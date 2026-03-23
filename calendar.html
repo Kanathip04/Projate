@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calendar - Visitor Count</title>
+
+  <style>
+    body{
+      margin:0;
+      font-family:Tahoma, sans-serif;
+      background:#eef0ea;
+      color:#1f2a22;
+    }
+
+    .topbar{
+      background:#fff;
+      border-bottom:1px solid #e5e5e5;
+      position:sticky;
+      top:0;
+      z-index:100;
+    }
+
+    .topbar-inner{
+      max-width:1200px;
+      margin:auto;
+      padding:12px 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .menu-btn{
+      background:#6b7b45;
+      border:none;
+      cursor:pointer;
+      font-size:14px;
+      padding:8px 15px;
+      border-radius:10px;
+      color:#fff;
+      font-weight:bold;
+      white-space:nowrap;
+    }
+    .menu-btn:hover{ background:#55624d; }
+
+    .title{
+      font-weight:700;
+      font-size:18px;
+      color:#3b4a33;
+      text-align:center;
+      flex:1;
+    }
+
+    .container{
+      max-width:1200px;
+      margin:auto;
+      padding:24px;
+    }
+
+    .card{
+      background:#fff;
+      border-radius:20px;
+      padding:25px;
+      box-shadow:0 15px 35px rgba(0,0,0,.1);
+      max-width:850px;
+      margin:auto;
+    }
+
+    .cal-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:20px;
+      gap:12px;
+    }
+
+    .cal-header button{
+      border:none;
+      background:#e8eadf;
+      padding:10px 15px;
+      border-radius:12px;
+      cursor:pointer;
+      font-size:18px;
+      transition:.2s;
+    }
+    .cal-header button:hover{ filter:brightness(.98); }
+
+    .calendar{
+      display:grid;
+      grid-template-columns:repeat(7,1fr);
+      gap:10px;
+      text-align:center;
+    }
+
+    .day-name{
+      font-weight:700;
+      padding:10px 0;
+      color:#888;
+      font-size:14px;
+      text-transform:uppercase;
+    }
+
+    .day{
+      background:#f9faf7;
+      border-radius:15px;
+      padding:10px;
+      min-height:90px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      position:relative;
+      transition:.2s;
+      border:1px solid transparent;
+      user-select:none;
+    }
+
+    .day span:first-child{
+      font-size:22px;
+      font-weight:500;
+      z-index:2;
+    }
+
+    .day:hover{
+      background:#fff;
+      border-color:#6b7b45;
+      transform:translateY(-2px);
+      box-shadow:0 5px 15px rgba(0,0,0,0.05);
+    }
+
+    .today{
+      background:#6b7b45 !important;
+      color:#fff !important;
+      border-color:#6b7b45 !important;
+    }
+
+    .today .visitor-count{
+      background:#fff !important;
+      color:#6b7b45 !important;
+    }
+
+    .visitor-count{
+      position:absolute;
+      top:8px;
+      right:8px;
+      font-size:11px;
+      background:#e74c3c;
+      color:#fff;
+      border-radius:8px;
+      min-width:22px;
+      height:22px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:bold;
+      padding:0 4px;
+      z-index:3;
+    }
+
+    .empty{
+      background:transparent !important;
+      cursor:default;
+      border:none !important;
+      box-shadow:none !important;
+      transform:none !important;
+    }
+
+    /* Modal */
+    .modal-overlay{
+      display:none;
+      position:fixed;
+      top:0; left:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.5);
+      z-index:200;
+      backdrop-filter:blur(2px);
+    }
+
+    .modal{
+      display:none;
+      position:fixed;
+      top:50%;
+      left:50%;
+      transform:translate(-50%, -50%);
+      background:#fff;
+      padding:25px;
+      border-radius:20px;
+      box-shadow:0 10px 40px rgba(0,0,0,0.2);
+      z-index:201;
+      width:90%;
+      max-width:400px;
+    }
+
+    .modal-header{
+      font-weight:bold;
+      font-size:1.2rem;
+      margin-bottom:15px;
+      color:#6b7b45;
+      border-bottom:2px solid #f0f2f5;
+      padding-bottom:10px;
+    }
+
+    .detail-row{
+      display:flex;
+      justify-content:space-between;
+      padding:10px 0;
+      border-bottom:1px solid #f9faf7;
+    }
+
+    .detail-row:last-child{
+      border-bottom:none;
+      font-weight:bold;
+      color:#000;
+      font-size:1.1rem;
+    }
+
+    .close-btn{
+      margin-top:20px;
+      width:100%;
+      background:#f0f2f5;
+      border:none;
+      padding:12px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:bold;
+      transition:.2s;
+    }
+    .close-btn:hover{ background:#e8eadf; }
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <!-- เปลี่ยนเป็น "หน้าหลัก" และลิงก์ไป index.php -->
+      <button class="menu-btn" onclick="location.href='index.php'">🏠 หน้าหลัก</button>
+
+      <div class="title">📅 ตรวจสอบสถิติรายวัน</div>
+
+      <div style="width:100px"></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <div class="cal-header">
+        <button type="button" onclick="prevMonth()">❮</button>
+        <div id="monthYear" style="font-weight:bold;font-size:1.4rem;color:#3b4a33;"></div>
+        <button type="button" onclick="nextMonth()">❯</button>
+      </div>
+
+      <div class="calendar" id="calendar"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay" onclick="closeModal()"></div>
+
+  <div class="modal" id="detailModal">
+    <div class="modal-header" id="modalDate">รายละเอียด</div>
+    <div id="modalBody"></div>
+    <button class="close-btn" type="button" onclick="closeModal()">ปิดหน้าต่าง</button>
+  </div>
+
+  <script>
+    const i18n = {
+      th: {
+        months: ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"],
+        days: ["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัสบดี","ศุกร์","เสาร์"]
+      }
+    };
+
+    const L = 'th';
+    const calendarEl = document.getElementById('calendar');
+    const monthYearEl = document.getElementById('monthYear');
+
+    let currentDate = new Date();
+    let rawVisitorData = []; // [{date:'YYYY-MM-DD', type:'...', count: 1}, ...]
+
+    async function fetchVisitorData() {
+      try {
+        const response = await fetch('get_calendar_events.php?v=' + Date.now());
+        rawVisitorData = await response.json();
+      } catch (err) {
+        console.error("Fetch Error:", err);
+        rawVisitorData = [];
+      }
+      renderCalendar();
+    }
+
+    function renderCalendar(){
+      calendarEl.innerHTML = "";
+
+      const year  = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const today = new Date();
+
+      monthYearEl.textContent = `${i18n[L].months[month]} ${year + 543}`;
+
+      i18n[L].days.forEach(d => {
+        const div = document.createElement("div");
+        div.className = "day-name";
+        div.textContent = d.substring(0, 2);
+        calendarEl.appendChild(div);
+      });
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const lastDate = new Date(year, month + 1, 0).getDate();
+
+      for (let i = 0; i < firstDay; i++) {
+        const div = document.createElement("div");
+        div.className = "day empty";
+        calendarEl.appendChild(div);
+      }
+
+      for (let d = 1; d <= lastDate; d++) {
+        const div = document.createElement("div");
+        div.className = "day";
+
+        const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        div.innerHTML = `<span>${d}</span>`;
+
+        const dayData = rawVisitorData.filter(item => item.date === dateKey);
+        const totalToday = dayData.reduce((sum, item) => sum + Number(item.count || 0), 0);
+
+        if (totalToday > 0) {
+          const badge = document.createElement("div");
+          badge.className = "visitor-count";
+          badge.textContent = totalToday;
+          div.appendChild(badge);
+
+          div.onclick = () => showDetails(dateKey, dayData);
+        } else {
+          div.onclick = null;
+        }
+
+        if (d === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+          div.classList.add("today");
+        }
+
+        calendarEl.appendChild(div);
+      }
+    }
+
+    function showDetails(dateKey, dayData) {
+      const [y, m, d] = dateKey.split('-');
+
+      document.getElementById('modalDate').textContent =
+        `วันที่ ${parseInt(d)} ${i18n[L].months[parseInt(m) - 1]} ${parseInt(y) + 543}`;
+
+      let html = '';
+      let grandTotal = 0;
+
+      dayData.forEach(item => {
+        const count = Number(item.count || 0);
+        html += `
+          <div class="detail-row">
+            <span>กลุ่ม: ${item.type}</span>
+            <span>${count} คน</span>
+          </div>
+        `;
+        grandTotal += count;
+      });
+
+      html += `
+        <div class="detail-row" style="margin-top:10px;border-top:2px solid #6b7b45;">
+          <span>รวมทั้งหมด</span>
+          <span>${grandTotal} คน</span>
+        </div>
+      `;
+
+      document.getElementById('modalBody').innerHTML = html;
+      document.getElementById('modalOverlay').style.display = 'block';
+      document.getElementById('detailModal').style.display = 'block';
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').style.display = 'none';
+      document.getElementById('detailModal').style.display = 'none';
+    }
+
+    function prevMonth() {
+      currentDate.setMonth(currentDate.getMonth() - 1);
+      fetchVisitorData();
+    }
+
+    function nextMonth() {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+      fetchVisitorData();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    fetchVisitorData();
+  </script>
+</body>
+</html>

@@ -268,7 +268,6 @@ $result = $conn->query("SELECT * FROM news ORDER BY id DESC");
     </div>
 
     <div class="page-head">
-        <div class="badge">News & Updates</div>
         <h1>ข่าวสาร</h1>
         <p>ติดตามข่าวสาร กิจกรรม ประกาศ และความเคลื่อนไหวล่าสุดของหน่วยงานได้ที่นี่</p>
     </div>

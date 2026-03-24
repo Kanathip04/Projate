@@ -2,65 +2,55 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
-$conn->set_charset("utf8mb4");
+include "config.php";
 
-if ($conn->connect_error) {
-    die("DB ERROR: " . $conn->connect_error);
+if (!isset($conn) || !$conn) {
+    die("เชื่อมต่อฐานข้อมูลไม่ได้");
 }
 
-echo "<h2>กำลังรีเซ็ตรหัส admin...</h2>";
-
-$sql1 = "CREATE TABLE IF NOT EXISTS admin (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL
+$createTableSQL = "CREATE TABLE IF NOT EXISTS `admin` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `username` VARCHAR(100) NOT NULL UNIQUE,
+    `password` VARCHAR(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
-if (!$conn->query($sql1)) {
-    die("CREATE TABLE ERROR: " . $conn->error);
+if (!$conn->query($createTableSQL)) {
+    die("สร้างตารางไม่สำเร็จ: " . $conn->error);
 }
 
 $newHash = password_hash("000000", PASSWORD_DEFAULT);
 
-$stmt = $conn->prepare("SELECT id, username FROM admin WHERE username = ? LIMIT 1");
+// ถ้ามี admin อยู่แล้ว ให้อัปเดตรหัส
+$check = $conn->prepare("SELECT id FROM `admin` WHERE username = ? LIMIT 1");
 $username = "admin";
-$stmt->bind_param("s", $username);
-$stmt->execute();
-$result = $stmt->get_result();
+$check->bind_param("s", $username);
+$check->execute();
+$check->store_result();
 
-if ($result->num_rows > 0) {
-    $upd = $conn->prepare("UPDATE admin SET password = ? WHERE username = ?");
-    $upd->bind_param("ss", $newHash, $username);
+if ($check->num_rows > 0) {
+    $update = $conn->prepare("UPDATE `admin` SET password = ? WHERE username = ?");
+    $update->bind_param("ss", $newHash, $username);
 
-    if ($upd->execute()) {
+    if ($update->execute()) {
         echo "รีเซ็ตรหัสผ่าน admin เป็น 000000 สำเร็จ";
     } else {
-        echo "UPDATE ERROR: " . $upd->error;
+        echo "อัปเดตรหัสไม่สำเร็จ: " . $update->error;
     }
-    $upd->close();
+
+    $update->close();
 } else {
-    $ins = $conn->prepare("INSERT INTO admin (username, password) VALUES (?, ?)");
-    $ins->bind_param("ss", $username, $newHash);
+    $insert = $conn->prepare("INSERT INTO `admin` (username, password) VALUES (?, ?)");
+    $insert->bind_param("ss", $username, $newHash);
 
-    if ($ins->execute()) {
-        echo "สร้าง admin ใหม่ และตั้งรหัสเป็น 000000 สำเร็จ";
+    if ($insert->execute()) {
+        echo "สร้าง admin และตั้งรหัสเป็น 000000 สำเร็จ";
     } else {
-        echo "INSERT ERROR: " . $ins->error;
+        echo "เพิ่ม admin ไม่สำเร็จ: " . $insert->error;
     }
-    $ins->close();
+
+    $insert->close();
 }
 
-$stmt->close();
-
-echo "<hr>";
-$res = $conn->query("SELECT id, username FROM admin");
-if ($res) {
-    echo "<h3>ข้อมูลในตาราง admin ตอนนี้</h3>";
-    while ($row = $res->fetch_assoc()) {
-        echo "ID: " . $row['id'] . " | USERNAME: " . htmlspecialchars($row['username']) . "<br>";
-    }
-}
-
+$check->close();
 $conn->close();
 ?>

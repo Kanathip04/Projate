@@ -1,6 +1,7 @@
 <?php
 echo "<div style='background:red;color:white;padding:10px;font-size:20px;'>TEST VERSION 999</div>";
 exit;
+
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 session_start();

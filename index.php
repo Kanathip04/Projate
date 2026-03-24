@@ -354,7 +354,7 @@ body{
         <a href="news.php">ข่าวสาร</a>
         <a href="view_data.php">ลงทะเบียน</a>
         <a href="https://docs.google.com/forms/d/e/1FAIpQLSdukofM-5EFzR1Zddip7uZJ-pnBmLnhXCNyABKIEY8cwUxzyQ/viewform?usp=dialog" target="_blank">แบบประเมิน</a>
-        <a href="calendar.html">ปฏิทิน</a>
+        <a href="calendar.php">ปฏิทิน</a>
         <a href="about_us.php">เกี่ยวกับ</a>
         <a href="game.php">เกม</a>
     </div>

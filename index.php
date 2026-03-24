@@ -23,7 +23,7 @@ $heroImage .= '?v=' . time();
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>สถาบัน55555วิจัยวลัยรุกขเวช</title>
+<title>สถาบันวิจัยวลัยรุกขเวช</title>
 
 <style>
 *{

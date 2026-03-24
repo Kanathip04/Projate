@@ -226,11 +226,6 @@ input, select, textarea{
                     <span class="text">เปลี่ยนรูปหน้าเว็บ</span>
                 </a>
 
-                <a href="manage_games.php" class="menu-item <?php echo ($activeMenu === 'games') ? 'active' : ''; ?>">
-                    <span class="icon">🎮</span>
-                    <span class="text">จัดการเกม</span>
-                </a>
-
                 <a href="admin_add_news.php" class="menu-item <?php echo ($activeMenu === 'news_manage') ? 'active' : ''; ?>">
                     <span class="icon">📰</span>
                     <span class="text">จัดการข่าว</span>

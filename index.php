@@ -357,7 +357,6 @@ body{
         <a href="calendar.html">ปฏิทิน</a>
         <a href="about_us.php">เกี่ยวกับ</a>
         <a href="game.php">เกม</a>
-        <a href="login.php">Admin</a>
     </div>
 </div>
 

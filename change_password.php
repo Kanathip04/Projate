@@ -1,4 +1,6 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 session_start();
 
 if (!isset($_SESSION['admin_logged_in'])) {
@@ -10,20 +12,26 @@ $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 
 if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+    die("❌ Connection failed: " . $conn->connect_error);
+}
+
+// ตรวจสอบว่าตาราง admin มีอยู่จริงไหม
+$check = $conn->query("SHOW TABLES LIKE 'admin'");
+if ($check->num_rows === 0) {
+    // สร้างตารางอัตโนมัติถ้ายังไม่มี
+    $conn->query("CREATE TABLE admin (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(100) NOT NULL,
+        password VARCHAR(255) NOT NULL
+    )");
+    $hash = password_hash('password', PASSWORD_DEFAULT);
+    $conn->query("INSERT INTO admin (id, username, password) VALUES (1, 'admin', '$hash')");
 }
 
 $message = "";
-
-/* =========================
-   ตั้งค่า layout กลาง
-========================= */
 $pageTitle  = "Security Setting";
 $activeMenu = "password";
 
-/* =========================
-   เปลี่ยนรหัสผ่าน
-========================= */
 if (isset($_POST['submit'])) {
 
     $current = $_POST['current_password'] ?? '';
@@ -71,22 +79,18 @@ include "admin_layout_top.php";
     border-radius:14px;
     box-shadow:0 4px 12px rgba(0,0,0,.08);
 }
-
 .security-card h1{
     margin:0 0 20px 0;
     font-size:22px;
 }
-
 .form-group{
     margin-bottom:18px;
 }
-
 .form-group label{
     display:block;
     margin-bottom:6px;
     font-weight:bold;
 }
-
 .form-group input{
     width:100%;
     padding:12px;
@@ -94,12 +98,10 @@ include "admin_layout_top.php";
     border:1px solid #ddd;
     font-size:14px;
 }
-
 .form-group input:focus{
     border-color:var(--brand);
     outline:none;
 }
-
 .btn-submit{
     width:100%;
     padding:12px;
@@ -111,23 +113,19 @@ include "admin_layout_top.php";
     cursor:pointer;
     transition:.2s;
 }
-
 .btn-submit:hover{
     background:var(--brand2);
 }
-
 .alert{
     padding:10px 12px;
     border-radius:8px;
     margin-bottom:15px;
     font-weight:bold;
 }
-
 .alert-success{
     background:#e6f7ed;
     color:#0a7c3e;
 }
-
 .alert-error{
     background:#fde8e8;
     color:#b91c1c;
@@ -144,17 +142,14 @@ include "admin_layout_top.php";
             <label for="current_password">รหัสผ่านปัจจุบัน</label>
             <input type="password" id="current_password" name="current_password" required>
         </div>
-
         <div class="form-group">
             <label for="new_password">รหัสผ่านใหม่</label>
             <input type="password" id="new_password" name="new_password" required>
         </div>
-
         <div class="form-group">
             <label for="confirm_password">ยืนยันรหัสผ่านใหม่</label>
             <input type="password" id="confirm_password" name="confirm_password" required>
         </div>
-
         <button type="submit" name="submit" class="btn-submit">
             บันทึกรหัสผ่านใหม่
         </button>

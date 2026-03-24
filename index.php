@@ -343,7 +343,7 @@ body{
 
 <div class="navbar">
     <div class="nav-left">
-        <img src="logo.png" alt="WRBRI Logo">
+        <img src="Logo.png" alt="WRBRI Logo">
         <div class="site-text">
             <h1>สถาบันวิจัยวลัยรุกขเวช</h1>
             <span>มหาวิทยาลัยมหาสารคาม</span>

@@ -241,6 +241,11 @@ input, select, textarea{
                     <span class="text">จัดการข่าว</span>
                 </a>
 
+                <a href="edit_about.php" class="menu-item <?php echo ($activeMenu === 'news_edit') ? 'active' : ''; ?>">
+                    <span class="icon">✏️</span>
+                    <span class="text">จัดการเกี่ยวกับ</span>
+                </a>
+
                 <a href="change_password.php" class="menu-item <?php echo ($activeMenu === 'password') ? 'active' : ''; ?>">
                     <span class="icon">🔐</span>
                     <span class="text">เปลี่ยนรหัสผ่าน</span>

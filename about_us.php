@@ -1,3 +1,30 @@
+<?php
+$conn = new mysqli("localhost", "root", "", "backoffice_db");
+$conn->set_charset("utf8mb4");
+
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+$result = $conn->query("SELECT * FROM about_content WHERE id = 1 LIMIT 1");
+$about = $result ? $result->fetch_assoc() : null;
+
+if (!$about) {
+    $about = [
+        'section_tag' => 'ABOUT',
+        'title' => 'ประวัติ',
+        'lead_text' => '',
+        'paragraph1' => '',
+        'paragraph2' => '',
+        'paragraph3' => '',
+        'image_path' => 'uploads/a0.jpg',
+        'image_badge_title' => '',
+        'image_badge_text' => ''
+    ];
+}
+
+$imagePath = !empty($about['image_path']) ? $about['image_path'] : 'uploads/a0.jpg';
+?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -11,153 +38,177 @@
     margin:0;
     padding:0;
 }
-
 :root{
     --main:#09422A;
-    --sub:#176046;
+    --main-soft:#176046;
+    --accent:#C8A96B;
     --white:#ffffff;
-    --text:#2d2d2d;
-    --shadow:0 10px 30px rgba(0,0,0,0.08);
+    --text:#2b2b2b;
+    --muted:#666;
+    --bg:#f3f5f4;
+    --line:#e7ece9;
+    --shadow:0 18px 45px rgba(0,0,0,0.10);
+    --shadow-hover:0 25px 55px rgba(0,0,0,0.14);
+    --radius-xl:32px;
 }
-
 body{
     font-family:'Segoe UI', Tahoma, sans-serif;
-    background:#f7f7f7;
+    background:
+        radial-gradient(circle at top left, rgba(9,66,42,0.05), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(200,169,107,0.08), transparent 24%),
+        var(--bg);
     color:var(--text);
-    line-height:1.8;
+    line-height:1.85;
 }
-
-/* ปุ่มกลับ */
 .back-btn{
     position:fixed;
-    top:25px;
-    left:30px;
+    top:24px;
+    left:28px;
     text-decoration:none;
     color:var(--main);
-    font-weight:600;
+    font-weight:700;
     font-size:15px;
-    padding:10px 18px;
-    border:2px solid var(--main);
-    border-radius:30px;
-    background:rgba(255,255,255,0.95);
+    padding:11px 18px;
+    border:1.8px solid rgba(9,66,42,0.75);
+    border-radius:999px;
+    background:rgba(255,255,255,0.88);
     z-index:999;
-    box-shadow:0 4px 12px rgba(0,0,0,0.08);
-    transition:all .3s ease;
+    box-shadow:0 10px 25px rgba(0,0,0,0.08);
+    transition:all .28s ease;
 }
-
 .back-btn:hover{
     background:var(--main);
     color:#fff;
     transform:translateY(-2px);
 }
-
-/* กล่องหลัก */
 .about-wrapper{
-    max-width:1400px;
+    max-width:1380px;
     margin:0 auto;
-    padding:100px 40px 60px;
+    padding:95px 30px 60px;
 }
-
 .about-section{
     display:grid;
-    grid-template-columns:1.1fr 0.9fr;
-    background:var(--white);
-    border-radius:30px;
+    grid-template-columns:1.08fr 0.92fr;
+    background:rgba(255,255,255,0.94);
+    border:1px solid rgba(9,66,42,0.06);
+    border-radius:var(--radius-xl);
     overflow:hidden;
     box-shadow:var(--shadow);
 }
-
-/* ฝั่งข้อความ */
 .about-text{
-    padding:70px 65px;
-    background:linear-gradient(to bottom, #fafafa, #f2f2f2);
+    position:relative;
+    padding:72px 64px;
+    background:linear-gradient(180deg, #fcfcfc 0%, #f6f7f6 100%);
     display:flex;
     flex-direction:column;
     justify-content:center;
 }
-
-.about-text h4{
-    color:var(--sub);
-    letter-spacing:8px;
-    font-weight:700;
-    font-size:14px;
-    margin-bottom:18px;
+.about-text::before{
+    content:"";
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:8px;
+    background:linear-gradient(90deg, var(--main) 0%, var(--accent) 100%);
 }
-
+.about-text h4{
+    display:inline-block;
+    color:var(--main-soft);
+    letter-spacing:7px;
+    font-weight:800;
+    font-size:13px;
+    margin-bottom:16px;
+    width:fit-content;
+}
+.about-text h4::after{
+    content:"";
+    display:block;
+    width:58px;
+    height:2px;
+    background:var(--accent);
+    margin-top:8px;
+    border-radius:10px;
+}
 .about-text h1{
     font-size:64px;
     color:var(--main);
-    margin-bottom:26px;
-    line-height:1.1;
+    margin-bottom:22px;
+    line-height:1.05;
+    font-weight:800;
 }
-
-.about-text p{
+.about-text .lead{
     font-size:18px;
+    color:#404040;
+    margin-bottom:18px;
+}
+.about-text p{
+    font-size:17px;
+    color:var(--muted);
     margin-bottom:18px;
     text-align:justify;
 }
-
-/* ฝั่งรูป */
 .about-image{
-    min-height:700px;
+    position:relative;
+    min-height:760px;
+    overflow:hidden;
+    background:#dfe8e2;
+}
+.about-image::before{
+    content:"";
+    position:absolute;
+    inset:0;
     background:
-        linear-gradient(rgba(9,66,42,0.08), rgba(9,66,42,0.08)),
-        url('a0.jpg') center center / cover no-repeat;
+        linear-gradient(rgba(9,66,42,0.10), rgba(9,66,42,0.08)),
+        url('<?php echo htmlspecialchars($imagePath) . '?v=' . time(); ?>') center center / cover no-repeat;
+    transform:scale(1.03);
 }
-
-/* Responsive */
-@media (max-width:1100px){
-    .about-section{
-        grid-template-columns:1fr;
-    }
-
-    .about-image{
-        min-height:450px;
-        order:-1;
-    }
-
-    .about-text{
-        padding:50px 35px;
-    }
-
-    .about-text h1{
-        font-size:48px;
-    }
+.about-image::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(9,66,42,0.05) 100%);
 }
-
+.image-badge{
+    position:absolute;
+    right:24px;
+    bottom:24px;
+    background:rgba(255,255,255,0.90);
+    color:var(--main);
+    padding:14px 18px;
+    border-radius:18px;
+    box-shadow:0 12px 25px rgba(0,0,0,0.12);
+    border:1px solid rgba(9,66,42,0.08);
+    max-width:260px;
+    z-index:2;
+}
+.image-badge strong{
+    display:block;
+    font-size:16px;
+    margin-bottom:4px;
+}
+.image-badge span{
+    font-size:13px;
+    color:#555;
+    line-height:1.6;
+}
+@media (max-width:1050px){
+    .about-section{grid-template-columns:1fr;}
+    .about-image{min-height:430px;order:-1;}
+    .about-text{padding:48px 34px 42px;}
+    .about-text h1{font-size:46px;}
+}
 @media (max-width:768px){
-    .about-wrapper{
-        padding:90px 18px 40px;
-    }
-
-    .about-text h4{
-        letter-spacing:5px;
-        font-size:13px;
-    }
-
-    .about-text h1{
-        font-size:38px;
-        margin-bottom:20px;
-    }
-
-    .about-text p{
-        font-size:16px;
-    }
-
-    .back-btn{
-        top:18px;
-        left:18px;
-        font-size:14px;
-        padding:8px 14px;
-    }
-
-    .about-image{
-        min-height:320px;
-    }
+    .about-wrapper{padding:88px 16px 34px;}
+    .about-text{padding:38px 22px 30px;}
+    .about-text h1{font-size:36px;margin-bottom:18px;}
+    .about-text p{font-size:15.5px;line-height:1.9;}
+    .back-btn{top:16px;left:16px;font-size:14px;padding:9px 14px;}
+    .about-image{min-height:300px;}
+    .image-badge{left:16px;right:16px;bottom:16px;max-width:none;}
 }
 </style>
 </head>
-
 <body>
 
 <a href="javascript:history.back()" class="back-btn">← กลับหน้าหลัก</a>
@@ -165,38 +216,38 @@ body{
 <div class="about-wrapper">
     <section class="about-section">
         <div class="about-text">
-            <h4>ABOUT</h4>
-            <h1>ประวัติ</h1>
+            <h4><?php echo htmlspecialchars($about['section_tag']); ?></h4>
+            <h1><?php echo htmlspecialchars($about['title']); ?></h1>
 
-            <p>
-                สถาบันวิจัยวลัยรุกขเวช มหาวิทยาลัยมหาสารคาม (สวนรุกขเวช มมส)
-                ก่อตั้งเมื่อปี พ.ศ. 2530 โดยความร่วมมือระหว่าง มศว.มหาสารคามและจังหวัด
-                เพื่ออนุรักษ์พรรณไม้พื้นเมืองอีสาน ได้รับพระราชทานนาม “สวนวลัยรุกขเวช”
-                จากสมเด็จพระเจ้าลูกเธอ เจ้าฟ้าจุฬาภรณวลัยลักษณ์ เมื่อวันที่ 28 กันยายน 2531
-                ปัจจุบันตั้งอยู่บนพื้นที่ 2 แห่ง ได้แก่ สถานีปฏิบัติการบ้านเกิ้ง (อ.เมือง)
-                และสถาบันวิจัยฯ (อ.นาดูน) ดำเนินงานด้านวิจัย ความหลากหลายทางชีวภาพ
-                และอนุรักษ์ธรรมชาติ
-            </p>
+            <?php if (!empty($about['lead_text'])): ?>
+                <p class="lead"><?php echo nl2br(htmlspecialchars($about['lead_text'])); ?></p>
+            <?php endif; ?>
 
-            <p>
-                จุดเริ่มต้นของสถาบันเริ่มจากโครงการสวนพฤกษชาติและศูนย์สนเทศพรรณไม้อีสาน
-                โดยความร่วมมือของมหาวิทยาลัยศรีนครินทรวิโรฒ วิทยาเขตมหาสารคาม
-                และจังหวัดมหาสารคาม ใช้พื้นที่สาธารณประโยชน์กุดแดง บ้านเกิ้ง ตำบลเกิ้ง
-                อำเภอเมือง จังหวัดมหาสารคาม จำนวนประมาณ 270 ไร่
-                ต่อมาได้รับพระราชทานนามว่า “สวนวลัยรุกขเวช”
-                และในช่วงปี พ.ศ. 2532–2535 ได้มีการขยายพื้นที่เพิ่มเติมที่อำเภอนาดูน
-                พร้อมการสนับสนุนงบประมาณจากโครงการอีสานเขียว
-            </p>
+            <?php if (!empty($about['paragraph1'])): ?>
+                <p><?php echo nl2br(htmlspecialchars($about['paragraph1'])); ?></p>
+            <?php endif; ?>
 
-            <p>
-                เมื่อวันที่ 22 ตุลาคม 2535 สถาบันได้รับการจัดตั้งเป็นหน่วยงานระดับสถาบันวิจัย
-                และได้รับพระราชทานนามหน่วยงานว่า “สถาบันวิจัยวลัยรุกขเวช”
-                ปัจจุบันเป็นหน่วยงานที่มุ่งเน้นงานวิจัยและบริการวิชาการด้านความหลากหลายทางชีวภาพ
-                เกษตรอินทรีย์ และภูมิปัญญาท้องถิ่น
-            </p>
+            <?php if (!empty($about['paragraph2'])): ?>
+                <p><?php echo nl2br(htmlspecialchars($about['paragraph2'])); ?></p>
+            <?php endif; ?>
+
+            <?php if (!empty($about['paragraph3'])): ?>
+                <p><?php echo nl2br(htmlspecialchars($about['paragraph3'])); ?></p>
+            <?php endif; ?>
         </div>
 
-        <div class="about-image"></div>
+        <div class="about-image">
+            <?php if (!empty($about['image_badge_title']) || !empty($about['image_badge_text'])): ?>
+                <div class="image-badge">
+                    <?php if (!empty($about['image_badge_title'])): ?>
+                        <strong><?php echo htmlspecialchars($about['image_badge_title']); ?></strong>
+                    <?php endif; ?>
+                    <?php if (!empty($about['image_badge_text'])): ?>
+                        <span><?php echo htmlspecialchars($about['image_badge_text']); ?></span>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+        </div>
     </section>
 </div>
 

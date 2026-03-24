@@ -6,6 +6,9 @@ $conn->set_charset("utf8mb4");
 if ($conn->connect_error) { 
     die("Connection failed: " . $conn->connect_error); 
 }
+
+$currentDate = date('Y-m-d');
+$currentTime = date('H:i');
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -261,16 +264,12 @@ input:focus, select:focus{
 
             <div class="form-group">
                 <label for="visit_date">วันที่เข้าชม *</label>
-                <input type="date" id="visit_date" name="visit_date" required value="<?php echo date('Y-m-d'); ?>">
+                <input type="date" id="visit_date" name="visit_date" required value="<?php echo $currentDate; ?>">
             </div>
 
             <div class="form-group">
                 <label for="visit_time">เวลาที่เข้าชม *</label>
-                <?php
-                    date_default_timezone_set('Asia/Bangkok');
-                    $currentDate = date('Y-m-d');
-                    $currentTime = date('H:i');
-                    ?>
+                <input type="time" id="visit_time" name="visit_time" required value="<?php echo $currentTime; ?>">
             </div>
 
             <div class="form-group">

@@ -1,4 +1,4 @@
-<?php $admin_password = "1234"; ?>
+<?php $admin_password = "000000"; ?>
 <?php
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");

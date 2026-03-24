@@ -1,35 +1,28 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 session_start();
 include 'config.php';
 
 $error = '';
 
-$stmt = $conn->prepare("SELECT password FROM admin WHERE id = 1 LIMIT 1");
-$stmt->execute();
-$stmt->bind_result($db_pass);
-$stmt->fetch();
-$stmt->close();
-
-echo "<div style='background:#111;color:#0f0;padding:10px;font-size:18px;'>LOGIN DEBUG VERSION</div>";
-echo "<div style='padding:10px;'>";
-echo "มี hash ใน DB: " . htmlspecialchars($db_pass ?: 'ไม่มี') . "<br>";
-echo "ทดสอบ verify 000000: " . (password_verify('000000', $db_pass) ? 'ถูก' : 'ผิด') . "<br>";
-echo "</div>";
-
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $password = trim($_POST['password'] ?? '');
 
-    echo "<div style='padding:10px;'>ค่าที่กรอก: " . htmlspecialchars($password) . "</div>";
-
-    if ($db_pass && password_verify($password, $db_pass)) {
-        $_SESSION['admin_logged_in'] = true;
-        echo "<div style='padding:10px;color:green;font-weight:bold;'>เข้าสู่ระบบสำเร็จ</div>";
-        header("refresh:1;url=admin_dashboard.php");
-        exit;
+    if ($password === '') {
+        $error = 'กรุณากรอกรหัสผ่าน';
     } else {
-        $error = 'รหัสผ่านไม่ถูกต้อง';
+        $stmt = $conn->prepare("SELECT password FROM admin WHERE id = 1 LIMIT 1");
+        $stmt->execute();
+        $stmt->bind_result($db_pass);
+        $stmt->fetch();
+        $stmt->close();
+
+        if ($db_pass && password_verify($password, $db_pass)) {
+            $_SESSION['admin_logged_in'] = true;
+            header("Location: admin_dashboard.php");
+            exit;
+        } else {
+            $error = 'รหัสผ่านไม่ถูกต้อง';
+        }
     }
 }
 ?>

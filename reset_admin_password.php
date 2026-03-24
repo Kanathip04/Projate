@@ -2,55 +2,46 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-include "config.php";
+include 'config.php';
 
-if (!isset($conn) || !$conn) {
-    die("เชื่อมต่อฐานข้อมูลไม่ได้");
-}
+$newPlainPassword = '000000';
+$newHash = password_hash($newPlainPassword, PASSWORD_DEFAULT);
 
-$createTableSQL = "CREATE TABLE IF NOT EXISTS `admin` (
-    `id` INT AUTO_INCREMENT PRIMARY KEY,
-    `username` VARCHAR(100) NOT NULL UNIQUE,
-    `password` VARCHAR(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+echo "<h2>Reset Admin Password</h2>";
+echo "New hash: " . htmlspecialchars($newHash) . "<br><br>";
 
-if (!$conn->query($createTableSQL)) {
-    die("สร้างตารางไม่สำเร็จ: " . $conn->error);
-}
+$check = $conn->query("SELECT id FROM admin WHERE id = 1 LIMIT 1");
 
-$newHash = password_hash("000000", PASSWORD_DEFAULT);
+if ($check && $check->num_rows > 0) {
+    $stmt = $conn->prepare("UPDATE admin SET password = ? WHERE id = 1");
+    $stmt->bind_param("s", $newHash);
 
-// ถ้ามี admin อยู่แล้ว ให้อัปเดตรหัส
-$check = $conn->prepare("SELECT id FROM `admin` WHERE username = ? LIMIT 1");
-$username = "admin";
-$check->bind_param("s", $username);
-$check->execute();
-$check->store_result();
-
-if ($check->num_rows > 0) {
-    $update = $conn->prepare("UPDATE `admin` SET password = ? WHERE username = ?");
-    $update->bind_param("ss", $newHash, $username);
-
-    if ($update->execute()) {
-        echo "รีเซ็ตรหัสผ่าน admin เป็น 000000 สำเร็จ";
+    if ($stmt->execute()) {
+        echo "อัปเดตรหัสผ่านสำเร็จ<br>";
     } else {
-        echo "อัปเดตรหัสไม่สำเร็จ: " . $update->error;
+        echo "อัปเดตไม่สำเร็จ: " . htmlspecialchars($stmt->error);
     }
 
-    $update->close();
+    $stmt->close();
 } else {
-    $insert = $conn->prepare("INSERT INTO `admin` (username, password) VALUES (?, ?)");
-    $insert->bind_param("ss", $username, $newHash);
+    $stmt = $conn->prepare("INSERT INTO admin (id, password) VALUES (1, ?)");
+    $stmt->bind_param("s", $newHash);
 
-    if ($insert->execute()) {
-        echo "สร้าง admin และตั้งรหัสเป็น 000000 สำเร็จ";
+    if ($stmt->execute()) {
+        echo "สร้าง admin id=1 สำเร็จ<br>";
     } else {
-        echo "เพิ่ม admin ไม่สำเร็จ: " . $insert->error;
+        echo "เพิ่มข้อมูลไม่สำเร็จ: " . htmlspecialchars($stmt->error);
     }
 
-    $insert->close();
+    $stmt->close();
 }
 
-$check->close();
+$res = $conn->query("SELECT id, password FROM admin WHERE id = 1 LIMIT 1");
+$row = $res ? $res->fetch_assoc() : null;
+
+echo "<br><strong>ตรวจสอบ:</strong><br>";
+echo "ID: " . htmlspecialchars($row['id'] ?? '-') . "<br>";
+echo "verify 000000: " . (isset($row['password']) && password_verify('000000', $row['password']) ? 'ถูก' : 'ผิด') . "<br>";
+
 $conn->close();
 ?>

@@ -356,7 +356,6 @@ body{
         <a href="https://docs.google.com/forms/d/e/1FAIpQLSdukofM-5EFzR1Zddip7uZJ-pnBmLnhXCNyABKIEY8cwUxzyQ/viewform?usp=dialog" target="_blank">แบบประเมิน</a>
         <a href="calendar.php">ปฏิทิน</a>
         <a href="about_us.php">เกี่ยวกับ</a>
-        <a href="game.php">เกม</a>
     </div>
 </div>
 

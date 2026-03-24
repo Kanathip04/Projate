@@ -15,10 +15,8 @@ if ($conn->connect_error) {
     die("❌ Connection failed: " . $conn->connect_error);
 }
 
-// ตรวจสอบว่าตาราง admin มีอยู่จริงไหม
 $check = $conn->query("SHOW TABLES LIKE 'admin'");
 if ($check->num_rows === 0) {
-    // สร้างตารางอัตโนมัติถ้ายังไม่มี
     $conn->query("CREATE TABLE admin (
         id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(100) NOT NULL,
@@ -43,7 +41,6 @@ if (isset($_POST['submit'])) {
     } elseif (strlen($new) < 6) {
         $message = "<div class='alert alert-error'>❌ รหัสผ่านต้องอย่างน้อย 6 ตัวอักษร</div>";
     } else {
-
         $stmt = $conn->prepare("SELECT password FROM admin WHERE id = 1");
         $stmt->execute();
         $stmt->bind_result($db_pass);
@@ -72,63 +69,83 @@ include "admin_layout_top.php";
 ?>
 
 <style>
-.security-card{
-    background:#fff;
-    max-width:600px;
-    padding:30px;
-    border-radius:14px;
-    box-shadow:0 4px 12px rgba(0,0,0,.08);
+.security-card {
+    background: #fff;
+    max-width: 600px;
+    padding: 30px;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
 }
-.security-card h1{
-    margin:0 0 20px 0;
-    font-size:22px;
+.security-card h1 {
+    margin: 0 0 20px 0;
+    font-size: 22px;
 }
-.form-group{
-    margin-bottom:18px;
+.form-group {
+    margin-bottom: 18px;
 }
-.form-group label{
-    display:block;
-    margin-bottom:6px;
-    font-weight:bold;
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: bold;
 }
-.form-group input{
-    width:100%;
-    padding:12px;
-    border-radius:8px;
-    border:1px solid #ddd;
-    font-size:14px;
+.input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
 }
-.form-group input:focus{
-    border-color:var(--brand);
-    outline:none;
+.input-wrap input {
+    width: 100%;
+    padding: 12px 44px 12px 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    font-size: 14px;
 }
-.btn-submit{
-    width:100%;
-    padding:12px;
-    border:none;
-    border-radius:8px;
-    background:var(--brand);
-    color:#fff;
-    font-weight:bold;
-    cursor:pointer;
-    transition:.2s;
+.input-wrap input:focus {
+    border-color: var(--brand);
+    outline: none;
 }
-.btn-submit:hover{
-    background:var(--brand2);
+.toggle-eye {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    color: #999;
+    font-size: 18px;
+    line-height: 1;
+    user-select: none;
 }
-.alert{
-    padding:10px 12px;
-    border-radius:8px;
-    margin-bottom:15px;
-    font-weight:bold;
+.toggle-eye:hover {
+    color: #555;
 }
-.alert-success{
-    background:#e6f7ed;
-    color:#0a7c3e;
+.btn-submit {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: var(--brand);
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    transition: .2s;
 }
-.alert-error{
-    background:#fde8e8;
-    color:#b91c1c;
+.btn-submit:hover {
+    background: var(--brand2);
+}
+.alert {
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+.alert-success {
+    background: #e6f7ed;
+    color: #0a7c3e;
+}
+.alert-error {
+    background: #fde8e8;
+    color: #b91c1c;
 }
 </style>
 
@@ -140,21 +157,43 @@ include "admin_layout_top.php";
     <form method="POST">
         <div class="form-group">
             <label for="current_password">รหัสผ่านปัจจุบัน</label>
-            <input type="password" id="current_password" name="current_password" required>
+            <div class="input-wrap">
+                <input type="password" id="current_password" name="current_password" required>
+                <button type="button" class="toggle-eye" onclick="togglePass('current_password', this)">👁️</button>
+            </div>
         </div>
         <div class="form-group">
             <label for="new_password">รหัสผ่านใหม่</label>
-            <input type="password" id="new_password" name="new_password" required>
+            <div class="input-wrap">
+                <input type="password" id="new_password" name="new_password" required>
+                <button type="button" class="toggle-eye" onclick="togglePass('new_password', this)">👁️</button>
+            </div>
         </div>
         <div class="form-group">
             <label for="confirm_password">ยืนยันรหัสผ่านใหม่</label>
-            <input type="password" id="confirm_password" name="confirm_password" required>
+            <div class="input-wrap">
+                <input type="password" id="confirm_password" name="confirm_password" required>
+                <button type="button" class="toggle-eye" onclick="togglePass('confirm_password', this)">👁️</button>
+            </div>
         </div>
         <button type="submit" name="submit" class="btn-submit">
             บันทึกรหัสผ่านใหม่
         </button>
     </form>
 </div>
+
+<script>
+function togglePass(fieldId, btn) {
+    const input = document.getElementById(fieldId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+    } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+    }
+}
+</script>
 
 <?php
 include "admin_layout_bottom.php";

@@ -21,10 +21,10 @@ $activeMenu = "password";
 /* =========================
    1) สร้างตาราง admin ถ้ายังไม่มี
 ========================= */
-$createTableSQL = "CREATE TABLE IF NOT EXISTS admin (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(100) NOT NULL,
-    password VARCHAR(255) NOT NULL
+$createTableSQL = "CREATE TABLE IF NOT EXISTS `admin` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `username` VARCHAR(100) NOT NULL UNIQUE,
+    `password` VARCHAR(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
 if (!$conn->query($createTableSQL)) {
@@ -32,28 +32,30 @@ if (!$conn->query($createTableSQL)) {
 }
 
 /* =========================
-   2) ถ้ายังไม่มี user admin id=1 ให้สร้าง
+   2) ถ้ายังไม่มี user admin ให้สร้าง
    รหัสเริ่มต้น = 000000
 ========================= */
-$checkAdmin = $conn->query("SELECT id FROM admin WHERE id = 1 LIMIT 1");
-if (!$checkAdmin) {
-    die("❌ ตรวจสอบข้อมูล admin ไม่สำเร็จ: " . $conn->error);
-}
+$checkAdmin = $conn->prepare("SELECT id FROM `admin` WHERE username = ? LIMIT 1");
+$defaultUsername = "admin";
+$checkAdmin->bind_param("s", $defaultUsername);
+$checkAdmin->execute();
+$checkAdmin->store_result();
 
 if ($checkAdmin->num_rows === 0) {
-    $defaultPassword = password_hash('000000', PASSWORD_DEFAULT);
-    $stmtInsert = $conn->prepare("INSERT INTO admin (id, username, password) VALUES (1, 'admin', ?)");
-    $stmtInsert->bind_param("s", $defaultPassword);
+    $defaultPasswordHash = password_hash("000000", PASSWORD_DEFAULT);
+    $insertAdmin = $conn->prepare("INSERT INTO `admin` (username, password) VALUES (?, ?)");
+    $insertAdmin->bind_param("ss", $defaultUsername, $defaultPasswordHash);
 
-    if (!$stmtInsert->execute()) {
-        die("❌ เพิ่มข้อมูล admin เริ่มต้นไม่สำเร็จ: " . $stmtInsert->error);
+    if (!$insertAdmin->execute()) {
+        die("❌ เพิ่ม admin เริ่มต้นไม่สำเร็จ: " . $insertAdmin->error);
     }
 
-    $stmtInsert->close();
+    $insertAdmin->close();
 }
+$checkAdmin->close();
 
 /* =========================
-   3) เมื่อกด submit เปลี่ยนรหัสผ่าน
+   3) เปลี่ยนรหัสผ่าน
 ========================= */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
 
@@ -68,7 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
     } elseif (strlen($new) < 6) {
         $message = "<div class='alert alert-error'>❌ รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร</div>";
     } else {
-        $stmt = $conn->prepare("SELECT password FROM admin WHERE id = 1 LIMIT 1");
+        $stmt = $conn->prepare("SELECT password FROM `admin` WHERE username = ? LIMIT 1");
+        $stmt->bind_param("s", $defaultUsername);
         $stmt->execute();
         $stmt->bind_result($db_pass);
         $stmt->fetch();
@@ -81,8 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
         } else {
             $new_hash = password_hash($new, PASSWORD_DEFAULT);
 
-            $update = $conn->prepare("UPDATE admin SET password = ? WHERE id = 1");
-            $update->bind_param("s", $new_hash);
+            $update = $conn->prepare("UPDATE `admin` SET password = ? WHERE username = ?");
+            $update->bind_param("ss", $new_hash, $defaultUsername);
 
             if ($update->execute()) {
                 $message = "<div class='alert alert-success'>✅ เปลี่ยนรหัสผ่านสำเร็จ</div>";
@@ -106,28 +109,23 @@ include "admin_layout_top.php";
     border-radius:14px;
     box-shadow:0 4px 12px rgba(0,0,0,.08);
 }
-
 .security-card h1{
     margin:0 0 20px 0;
     font-size:22px;
 }
-
 .form-group{
     margin-bottom:18px;
 }
-
 .form-group label{
     display:block;
     margin-bottom:6px;
     font-weight:bold;
 }
-
 .input-wrap{
     position:relative;
     display:flex;
     align-items:center;
 }
-
 .input-wrap input{
     width:100%;
     padding:12px 44px 12px 12px;
@@ -135,12 +133,10 @@ include "admin_layout_top.php";
     border:1px solid #ddd;
     font-size:14px;
 }
-
 .input-wrap input:focus{
     border-color:var(--brand);
     outline:none;
 }
-
 .toggle-eye{
     position:absolute;
     right:12px;
@@ -153,11 +149,9 @@ include "admin_layout_top.php";
     line-height:1;
     user-select:none;
 }
-
 .toggle-eye:hover{
     color:#555;
 }
-
 .btn-submit{
     width:100%;
     padding:12px;
@@ -169,23 +163,19 @@ include "admin_layout_top.php";
     cursor:pointer;
     transition:.2s;
 }
-
 .btn-submit:hover{
     background:var(--brand2);
 }
-
 .alert{
     padding:10px 12px;
     border-radius:8px;
     margin-bottom:15px;
     font-weight:bold;
 }
-
 .alert-success{
     background:#e6f7ed;
     color:#0a7c3e;
 }
-
 .alert-error{
     background:#fde8e8;
     color:#b91c1c;

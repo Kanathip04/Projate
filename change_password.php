@@ -13,7 +13,7 @@ $activeMenu = "password";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $current = trim($_POST['current_password'] ?? '');
-    $new     = trim($_POST['new_password'] ?? '');
+    $new = trim($_POST['new_password'] ?? '');
     $confirm = trim($_POST['confirm_password'] ?? '');
 
     if ($current === '' || $new === '' || $confirm === '') {

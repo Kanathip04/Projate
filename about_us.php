@@ -146,7 +146,10 @@ body{
     font-size:17px;
     color:var(--muted);
     margin-bottom:18px;
-    text-align:justify;
+    text-align:left; /* แก้ตรงนี้ */
+    letter-spacing:0;
+    word-spacing:0;
+    line-height:1.9;
 }
 .about-image{
     position:relative;

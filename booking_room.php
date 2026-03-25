@@ -660,6 +660,9 @@ a{
                 <div class="room-footer">
                     <div class="room-capacity">รองรับ 2 คน</div>
                     <button class="book-btn" onclick="scrollToBooking('Standard Room')">จองห้องนี้</button>
+                    <a class="book-btn" href="booking_form.php?room_type=Standard Room&price=800&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
+                        จองห้องนี้
+                    </a>
                 </div>
             </div>
         </div>
@@ -687,6 +690,9 @@ a{
                 <div class="room-footer">
                     <div class="room-capacity">รองรับ 2-3 คน</div>
                     <button class="book-btn" onclick="scrollToBooking('Deluxe Room')">จองห้องนี้</button>
+                    <a class="book-btn" href="booking_form.php?room_type=Standard Room&price=800&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
+                        จองห้องนี้
+                    </a>
                 </div>
             </div>
         </div>
@@ -714,6 +720,9 @@ a{
                 <div class="room-footer">
                     <div class="room-capacity">รองรับ 4-5 คน</div>
                     <button class="book-btn" onclick="scrollToBooking('Family Room')">จองห้องนี้</button>
+                    <a class="book-btn" href="booking_form.php?room_type=Standard Room&price=800&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
+                        จองห้องนี้
+                    </a>
                 </div>
             </div>
         </div>

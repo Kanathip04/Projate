@@ -72,7 +72,7 @@ if ($count_result && $count_result->num_rows > 0) {
 include "admin_layout_top.php";
 ?>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 
 <style>
 .top-section{

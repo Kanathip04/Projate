@@ -807,17 +807,6 @@ $statusOptions = bookingStatusMap();
             <div class="sub">รายการที่ถูกยกเลิก</div>
         </div>
     </div>
-
-    <div class="layout">
-        <div class="sticky-box">
-            <div class="panel sidebar-card">
-                <h2 class="section-title">
-                    <?php echo $edit_data ? 'แก้ไขข้อมูลการจอง' : 'แผงแก้ไขข้อมูล'; ?>
-                </h2>
-                <p class="section-desc">
-                    <?php echo $edit_data ? 'ปรับข้อมูลรายการที่เลือก แล้วกดบันทึกการแก้ไข' : 'กดปุ่ม “แก้ไข” จากตารางด้านขวาเพื่อโหลดข้อมูลเข้าฟอร์ม'; ?>
-                </p>
-
                 <?php if ($edit_data): ?>
                     <form method="POST">
                         <input type="hidden" name="action" value="update_booking">

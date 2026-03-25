@@ -773,7 +773,7 @@ $statusOptions = bookingStatusMap();
             <p>ตรวจสอบ แก้ไข เปลี่ยนสถานะ และจัดเก็บรายการจองได้จากหน้าเดียว</p>
         </div>
 
-        <a href="index.php" class="btn btn-info">← กลับหน้าเว็บไซต์</a>
+        <a href="admin_dashboard.php" class="btn btn-info">← dashboard </a>
     </div>
 
     <?php if ($message !== ''): ?>

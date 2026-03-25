@@ -226,6 +226,11 @@ input, select, textarea{
                     <span class="text">เปลี่ยนรูปหน้าเว็บ</span>
                 </a>
 
+                <a href="admin_booking_list.php" class="menu-item <?php echo ($activeMenu === 'banner') ? 'active' : ''; ?>">
+                    <span class="icon">🖼️</span>
+                    <span class="text">ข้อมูลการเข้าพัก</span>
+                </a>
+
                 <a href="admin_add_news.php" class="menu-item <?php echo ($activeMenu === 'news_manage') ? 'active' : ''; ?>">
                     <span class="icon">📰</span>
                     <span class="text">จัดการข่าว</span>

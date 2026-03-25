@@ -8,15 +8,9 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-/* =============================
-   ตั้งค่า layout กลาง
-============================= */
 $pageTitle  = "Admin Dashboard";
 $activeMenu = "dashboard";
 
-/* =============================
-   ค้นหา + เงื่อนไขวันนี้
-============================= */
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
 $where = "WHERE visit_date = CURDATE()";
@@ -26,9 +20,6 @@ if ($search !== '') {
     $where .= " AND (nickname LIKE '%$safe%' OR user_type LIKE '%$safe%')";
 }
 
-/* =============================
-   ตารางวันนี้
-============================= */
 $sql = "SELECT id, nickname, user_type, visit_date, visit_time, created_at
         FROM tourists
         $where
@@ -39,87 +30,10 @@ if (!$result) {
     die("SQL Error: " . $conn->error);
 }
 
-/* =============================
-   สถิติวันนี้
-============================= */
-$count_sql = "
-    SELECT user_type, COUNT(*) as total
-    FROM tourists
-    WHERE visit_date = CURDATE()
-    GROUP BY user_type
-";
-$count_result = $conn->query($count_sql);
-
-$type_counts = [];
-$chart_labels = [];
-$chart_data   = [];
-$total_today  = 0;
-
-if ($count_result && $count_result->num_rows > 0) {
-    while ($row = $count_result->fetch_assoc()) {
-        $type = $row['user_type'];
-        $cnt  = (int)$row['total'];
-
-        $type_counts[$type] = $cnt;
-        $chart_labels[] = $type;
-        $chart_data[]   = $cnt;
-        $total_today   += $cnt;
-    }
-} else {
-    $total_today = 0;
-}
-
 include "admin_layout_top.php";
 ?>
 
-
-
 <style>
-.top-section{
-    display:grid;
-    grid-template-columns:420px 1fr;
-    gap:16px;
-    align-items:stretch;
-    margin-bottom:25px;
-}
-
-.chart-box{
-    background:#fff;
-    border-radius:10px;
-    box-shadow:0 3px 8px rgba(0,0,0,.05);
-    padding:18px;
-    height:260px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-}
-
-.stats-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(180px, 1fr));
-    gap:12px;
-}
-
-.card{
-    background:#fff;
-    padding:18px;
-    border-radius:10px;
-    box-shadow:0 3px 8px rgba(0,0,0,.05);
-    border-left:4px solid var(--brand);
-}
-
-.card h3{
-    margin:0;
-    font-size:13px;
-    color:#777;
-}
-
-.card p{
-    margin:5px 0 0;
-    font-size:22px;
-    font-weight:bold;
-}
-
 .table-box{
     background:#fff;
     padding:20px;
@@ -263,43 +177,7 @@ include "admin_layout_top.php";
 .close-day-btn:hover{
     background:var(--brand2);
 }
-
-@media (max-width: 1050px){
-    .top-section{
-        grid-template-columns:1fr;
-    }
-
-    .chart-box{
-        height:320px;
-    }
-
-    .stats-grid{
-        grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
-    }
-}
 </style>
-
-<div class="top-section">
-    <div class="chart-box">
-        <canvas id="donutChart"></canvas>
-    </div>
-
-    <div class="stats-grid">
-        <div class="card">
-            <h3>ผู้ลงทะเบียนวันนี้</h3>
-            <p><?php echo (int)$total_today; ?> คน</p>
-        </div>
-
-        <?php if (!empty($type_counts)): ?>
-            <?php foreach ($type_counts as $type => $cnt): ?>
-                <div class="card">
-                    <h3><?php echo htmlspecialchars($type); ?></h3>
-                    <p><?php echo (int)$cnt; ?> คน</p>
-                </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
-</div>
 
 <div class="table-box">
     <div class="search">
@@ -367,28 +245,6 @@ include "admin_layout_top.php";
 </div>
 
 <script>
-new Chart(document.getElementById('donutChart'), {
-    type: 'doughnut',
-    data: {
-        labels: <?php echo json_encode($chart_labels); ?>,
-        datasets: [{
-            data: <?php echo json_encode($chart_data); ?>,
-            backgroundColor: ['#1976d2', '#f57c00', '#388e3c'],
-            borderWidth: 0
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '70%',
-        plugins: {
-            legend: {
-                position: 'bottom'
-            }
-        }
-    }
-});
-
 setInterval(function () {
     const params = new URLSearchParams(window.location.search);
     const url = 'fetch_today.php' + (params.toString() ? ('?' + params.toString()) : '');

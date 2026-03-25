@@ -3,14 +3,16 @@ session_start();
 date_default_timezone_set('Asia/Bangkok');
 
 /* =========================
-   เปิด error ชั่วคราว
+   CONFIG
 ========================= */
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+$currentPage = basename($_SERVER['PHP_SELF']); // ใช้ชื่อไฟล์ปัจจุบันอัตโนมัติ
+
 /* =========================
-   ตรวจสอบ admin login
+   AUTH
 ========================= */
 if (!isset($_SESSION['admin_logged_in'])) {
     header("Location: login.php");
@@ -18,7 +20,7 @@ if (!isset($_SESSION['admin_logged_in'])) {
 }
 
 /* =========================
-   เชื่อมต่อฐานข้อมูล
+   DB CONNECT
 ========================= */
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
@@ -27,43 +29,74 @@ if ($conn->connect_error) {
     die("เชื่อมต่อฐานข้อมูลไม่สำเร็จ: " . $conn->connect_error);
 }
 
-$message = "";
-$message_type = "success";
-
 /* =========================
-   ฟังก์ชัน escape
+   HELPERS
 ========================= */
 function h($str) {
     return htmlspecialchars((string)$str, ENT_QUOTES, 'UTF-8');
 }
 
+function bookingStatusMap() {
+    return [
+        'pending' => [
+            'label' => 'รอยืนยัน',
+            'class' => 'status-pending'
+        ],
+        'approved' => [
+            'label' => 'อนุมัติแล้ว',
+            'class' => 'status-approved'
+        ],
+        'cancelled' => [
+            'label' => 'ยกเลิก',
+            'class' => 'status-cancelled'
+        ],
+    ];
+}
+
+function bookingStatusLabel($status) {
+    $map = bookingStatusMap();
+    return $map[$status]['label'] ?? $status;
+}
+
+function bookingStatusClass($status) {
+    $map = bookingStatusMap();
+    return $map[$status]['class'] ?? 'status-default';
+}
+
+$message = "";
+$message_type = "success";
+
 /* =========================
-   จัดการ Action ต่าง ๆ
+   POST ACTIONS
 ========================= */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+    $allowed_status = ['pending', 'approved', 'cancelled'];
 
-    /* -------------------------
-       1) แก้ไขข้อมูลการจอง
-    ------------------------- */
     if ($action === 'update_booking') {
-        $id            = (int)($_POST['id'] ?? 0);
-        $full_name     = trim($_POST['full_name'] ?? '');
-        $phone         = trim($_POST['phone'] ?? '');
-        $email         = trim($_POST['email'] ?? '');
-        $room_type     = trim($_POST['room_type'] ?? '');
-        $guests        = (int)($_POST['guests'] ?? 1);
-        $checkin_date  = trim($_POST['checkin_date'] ?? '');
-        $checkout_date = trim($_POST['checkout_date'] ?? '');
-        $note          = trim($_POST['note'] ?? '');
-        $booking_status= trim($_POST['booking_status'] ?? 'pending');
+        $id             = (int)($_POST['id'] ?? 0);
+        $full_name      = trim($_POST['full_name'] ?? '');
+        $phone          = trim($_POST['phone'] ?? '');
+        $email          = trim($_POST['email'] ?? '');
+        $room_type      = trim($_POST['room_type'] ?? '');
+        $guests         = (int)($_POST['guests'] ?? 1);
+        $checkin_date   = trim($_POST['checkin_date'] ?? '');
+        $checkout_date  = trim($_POST['checkout_date'] ?? '');
+        $note           = trim($_POST['note'] ?? '');
+        $booking_status = trim($_POST['booking_status'] ?? 'pending');
 
-        $allowed_status = ['pending', 'approved', 'cancelled'];
         if (!in_array($booking_status, $allowed_status, true)) {
             $booking_status = 'pending';
         }
 
-        if ($id <= 0 || $full_name === '' || $phone === '' || $room_type === '' || $checkin_date === '' || $checkout_date === '') {
+        if (
+            $id <= 0 ||
+            $full_name === '' ||
+            $phone === '' ||
+            $room_type === '' ||
+            $checkin_date === '' ||
+            $checkout_date === ''
+        ) {
             $message = "กรอกข้อมูลไม่ครบ";
             $message_type = "error";
         } elseif (strtotime($checkout_date) <= strtotime($checkin_date)) {
@@ -75,6 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 SET full_name = ?, phone = ?, email = ?, room_type = ?, guests = ?, checkin_date = ?, checkout_date = ?, note = ?, booking_status = ?
                 WHERE id = ?
             ");
+
             if ($stmt) {
                 $stmt->bind_param(
                     "ssssissssi",
@@ -89,6 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $booking_status,
                     $id
                 );
+
                 if ($stmt->execute()) {
                     $message = "อัปเดตข้อมูลเรียบร้อยแล้ว";
                     $message_type = "success";
@@ -104,9 +139,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    /* -------------------------
-       2) ลบข้อมูล
-    ------------------------- */
     if ($action === 'delete_booking') {
         $id = (int)($_POST['id'] ?? 0);
 
@@ -129,14 +161,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    /* -------------------------
-       3) เปลี่ยนสถานะ
-    ------------------------- */
     if ($action === 'change_status') {
         $id = (int)($_POST['id'] ?? 0);
         $new_status = trim($_POST['booking_status'] ?? 'pending');
 
-        $allowed_status = ['pending', 'approved', 'cancelled'];
         if ($id > 0 && in_array($new_status, $allowed_status, true)) {
             $stmt = $conn->prepare("UPDATE room_bookings SET booking_status = ? WHERE id = ?");
             if ($stmt) {
@@ -149,13 +177,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message_type = "error";
                 }
                 $stmt->close();
+            } else {
+                $message = "Prepare เปลี่ยนสถานะไม่สำเร็จ: " . $conn->error;
+                $message_type = "error";
             }
         }
     }
 
-    /* -------------------------
-       4) จัดเก็บข้อมูล
-    ------------------------- */
     if ($action === 'archive_booking') {
         $id = (int)($_POST['id'] ?? 0);
 
@@ -175,9 +203,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    /* -------------------------
-       5) กู้คืนข้อมูลจาก archive
-    ------------------------- */
     if ($action === 'unarchive_booking') {
         $id = (int)($_POST['id'] ?? 0);
 
@@ -197,12 +222,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    header("Location: admin_bookings.php?msg=" . urlencode($message) . "&type=" . urlencode($message_type));
+    header("Location: {$currentPage}?msg=" . urlencode($message) . "&type=" . urlencode($message_type));
     exit;
 }
 
 /* =========================
-   รับข้อความแจ้งเตือน
+   GET MESSAGE
 ========================= */
 if (isset($_GET['msg'])) {
     $message = $_GET['msg'];
@@ -210,7 +235,7 @@ if (isset($_GET['msg'])) {
 }
 
 /* =========================
-   ค้นหา / filter
+   FILTERS
 ========================= */
 $search = trim($_GET['search'] ?? '');
 $status_filter = trim($_GET['status'] ?? '');
@@ -218,22 +243,22 @@ $archive_filter = isset($_GET['archived']) ? (int)$_GET['archived'] : 0;
 $edit_id = isset($_GET['edit']) ? (int)$_GET['edit'] : 0;
 
 /* =========================
-   โหลดข้อมูลที่จะแก้ไข
+   LOAD EDIT DATA
 ========================= */
 $edit_data = null;
 if ($edit_id > 0) {
-    $stmt = $conn->prepare("SELECT * FROM room_bookings WHERE id = ? LIMIT 1");
-    if ($stmt) {
-        $stmt->bind_param("i", $edit_id);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $edit_data = $res->fetch_assoc();
-        $stmt->close();
+    $stmtEdit = $conn->prepare("SELECT * FROM room_bookings WHERE id = ? LIMIT 1");
+    if ($stmtEdit) {
+        $stmtEdit->bind_param("i", $edit_id);
+        $stmtEdit->execute();
+        $resEdit = $stmtEdit->get_result();
+        $edit_data = $resEdit->fetch_assoc();
+        $stmtEdit->close();
     }
 }
 
 /* =========================
-   สถิติสรุป
+   STATS
 ========================= */
 $stat_total = 0;
 $stat_pending = 0;
@@ -250,15 +275,16 @@ $sqlStat = "
     WHERE archived = $archive_filter
 ";
 $resStat = $conn->query($sqlStat);
+
 if ($resStat && $rowStat = $resStat->fetch_assoc()) {
-    $stat_total = (int)$rowStat['total'];
-    $stat_pending = (int)$rowStat['pending_count'];
-    $stat_approved = (int)$rowStat['approved_count'];
-    $stat_cancelled = (int)$rowStat['cancelled_count'];
+    $stat_total = (int)($rowStat['total'] ?? 0);
+    $stat_pending = (int)($rowStat['pending_count'] ?? 0);
+    $stat_approved = (int)($rowStat['approved_count'] ?? 0);
+    $stat_cancelled = (int)($rowStat['cancelled_count'] ?? 0);
 }
 
 /* =========================
-   ดึงข้อมูลรายการจอง
+   BOOKING LIST
 ========================= */
 $where = "WHERE archived = ?";
 $params = [$archive_filter];
@@ -281,13 +307,13 @@ if ($search !== '') {
     $types .= "sssss";
 }
 
-if ($status_filter !== '' && in_array($status_filter, ['pending','approved','cancelled'], true)) {
+if ($status_filter !== '' && in_array($status_filter, ['pending', 'approved', 'cancelled'], true)) {
     $where .= " AND booking_status = ?";
     $params[] = $status_filter;
     $types .= "s";
 }
 
-$sql = "SELECT * FROM room_bookings $where ORDER BY id DESC";
+$sql = "SELECT * FROM room_bookings {$where} ORDER BY id DESC";
 $stmt = $conn->prepare($sql);
 
 if (!$stmt) {
@@ -297,6 +323,8 @@ if (!$stmt) {
 $stmt->bind_param($types, ...$params);
 $stmt->execute();
 $result = $stmt->get_result();
+
+$statusOptions = bookingStatusMap();
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -305,211 +333,433 @@ $result = $stmt->get_result();
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>จัดการข้อมูลการจองห้องพัก</title>
 <style>
-    *{box-sizing:border-box}
+    :root{
+        --bg:#f4f7fb;
+        --surface:#ffffff;
+        --surface-2:#f8fafc;
+        --text:#18212f;
+        --muted:#6b7280;
+        --line:#e5eaf1;
+
+        --primary:#1d3557;
+        --primary-hover:#16304f;
+        --accent:#638411;
+        --accent-hover:#56740e;
+
+        --danger:#dc4c64;
+        --danger-hover:#c53a52;
+
+        --warning:#f59e0b;
+        --warning-hover:#dd8b07;
+
+        --gray:#6b7280;
+        --gray-hover:#59616c;
+
+        --shadow:0 12px 30px rgba(15, 23, 42, 0.08);
+        --radius-xl:22px;
+        --radius-lg:16px;
+        --radius-md:12px;
+    }
+
+    *{
+        box-sizing:border-box;
+    }
+
     body{
         margin:0;
-        font-family:'Segoe UI',Tahoma,sans-serif;
-        background:#f4f6f9;
-        color:#222;
+        font-family:'Segoe UI', Tahoma, sans-serif;
+        background:linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+        color:var(--text);
     }
+
     .container{
-        max-width:1400px;
+        max-width:1500px;
         margin:0 auto;
-        padding:24px;
+        padding:28px;
     }
+
     .topbar{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:16px;
+        flex-wrap:wrap;
+        margin-bottom:24px;
+    }
+
+    .page-heading{
+        display:flex;
+        flex-direction:column;
+        gap:6px;
+    }
+
+    .page-heading h1{
+        margin:0;
+        font-size:36px;
+        line-height:1.1;
+        font-weight:800;
+        letter-spacing:-0.5px;
+    }
+
+    .page-heading p{
+        margin:0;
+        color:var(--muted);
+        font-size:15px;
+    }
+
+    .btn{
+        border:none;
+        border-radius:14px;
+        padding:11px 16px;
+        font-size:14px;
+        font-weight:700;
+        cursor:pointer;
+        text-decoration:none;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        gap:8px;
+        transition:.18s ease;
+        white-space:nowrap;
+    }
+
+    .btn:hover{
+        transform:translateY(-1px);
+    }
+
+    .btn-primary{ background:var(--accent); color:#fff; }
+    .btn-primary:hover{ background:var(--accent-hover); }
+
+    .btn-secondary{ background:var(--gray); color:#fff; }
+    .btn-secondary:hover{ background:var(--gray-hover); }
+
+    .btn-info{ background:var(--primary); color:#fff; }
+    .btn-info:hover{ background:var(--primary-hover); }
+
+    .btn-danger{ background:var(--danger); color:#fff; }
+    .btn-danger:hover{ background:var(--danger-hover); }
+
+    .btn-warning{ background:var(--warning); color:#fff; }
+    .btn-warning:hover{ background:var(--warning-hover); }
+
+    .btn-sm{
+        padding:8px 12px;
+        border-radius:12px;
+        font-size:13px;
+    }
+
+    .panel{
+        background:rgba(255,255,255,0.92);
+        backdrop-filter:blur(10px);
+        border:1px solid rgba(255,255,255,0.7);
+        box-shadow:var(--shadow);
+        border-radius:var(--radius-xl);
+    }
+
+    .alert{
+        margin-bottom:20px;
+        padding:14px 18px;
+        border-radius:16px;
+        font-weight:700;
+    }
+
+    .alert.success{
+        background:#edf9f0;
+        color:#1d7d3f;
+        border:1px solid #c8ebd2;
+    }
+
+    .alert.error{
+        background:#fff1f2;
+        color:#be123c;
+        border:1px solid #fecdd3;
+    }
+
+    .stats{
+        display:grid;
+        grid-template-columns:repeat(4, minmax(0, 1fr));
+        gap:18px;
+        margin-bottom:22px;
+    }
+
+    .stat-card{
+        padding:22px;
+    }
+
+    .stat-card .label{
+        font-size:14px;
+        color:var(--muted);
+        font-weight:700;
+        margin-bottom:10px;
+    }
+
+    .stat-card .value{
+        font-size:34px;
+        font-weight:800;
+        line-height:1;
+        margin-bottom:8px;
+    }
+
+    .stat-card .sub{
+        font-size:13px;
+        color:var(--muted);
+    }
+
+    .layout{
+        display:grid;
+        grid-template-columns:360px minmax(0, 1fr);
+        gap:22px;
+        align-items:start;
+    }
+
+    .sidebar-card,
+    .content-card{
+        padding:22px;
+    }
+
+    .section-title{
+        margin:0 0 6px;
+        font-size:24px;
+        font-weight:800;
+    }
+
+    .section-desc{
+        margin:0 0 18px;
+        color:var(--muted);
+        font-size:14px;
+    }
+
+    .form-grid{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:14px;
+    }
+
+    .form-group{
+        margin-bottom:14px;
+    }
+
+    .form-group label{
+        display:block;
+        margin-bottom:7px;
+        font-size:14px;
+        font-weight:700;
+        color:var(--text);
+    }
+
+    .form-control,
+    textarea,
+    select{
+        width:100%;
+        background:#fff;
+        border:1px solid var(--line);
+        border-radius:14px;
+        padding:12px 14px;
+        font-size:15px;
+        color:var(--text);
+        outline:none;
+        transition:.18s ease;
+    }
+
+    .form-control:focus,
+    textarea:focus,
+    select:focus{
+        border-color:#9ab85c;
+        box-shadow:0 0 0 4px rgba(99,132,17,.10);
+    }
+
+    textarea{
+        min-height:120px;
+        resize:vertical;
+    }
+
+    .sticky-box{
+        position:sticky;
+        top:20px;
+    }
+
+    .empty-edit{
+        background:var(--surface-2);
+        border:1px dashed #d7dee8;
+        border-radius:18px;
+        padding:18px;
+        color:var(--muted);
+        line-height:1.6;
+    }
+
+    .filter-wrap{
+        padding:18px;
+        background:var(--surface-2);
+        border:1px solid #edf1f6;
+        border-radius:18px;
+        margin-bottom:18px;
+    }
+
+    .filter-actions{
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+        align-items:end;
+    }
+
+    .table-toolbar{
         display:flex;
         justify-content:space-between;
         align-items:center;
         gap:12px;
         flex-wrap:wrap;
-        margin-bottom:20px;
-    }
-    .title{
-        font-size:28px;
-        font-weight:800;
-        color:#1a1a1a;
-    }
-    .back-btn{
-        text-decoration:none;
-        background:#1d3557;
-        color:#fff;
-        padding:10px 16px;
-        border-radius:12px;
-        font-weight:700;
-    }
-    .msg{
-        padding:14px 16px;
-        border-radius:14px;
-        margin-bottom:18px;
-        font-weight:600;
-    }
-    .msg.success{
-        background:#eaf8ef;
-        color:#167c3f;
-        border:1px solid #bfe5cb;
-    }
-    .msg.error{
-        background:#fff0f0;
-        color:#c0392b;
-        border:1px solid #f1b4ae;
-    }
-    .stats{
-        display:grid;
-        grid-template-columns:repeat(4,1fr);
-        gap:16px;
-        margin-bottom:20px;
-    }
-    .card{
-        background:#fff;
-        border-radius:20px;
-        padding:20px;
-        box-shadow:0 8px 24px rgba(0,0,0,.06);
-    }
-    .card h3{
-        margin:0 0 8px;
-        font-size:16px;
-        color:#666;
-        font-weight:600;
-    }
-    .card .num{
-        font-size:30px;
-        font-weight:800;
-    }
-    .layout{
-        display:grid;
-        grid-template-columns: 1.1fr 2fr;
-        gap:20px;
-    }
-    .section-title{
-        margin:0 0 16px;
-        font-size:20px;
-        font-weight:800;
-    }
-    .form-group{
         margin-bottom:14px;
     }
-    .form-group label{
-        display:block;
-        margin-bottom:6px;
-        font-weight:700;
-        color:#333;
+
+    .table-meta{
+        color:var(--muted);
+        font-size:14px;
     }
-    .form-control, textarea, select{
-        width:100%;
-        border:1px solid #d9dfe7;
-        border-radius:12px;
-        padding:12px 14px;
-        font-size:15px;
-        outline:none;
-        background:#fff;
-    }
-    textarea{
-        min-height:110px;
-        resize:vertical;
-    }
-    .row{
-        display:grid;
-        grid-template-columns:1fr 1fr;
-        gap:12px;
-    }
-    .btn{
-        border:none;
-        border-radius:12px;
-        padding:11px 16px;
-        font-weight:700;
-        cursor:pointer;
-        text-decoration:none;
-        display:inline-block;
-    }
-    .btn-primary{ background:#638411; color:#fff; }
-    .btn-warning{ background:#f39c12; color:#fff; }
-    .btn-danger{ background:#d9534f; color:#fff; }
-    .btn-secondary{ background:#6c757d; color:#fff; }
-    .btn-info{ background:#1d3557; color:#fff; }
-    .btn-sm{
-        padding:8px 12px;
-        border-radius:10px;
-        font-size:13px;
-    }
-    .filter-box{
-        margin-bottom:18px;
-    }
+
     .table-wrap{
         overflow:auto;
+        border:1px solid #edf1f6;
+        border-radius:18px;
     }
+
     table{
         width:100%;
-        border-collapse:collapse;
-        min-width:1100px;
+        min-width:1180px;
+        border-collapse:separate;
+        border-spacing:0;
+        background:#fff;
     }
-    th, td{
-        padding:12px 10px;
-        border-bottom:1px solid #eceff3;
-        text-align:left;
-        vertical-align:top;
-        font-size:14px;
-    }
-    th{
+
+    thead th{
         background:#f8fafc;
+        color:#334155;
         font-size:14px;
         font-weight:800;
-        color:#333;
+        padding:14px 12px;
+        text-align:left;
+        border-bottom:1px solid #e8edf4;
         position:sticky;
         top:0;
         z-index:1;
     }
-    .badge{
-        display:inline-block;
-        padding:6px 10px;
+
+    tbody td{
+        padding:14px 12px;
+        font-size:14px;
+        vertical-align:top;
+        border-bottom:1px solid #eef2f7;
+    }
+
+    tbody tr:hover{
+        background:#fcfdff;
+    }
+
+    .name-cell strong{
+        display:block;
+        margin-bottom:4px;
+        font-size:15px;
+    }
+
+    .muted{
+        color:var(--muted);
+        font-size:13px;
+        line-height:1.5;
+    }
+
+    .status-badge{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-width:90px;
+        padding:7px 12px;
         border-radius:999px;
         font-size:12px;
-        font-weight:700;
+        font-weight:800;
     }
-    .pending{
-        background:#fff3cd;
-        color:#856404;
+
+    .status-pending{
+        background:#fff4cc;
+        color:#9a6700;
     }
-    .approved{
-        background:#d4edda;
-        color:#155724;
+
+    .status-approved{
+        background:#dcfce7;
+        color:#166534;
     }
-    .cancelled{
-        background:#f8d7da;
-        color:#721c24;
+
+    .status-cancelled{
+        background:#fee2e2;
+        color:#991b1b;
     }
-    .muted{
-        color:#666;
-        font-size:13px;
+
+    .status-default{
+        background:#e5e7eb;
+        color:#374151;
     }
+
     .action-group{
         display:flex;
         flex-wrap:wrap;
-        gap:6px;
+        gap:8px;
+        align-items:center;
     }
+
     .inline-form{
         display:inline;
+        margin:0;
     }
-    @media (max-width: 1100px){
+
+    .status-select{
+        min-width:135px;
+        padding:8px 10px;
+        border-radius:12px;
+        font-size:13px;
+    }
+
+    .table-empty{
+        text-align:center;
+        padding:34px 18px;
+        color:var(--muted);
+        background:#fff;
+    }
+
+    @media (max-width: 1180px){
         .layout{
             grid-template-columns:1fr;
         }
-        .stats{
-            grid-template-columns:repeat(2,1fr);
+
+        .sticky-box{
+            position:static;
         }
     }
-    @media (max-width: 640px){
+
+    @media (max-width: 860px){
+        .stats{
+            grid-template-columns:repeat(2, minmax(0, 1fr));
+        }
+
+        .form-grid{
+            grid-template-columns:1fr;
+        }
+
+        .page-heading h1{
+            font-size:28px;
+        }
+    }
+
+    @media (max-width: 580px){
+        .container{
+            padding:16px;
+        }
+
         .stats{
             grid-template-columns:1fr;
         }
-        .row{
-            grid-template-columns:1fr;
-        }
-        .container{
-            padding:14px;
-        }
-        .title{
-            font-size:22px;
+
+        .sidebar-card,
+        .content-card,
+        .stat-card{
+            padding:18px;
         }
     }
 </style>
@@ -518,127 +768,164 @@ $result = $stmt->get_result();
 <div class="container">
 
     <div class="topbar">
-        <div class="title">จัดการข้อมูลการจองห้องพัก</div>
-        <a href="index.php" class="back-btn">← กลับหน้าเว็บไซต์</a>
+        <div class="page-heading">
+            <h1>จัดการข้อมูลการจองห้องพัก</h1>
+            <p>ตรวจสอบ แก้ไข เปลี่ยนสถานะ และจัดเก็บรายการจองได้จากหน้าเดียว</p>
+        </div>
+
+        <a href="index.php" class="btn btn-info">← กลับหน้าเว็บไซต์</a>
     </div>
 
     <?php if ($message !== ''): ?>
-        <div class="msg <?php echo $message_type === 'error' ? 'error' : 'success'; ?>">
+        <div class="alert <?php echo $message_type === 'error' ? 'error' : 'success'; ?>">
             <?php echo h($message); ?>
         </div>
     <?php endif; ?>
 
     <div class="stats">
-        <div class="card">
-            <h3>รายการทั้งหมด</h3>
-            <div class="num"><?php echo $stat_total; ?></div>
+        <div class="panel stat-card">
+            <div class="label">รายการทั้งหมด</div>
+            <div class="value"><?php echo $stat_total; ?></div>
+            <div class="sub"><?php echo $archive_filter === 0 ? 'ข้อมูลที่กำลังใช้งาน' : 'ข้อมูลที่ถูกจัดเก็บแล้ว'; ?></div>
         </div>
-        <div class="card">
-            <h3>รอยืนยัน</h3>
-            <div class="num"><?php echo $stat_pending; ?></div>
+
+        <div class="panel stat-card">
+            <div class="label">รอยืนยัน</div>
+            <div class="value"><?php echo $stat_pending; ?></div>
+            <div class="sub">รายการที่ยังรอการตรวจสอบ</div>
         </div>
-        <div class="card">
-            <h3>อนุมัติแล้ว</h3>
-            <div class="num"><?php echo $stat_approved; ?></div>
+
+        <div class="panel stat-card">
+            <div class="label">อนุมัติแล้ว</div>
+            <div class="value"><?php echo $stat_approved; ?></div>
+            <div class="sub">รายการที่พร้อมเข้าพัก</div>
         </div>
-        <div class="card">
-            <h3>ยกเลิก</h3>
-            <div class="num"><?php echo $stat_cancelled; ?></div>
+
+        <div class="panel stat-card">
+            <div class="label">ยกเลิก</div>
+            <div class="value"><?php echo $stat_cancelled; ?></div>
+            <div class="sub">รายการที่ถูกยกเลิก</div>
         </div>
     </div>
 
     <div class="layout">
-        <div class="card">
-            <h2 class="section-title"><?php echo $edit_data ? 'แก้ไขข้อมูลการจอง' : 'เลือกข้อมูลจากตารางเพื่อแก้ไข'; ?></h2>
+        <div class="sticky-box">
+            <div class="panel sidebar-card">
+                <h2 class="section-title">
+                    <?php echo $edit_data ? 'แก้ไขข้อมูลการจอง' : 'แผงแก้ไขข้อมูล'; ?>
+                </h2>
+                <p class="section-desc">
+                    <?php echo $edit_data ? 'ปรับข้อมูลรายการที่เลือก แล้วกดบันทึกการแก้ไข' : 'กดปุ่ม “แก้ไข” จากตารางด้านขวาเพื่อโหลดข้อมูลเข้าฟอร์ม'; ?>
+                </p>
 
-            <?php if ($edit_data): ?>
-                <form method="POST">
-                    <input type="hidden" name="action" value="update_booking">
-                    <input type="hidden" name="id" value="<?php echo (int)$edit_data['id']; ?>">
+                <?php if ($edit_data): ?>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="update_booking">
+                        <input type="hidden" name="id" value="<?php echo (int)$edit_data['id']; ?>">
 
-                    <div class="form-group">
-                        <label>ชื่อผู้จอง</label>
-                        <input type="text" name="full_name" class="form-control" value="<?php echo h($edit_data['full_name']); ?>" required>
-                    </div>
-
-                    <div class="row">
                         <div class="form-group">
-                            <label>เบอร์โทร</label>
-                            <input type="text" name="phone" class="form-control" value="<?php echo h($edit_data['phone']); ?>" required>
+                            <label>ชื่อผู้จอง</label>
+                            <input type="text" name="full_name" class="form-control" value="<?php echo h($edit_data['full_name']); ?>" required>
                         </div>
-                        <div class="form-group">
-                            <label>อีเมล</label>
-                            <input type="email" name="email" class="form-control" value="<?php echo h($edit_data['email']); ?>">
-                        </div>
-                    </div>
 
-                    <div class="row">
-                        <div class="form-group">
-                            <label>ประเภท / ชื่อห้อง</label>
-                            <input type="text" name="room_type" class="form-control" value="<?php echo h($edit_data['room_type']); ?>" required>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>เบอร์โทร</label>
+                                <input type="text" name="phone" class="form-control" value="<?php echo h($edit_data['phone']); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label>อีเมล</label>
+                                <input type="email" name="email" class="form-control" value="<?php echo h($edit_data['email']); ?>">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>จำนวนผู้เข้าพัก</label>
-                            <input type="number" name="guests" class="form-control" min="1" value="<?php echo (int)$edit_data['guests']; ?>" required>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>ประเภท / ชื่อห้อง</label>
+                                <input type="text" name="room_type" class="form-control" value="<?php echo h($edit_data['room_type']); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label>จำนวนผู้เข้าพัก</label>
+                                <input type="number" name="guests" class="form-control" min="1" value="<?php echo (int)$edit_data['guests']; ?>" required>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="row">
-                        <div class="form-group">
-                            <label>วันเช็คอิน</label>
-                            <input type="date" name="checkin_date" class="form-control" value="<?php echo h($edit_data['checkin_date']); ?>" required>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>วันเช็คอิน</label>
+                                <input type="date" name="checkin_date" class="form-control" value="<?php echo h($edit_data['checkin_date']); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label>วันเช็คเอาท์</label>
+                                <input type="date" name="checkout_date" class="form-control" value="<?php echo h($edit_data['checkout_date']); ?>" required>
+                            </div>
                         </div>
+
                         <div class="form-group">
-                            <label>วันเช็คเอาท์</label>
-                            <input type="date" name="checkout_date" class="form-control" value="<?php echo h($edit_data['checkout_date']); ?>" required>
+                            <label>สถานะการจอง</label>
+                            <select name="booking_status" class="form-control">
+                                <?php foreach ($statusOptions as $statusKey => $statusItem): ?>
+                                    <option value="<?php echo h($statusKey); ?>" <?php echo $edit_data['booking_status'] === $statusKey ? 'selected' : ''; ?>>
+                                        <?php echo h($statusItem['label']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
-                    </div>
 
-                    <div class="form-group">
-                        <label>สถานะการจอง</label>
-                        <select name="booking_status" class="form-control">
-                            <option value="pending" <?php echo $edit_data['booking_status'] === 'pending' ? 'selected' : ''; ?>>pending</option>
-                            <option value="approved" <?php echo $edit_data['booking_status'] === 'approved' ? 'selected' : ''; ?>>approved</option>
-                            <option value="cancelled" <?php echo $edit_data['booking_status'] === 'cancelled' ? 'selected' : ''; ?>>cancelled</option>
-                        </select>
-                    </div>
+                        <div class="form-group">
+                            <label>หมายเหตุ</label>
+                            <textarea name="note"><?php echo h($edit_data['note']); ?></textarea>
+                        </div>
 
-                    <div class="form-group">
-                        <label>หมายเหตุ</label>
-                        <textarea name="note"><?php echo h($edit_data['note']); ?></textarea>
+                        <div class="filter-actions">
+                            <button type="submit" class="btn btn-primary">บันทึกการแก้ไข</button>
+                            <a href="<?php echo h($currentPage); ?>?archived=<?php echo $archive_filter; ?>" class="btn btn-secondary">ยกเลิก</a>
+                        </div>
+                    </form>
+                <?php else: ?>
+                    <div class="empty-edit">
+                        ยังไม่ได้เลือกรายการที่ต้องการแก้ไข<br>
+                        ให้กดปุ่ม <strong>แก้ไข</strong> จากตารางรายการด้านขวา
                     </div>
-
-                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                        <button type="submit" class="btn btn-primary">บันทึกการแก้ไข</button>
-                        <a href="admin_bookings.php?archived=<?php echo $archive_filter; ?>" class="btn btn-secondary">ยกเลิก</a>
-                    </div>
-                </form>
-            <?php else: ?>
-                <div class="muted">ยังไม่ได้เลือกรายการที่ต้องการแก้ไข ให้กดปุ่ม “แก้ไข” จากตารางด้านขวา</div>
-            <?php endif; ?>
+                <?php endif; ?>
+            </div>
         </div>
 
-        <div class="card">
-            <h2 class="section-title">รายการจองทั้งหมด</h2>
+        <div class="panel content-card">
+            <div class="table-toolbar">
+                <div>
+                    <h2 class="section-title" style="margin-bottom:4px;">รายการจองทั้งหมด</h2>
+                    <div class="table-meta">ค้นหา กรองสถานะ และจัดการรายการได้จากส่วนนี้</div>
+                </div>
+            </div>
 
-            <form method="GET" class="filter-box">
-                <div class="row">
+            <form method="GET" class="filter-wrap">
+                <div class="form-grid">
                     <div class="form-group">
                         <label>ค้นหา</label>
-                        <input type="text" name="search" class="form-control" placeholder="ชื่อ, เบอร์โทร, อีเมล, ห้อง, หมายเหตุ" value="<?php echo h($search); ?>">
+                        <input
+                            type="text"
+                            name="search"
+                            class="form-control"
+                            placeholder="ชื่อ, เบอร์โทร, อีเมล, ห้อง, หมายเหตุ"
+                            value="<?php echo h($search); ?>"
+                        >
                     </div>
+
                     <div class="form-group">
                         <label>สถานะ</label>
                         <select name="status" class="form-control">
                             <option value="">ทั้งหมด</option>
-                            <option value="pending" <?php echo $status_filter === 'pending' ? 'selected' : ''; ?>>pending</option>
-                            <option value="approved" <?php echo $status_filter === 'approved' ? 'selected' : ''; ?>>approved</option>
-                            <option value="cancelled" <?php echo $status_filter === 'cancelled' ? 'selected' : ''; ?>>cancelled</option>
+                            <?php foreach ($statusOptions as $statusKey => $statusItem): ?>
+                                <option value="<?php echo h($statusKey); ?>" <?php echo $status_filter === $statusKey ? 'selected' : ''; ?>>
+                                    <?php echo h($statusItem['label']); ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                 </div>
 
-                <div class="row">
+                <div class="form-grid">
                     <div class="form-group">
                         <label>ประเภทข้อมูล</label>
                         <select name="archived" class="form-control">
@@ -646,9 +933,13 @@ $result = $stmt->get_result();
                             <option value="1" <?php echo $archive_filter === 1 ? 'selected' : ''; ?>>ข้อมูลที่จัดเก็บแล้ว</option>
                         </select>
                     </div>
-                    <div class="form-group" style="display:flex; align-items:end; gap:10px;">
-                        <button type="submit" class="btn btn-primary">ค้นหา</button>
-                        <a href="admin_bookings.php" class="btn btn-secondary">รีเซ็ต</a>
+
+                    <div class="form-group">
+                        <label>การทำงาน</label>
+                        <div class="filter-actions">
+                            <button type="submit" class="btn btn-primary">ค้นหา</button>
+                            <a href="<?php echo h($currentPage); ?>" class="btn btn-secondary">รีเซ็ต</a>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -657,16 +948,16 @@ $result = $stmt->get_result();
                 <table>
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>ผู้จอง</th>
-                            <th>ติดต่อ</th>
-                            <th>ห้อง</th>
-                            <th>ผู้เข้าพัก</th>
-                            <th>วันเข้าพัก</th>
-                            <th>หมายเหตุ</th>
-                            <th>สถานะ</th>
-                            <th>สร้างเมื่อ</th>
-                            <th>จัดการ</th>
+                            <th style="width:70px;">ID</th>
+                            <th style="width:220px;">ผู้จอง</th>
+                            <th style="width:220px;">ติดต่อ</th>
+                            <th style="width:140px;">ห้อง</th>
+                            <th style="width:110px;">ผู้เข้าพัก</th>
+                            <th style="width:170px;">วันเข้าพัก</th>
+                            <th style="width:170px;">หมายเหตุ</th>
+                            <th style="width:120px;">สถานะ</th>
+                            <th style="width:170px;">สร้างเมื่อ</th>
+                            <th style="width:270px;">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -674,30 +965,44 @@ $result = $stmt->get_result();
                         <?php while ($row = $result->fetch_assoc()): ?>
                             <tr>
                                 <td><?php echo (int)$row['id']; ?></td>
-                                <td>
-                                    <strong><?php echo h($row['full_name']); ?></strong><br>
-                                    <span class="muted">room_id: <?php echo (int)$row['room_id']; ?></span>
+
+                                <td class="name-cell">
+                                    <strong><?php echo h($row['full_name']); ?></strong>
+                                    <div class="muted">room_id: <?php echo (int)$row['room_id']; ?></div>
                                 </td>
+
                                 <td>
                                     <?php echo h($row['phone']); ?><br>
                                     <span class="muted"><?php echo h($row['email']); ?></span>
                                 </td>
+
                                 <td><?php echo h($row['room_type']); ?></td>
+
                                 <td><?php echo (int)$row['guests']; ?> คน</td>
+
                                 <td>
-                                    เข้า: <?php echo h($row['checkin_date']); ?><br>
-                                    ออก: <?php echo h($row['checkout_date']); ?>
+                                    <div>เข้า: <?php echo h($row['checkin_date']); ?></div>
+                                    <div>ออก: <?php echo h($row['checkout_date']); ?></div>
                                 </td>
-                                <td><?php echo nl2br(h($row['note'])); ?></td>
+
+                                <td><?php echo $row['note'] !== '' ? nl2br(h($row['note'])) : '<span class="muted">-</span>'; ?></td>
+
                                 <td>
-                                    <span class="badge <?php echo h($row['booking_status']); ?>">
-                                        <?php echo h($row['booking_status']); ?>
+                                    <span class="status-badge <?php echo h(bookingStatusClass($row['booking_status'])); ?>">
+                                        <?php echo h(bookingStatusLabel($row['booking_status'])); ?>
                                     </span>
                                 </td>
+
                                 <td><?php echo h($row['created_at']); ?></td>
+
                                 <td>
                                     <div class="action-group">
-                                        <a class="btn btn-info btn-sm" href="admin_bookings.php?edit=<?php echo (int)$row['id']; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status_filter); ?>&archived=<?php echo $archive_filter; ?>">แก้ไข</a>
+                                        <a
+                                            class="btn btn-info btn-sm"
+                                            href="<?php echo h($currentPage); ?>?edit=<?php echo (int)$row['id']; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status_filter); ?>&archived=<?php echo $archive_filter; ?>"
+                                        >
+                                            แก้ไข
+                                        </a>
 
                                         <form method="POST" class="inline-form" onsubmit="return confirm('ยืนยันการลบข้อมูลนี้?');">
                                             <input type="hidden" name="action" value="delete_booking">
@@ -722,10 +1027,12 @@ $result = $stmt->get_result();
                                         <form method="POST" class="inline-form">
                                             <input type="hidden" name="action" value="change_status">
                                             <input type="hidden" name="id" value="<?php echo (int)$row['id']; ?>">
-                                            <select name="booking_status" onchange="this.form.submit()" class="form-control" style="padding:7px 10px; min-width:120px;">
-                                                <option value="pending" <?php echo $row['booking_status'] === 'pending' ? 'selected' : ''; ?>>pending</option>
-                                                <option value="approved" <?php echo $row['booking_status'] === 'approved' ? 'selected' : ''; ?>>approved</option>
-                                                <option value="cancelled" <?php echo $row['booking_status'] === 'cancelled' ? 'selected' : ''; ?>>cancelled</option>
+                                            <select name="booking_status" onchange="this.form.submit()" class="form-control status-select">
+                                                <?php foreach ($statusOptions as $statusKey => $statusItem): ?>
+                                                    <option value="<?php echo h($statusKey); ?>" <?php echo $row['booking_status'] === $statusKey ? 'selected' : ''; ?>>
+                                                        <?php echo h($statusItem['label']); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
                                             </select>
                                         </form>
                                     </div>
@@ -734,7 +1041,7 @@ $result = $stmt->get_result();
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="10" style="text-align:center; padding:30px;">ไม่พบข้อมูลการจอง</td>
+                            <td colspan="10" class="table-empty">ไม่พบข้อมูลการจอง</td>
                         </tr>
                     <?php endif; ?>
                     </tbody>

@@ -616,21 +616,19 @@ $statusOptions = bookingStatusMap();
         font-size:14px;
     }
 
-.table-wrap{
-    overflow:visible;
-    border:1px solid #edf1f6;
-    border-radius:18px;
-    width:100%;
-}
+    .table-wrap{
+        overflow:auto;
+        border:1px solid #edf1f6;
+        border-radius:18px;
+    }
 
-table{
-    width:100%;
-    min-width:100%;
-    border-collapse:separate;
-    border-spacing:0;
-    background:#fff;
-    table-layout:fixed;
-}
+    table{
+        width:100%;
+        min-width:1180px;
+        border-collapse:separate;
+        border-spacing:0;
+        background:#fff;
+    }
 
     thead th{
         background:#f8fafc;

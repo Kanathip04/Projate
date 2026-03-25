@@ -30,9 +30,8 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
    รับค่าจากฟอร์ม
 ------------------------------ */
 $room_id       = isset($_POST['room_id']) ? (int)$_POST['room_id'] : 0;
-$room_name     = trim($_POST['room_name'] ?? '');
-$room_price    = isset($_POST['room_price']) ? (float)$_POST['room_price'] : 0;
-$customer_name = trim($_POST['customer_name'] ?? '');
+$room_name     = trim($_POST['room_name'] ?? '');   // จะเอาไปเก็บลง room_type
+$customer_name = trim($_POST['customer_name'] ?? ''); // จะเอาไปเก็บลง full_name
 $phone         = trim($_POST['phone'] ?? '');
 $email         = trim($_POST['email'] ?? '');
 $checkin_date  = trim($_POST['checkin_date'] ?? '');
@@ -42,6 +41,14 @@ $children      = isset($_POST['children']) ? (int)$_POST['children'] : 0;
 $note          = trim($_POST['note'] ?? '');
 
 /* -----------------------------
+   แปลงค่าให้ตรงกับโครงสร้างตารางจริง
+------------------------------ */
+$full_name = $customer_name;
+$room_type = $room_name;
+$guests    = $adults + $children;
+$status    = 'pending'; // ตารางจริงใช้ enum: pending/approved/cancelled
+
+/* -----------------------------
    ตรวจสอบข้อมูล
 ------------------------------ */
 $errors = [];
@@ -49,13 +56,10 @@ $errors = [];
 if ($room_id <= 0) {
     $errors[] = "ไม่พบรหัสห้อง";
 }
-if ($room_name === '') {
+if ($room_type === '') {
     $errors[] = "ไม่พบชื่อห้อง";
 }
-if ($room_price <= 0) {
-    $errors[] = "ไม่พบราคาห้อง";
-}
-if ($customer_name === '') {
+if ($full_name === '') {
     $errors[] = "กรุณากรอกชื่อผู้จอง";
 }
 if ($phone === '') {
@@ -73,7 +77,6 @@ if ($adults < 1) {
 if ($children < 0) {
     $errors[] = "จำนวนเด็กห้ามติดลบ";
 }
-
 if ($checkin_date !== '' && $checkout_date !== '') {
     if (strtotime($checkout_date) <= strtotime($checkin_date)) {
         $errors[] = "วันเช็คเอาท์ต้องมากกว่าวันเช็คอิน";
@@ -93,10 +96,11 @@ if (!empty($errors)) {
 
 /* -----------------------------
    เตรียม SQL
+   ใช้คอลัมน์ตามตารางจริง
 ------------------------------ */
 $sql = "INSERT INTO room_bookings
-        (room_id, room_name, room_price, customer_name, phone, email, checkin_date, checkout_date, adults, children, note, booking_status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        (room_id, full_name, phone, email, room_type, guests, checkin_date, checkout_date, note, booking_status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 $stmt = $conn->prepare($sql);
 
@@ -105,38 +109,28 @@ if (!$stmt) {
 }
 
 /*
-ชนิดข้อมูล:
-i = int
-s = string
-d = double
-
+ชนิดข้อมูล
 room_id       = i
-room_name     = s
-room_price    = d
-customer_name = s
+full_name     = s
 phone         = s
 email         = s
+room_type     = s
+guests        = i
 checkin_date  = s
 checkout_date = s
-adults        = i
-children      = i
 note          = s
 status        = s
 */
-$status = 'รอการยืนยัน';
-
 $bind = $stmt->bind_param(
-    "isdsssssiiss",
+    "issssissss",
     $room_id,
-    $room_name,
-    $room_price,
-    $customer_name,
+    $full_name,
     $phone,
     $email,
+    $room_type,
+    $guests,
     $checkin_date,
     $checkout_date,
-    $adults,
-    $children,
     $note,
     $status
 );
@@ -157,9 +151,7 @@ if ($stmt->execute()) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>จองห้องพักสำเร็จ</title>
         <style>
-            *{
-                box-sizing:border-box;
-            }
+            *{box-sizing:border-box;}
             body{
                 margin:0;
                 font-family:'Segoe UI', Tahoma, sans-serif;
@@ -204,9 +196,10 @@ if ($stmt->execute()) {
         <div class="box">
             <h1>ส่งคำขอจองสำเร็จ</h1>
             <p>ระบบบันทึกข้อมูลการจองเรียบร้อยแล้ว</p>
-            <p><strong>ห้อง:</strong> <?php echo htmlspecialchars($room_name); ?></p>
-            <p><strong>ผู้จอง:</strong> <?php echo htmlspecialchars($customer_name); ?></p>
-            <p><strong>สถานะ:</strong> <?php echo htmlspecialchars($status); ?></p>
+            <p><strong>ห้อง:</strong> <?php echo htmlspecialchars($room_type); ?></p>
+            <p><strong>ผู้จอง:</strong> <?php echo htmlspecialchars($full_name); ?></p>
+            <p><strong>จำนวนผู้เข้าพัก:</strong> <?php echo (int)$guests; ?> คน</p>
+            <p><strong>สถานะ:</strong> รอการยืนยัน</p>
             <a href="rooms.php" class="btn">กลับไปหน้าห้องพัก</a>
         </div>
     </body>

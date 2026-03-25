@@ -1,165 +1,842 @@
 <?php
 date_default_timezone_set('Asia/Bangkok');
 
-$room_type = $_GET['room_type'] ?? '';
-$price     = $_GET['price'] ?? 0;
-$checkin   = $_GET['checkin'] ?? '';
-$checkout  = $_GET['checkout'] ?? '';
-$guests    = $_GET['guests'] ?? 1;
+/* =========================
+   รับค่าจาก GET
+========================= */
+$checkin  = isset($_GET['checkin']) ? trim($_GET['checkin']) : '';
+$checkout = isset($_GET['checkout']) ? trim($_GET['checkout']) : '';
+$guests   = isset($_GET['guests']) ? (int)$_GET['guests'] : 0;
+$roomtype = isset($_GET['roomtype']) ? trim($_GET['roomtype']) : '';
 
-if ($room_type == '' || $checkin == '' || $checkout == '') {
-    die("ข้อมูลการจองไม่ครบ");
+/* =========================
+   ข้อมูลห้องพัก
+========================= */
+$rooms = [
+    [
+        'type_key'   => 'standard',
+        'name'       => 'Standard Room',
+        'price'      => 800,
+        'image'      => 'uploads/room1.jpg',
+        'desc'       => 'ห้องพักมาตรฐาน เหมาะสำหรับผู้เข้าพัก 1-2 คน บรรยากาศเรียบง่าย สะอาด และเงียบสงบ',
+        'capacity_text' => 'รองรับ 2 คน',
+        'max_guests' => 2,
+        'features'   => ['เตียง 1 เตียง', 'Wi-Fi', 'เครื่องปรับอากาศ', 'ห้องน้ำในตัว']
+    ],
+    [
+        'type_key'   => 'deluxe',
+        'name'       => 'Deluxe Room',
+        'price'      => 1200,
+        'image'      => 'uploads/room2.jpg',
+        'desc'       => 'ห้องพักขนาดใหญ่ขึ้น พร้อมสิ่งอำนวยความสะดวกครบครัน เหมาะสำหรับผู้เข้าพักที่ต้องการความสะดวกสบายมากขึ้น',
+        'capacity_text' => 'รองรับ 2-3 คน',
+        'max_guests' => 3,
+        'features'   => ['เตียงใหญ่', 'Wi-Fi', 'ทีวี', 'ตู้เย็น']
+    ],
+    [
+        'type_key'   => 'family',
+        'name'       => 'Family Room',
+        'price'      => 1800,
+        'image'      => 'uploads/room3.jpg',
+        'desc'       => 'ห้องพักสำหรับครอบครัวหรือผู้เข้าพักหลายคน พื้นที่กว้าง เหมาะกับการเข้าพักเป็นกลุ่ม',
+        'capacity_text' => 'รองรับ 4-5 คน',
+        'max_guests' => 5,
+        'features'   => ['2 เตียง', 'Wi-Fi', 'ทีวี', 'พื้นที่กว้าง']
+    ]
+];
+
+/* =========================
+   กรองห้องพัก
+========================= */
+$filteredRooms = $rooms;
+
+if ($roomtype !== '') {
+    $filteredRooms = array_filter($filteredRooms, function ($room) use ($roomtype) {
+        return $room['type_key'] === $roomtype;
+    });
 }
+
+if ($guests > 0) {
+    $filteredRooms = array_filter($filteredRooms, function ($room) use ($guests) {
+        return $guests <= $room['max_guests'];
+    });
+}
+
+/* reset index */
+$filteredRooms = array_values($filteredRooms);
+
+/* =========================
+   ตรวจสอบว่ามีการค้นหาหรือยัง
+========================= */
+$isSearching = ($checkin !== '' || $checkout !== '' || $guests > 0 || $roomtype !== '');
 ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>กรอกข้อมูลการจอง</title>
+<title>จองห้องพัก | สถาบันวิจัยวลัยรุกขเวช</title>
+
 <style>
-body{
-    font-family:'Segoe UI',sans-serif;
-    background:#f4f4f4;
+:root{
+    --brand:#7a8f3b;
+    --brand-dark:#5f7229;
+    --text:#222;
+    --muted:#666;
+    --bg:#f7f7f5;
+    --white:#ffffff;
+    --border:#e8e8e8;
+    --shadow:0 10px 30px rgba(0,0,0,0.08);
+    --radius:18px;
+    --danger:#c62828;
+}
+
+*{
     margin:0;
     padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:"Segoe UI", Tahoma, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.6;
+}
+
+a{
+    text-decoration:none;
+    color:inherit;
+}
+
+/* =========================
+   HEADER
+========================= */
+.site-header{
+    width:100%;
+    background:#fff;
+    border-bottom:1px solid #eee;
+    position:sticky;
+    top:0;
+    z-index:1000;
+}
+
+.nav-wrap{
+    max-width:1280px;
+    margin:auto;
+    padding:18px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px;
+}
+
+.brand{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    min-width:0;
+}
+
+.brand img{
+    width:88px;
+    height:88px;
+    object-fit:contain;
+}
+
+.brand-text{
+    line-height:1.25;
+}
+
+.brand-text h1{
+    font-size:20px;
+    font-weight:800;
+    color:#1d1d1d;
+}
+
+.brand-text p{
+    font-size:14px;
+    color:#444;
+    font-weight:600;
+}
+
+.nav-menu{
+    display:flex;
+    align-items:center;
+    gap:36px;
+    flex-wrap:wrap;
+}
+
+.nav-menu a{
+    font-size:15px;
+    font-weight:700;
+    color:#333;
+    transition:0.2s ease;
+    position:relative;
+}
+
+.nav-menu a:hover,
+.nav-menu a.active{
+    color:var(--brand-dark);
+}
+
+.nav-menu a.active::after{
+    content:"";
+    position:absolute;
+    left:0;
+    bottom:-8px;
+    width:100%;
+    height:3px;
+    border-radius:20px;
+    background:var(--brand);
+}
+
+/* =========================
+   HERO
+========================= */
+.hero{
+    max-width:1280px;
+    margin:34px auto 24px;
+    padding:0 28px;
+}
+
+.hero-box{
+    background:
+        linear-gradient(rgba(0,0,0,0.38), rgba(0,0,0,0.35)),
+        url('uploads/room-banner.jpg') center/cover no-repeat;
+    border-radius:28px;
+    min-height:360px;
+    display:flex;
+    align-items:center;
+    padding:46px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+}
+
+.hero-content{
+    max-width:650px;
+    color:#fff;
+}
+
+.hero-badge{
+    display:inline-block;
+    background:rgba(255,255,255,0.18);
+    backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,0.25);
+    color:#fff;
+    padding:8px 16px;
+    border-radius:999px;
+    font-size:14px;
+    margin-bottom:18px;
+    font-weight:700;
+}
+
+.hero-content h2{
+    font-size:40px;
+    line-height:1.2;
+    margin-bottom:14px;
+    font-weight:800;
+}
+
+.hero-content p{
+    font-size:16px;
+    line-height:1.7;
+    color:rgba(255,255,255,0.94);
+}
+
+/* =========================
+   SEARCH BOX
+========================= */
+.booking-search{
+    max-width:1280px;
+    margin:0 auto 28px;
+    padding:0 28px;
+}
+
+.search-card{
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:24px;
+    padding:24px;
+    box-shadow:var(--shadow);
+    margin-top:-58px;
+    position:relative;
+    z-index:10;
+}
+
+.search-card h3{
+    font-size:24px;
+    margin-bottom:18px;
     color:#222;
 }
-.container{
-    max-width:900px;
-    margin:40px auto;
-    background:#fff;
-    border-radius:20px;
-    box-shadow:0 10px 30px rgba(0,0,0,.08);
-    padding:30px;
-}
-h2{
-    margin-top:0;
-    color:#2d2d2d;
-}
-.summary{
-    background:#f8f8f0;
-    border:1px solid #e5e5d8;
-    border-radius:16px;
-    padding:20px;
-    margin-bottom:25px;
-}
-.summary p{
-    margin:8px 0;
-    font-size:16px;
-}
-form{
+
+.form-grid{
     display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:18px;
+    grid-template-columns:repeat(5, 1fr);
+    gap:16px;
+    align-items:end;
 }
+
 .form-group{
     display:flex;
     flex-direction:column;
+    gap:8px;
 }
-.form-group.full{
-    grid-column:1 / -1;
+
+.form-group label{
+    font-size:14px;
+    font-weight:700;
+    color:#444;
 }
-label{
-    margin-bottom:8px;
-    font-weight:600;
-}
-input, textarea{
-    padding:14px;
+
+.form-group input,
+.form-group select{
+    width:100%;
+    height:50px;
     border:1px solid #ddd;
-    border-radius:12px;
+    border-radius:14px;
+    padding:0 14px;
     font-size:15px;
+    outline:none;
+    transition:0.2s ease;
+    background:#fff;
 }
-textarea{
-    min-height:120px;
-    resize:vertical;
+
+.form-group input:focus,
+.form-group select:focus{
+    border-color:var(--brand);
+    box-shadow:0 0 0 4px rgba(122,143,59,0.12);
 }
-.actions{
-    grid-column:1 / -1;
-    display:flex;
-    gap:12px;
-    margin-top:10px;
-}
-.btn{
-    display:inline-block;
-    padding:14px 22px;
-    border-radius:12px;
-    text-decoration:none;
+
+.search-btn{
+    width:100%;
+    height:50px;
     border:none;
+    border-radius:14px;
+    background:linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color:#fff;
+    font-size:15px;
+    font-weight:800;
     cursor:pointer;
-    font-size:16px;
+    transition:0.2s ease;
+}
+
+.search-btn:hover{
+    transform:translateY(-2px);
+    box-shadow:0 12px 20px rgba(95,114,41,0.22);
+}
+
+.reset-btn{
+    margin-top:14px;
+    display:inline-block;
+    padding:10px 16px;
+    border-radius:12px;
+    border:1px solid #ddd;
+    background:#fff;
+    color:#333;
     font-weight:700;
 }
-.btn-back{
-    background:#ddd;
+
+/* =========================
+   SECTION
+========================= */
+.section{
+    max-width:1280px;
+    margin:0 auto;
+    padding:10px 28px 50px;
+}
+
+.section-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:end;
+    gap:20px;
+    margin-bottom:24px;
+    flex-wrap:wrap;
+}
+
+.section-head h3{
+    font-size:30px;
+    color:#1f1f1f;
+}
+
+.section-head p{
+    color:var(--muted);
+    font-size:15px;
+    max-width:700px;
+}
+
+.search-result-note{
+    margin-bottom:18px;
+    padding:14px 18px;
+    border-radius:16px;
+    background:#f4f7ea;
+    color:#4f6121;
+    border:1px solid #dce7be;
+    font-weight:700;
+}
+
+.no-room{
+    background:#fff;
+    border:1px solid #f0d7d7;
+    color:var(--danger);
+    border-radius:20px;
+    padding:22px;
+    box-shadow:var(--shadow);
+    font-weight:700;
+}
+
+/* =========================
+   ROOM CARDS
+========================= */
+.rooms-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:24px;
+}
+
+.room-card{
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:24px;
+    overflow:hidden;
+    box-shadow:var(--shadow);
+    transition:0.25s ease;
+    display:flex;
+    flex-direction:column;
+}
+
+.room-card:hover{
+    transform:translateY(-4px);
+}
+
+.room-image{
+    width:100%;
+    height:230px;
+    object-fit:cover;
+    display:block;
+}
+
+.room-body{
+    padding:22px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    flex:1;
+}
+
+.room-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:14px;
+}
+
+.room-title{
+    font-size:22px;
+    font-weight:800;
     color:#222;
 }
-.btn-save{
-    background:#6b7f1a;
-    color:#fff;
+
+.room-price{
+    font-size:22px;
+    font-weight:800;
+    color:var(--brand-dark);
+    white-space:nowrap;
 }
-@media (max-width: 768px){
-    .container{
-        margin:20px;
-        padding:20px;
+
+.room-price span{
+    font-size:13px;
+    color:#666;
+    font-weight:600;
+}
+
+.room-desc{
+    color:#666;
+    font-size:15px;
+    min-height:48px;
+}
+
+.room-features{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+}
+
+.feature{
+    padding:8px 12px;
+    border-radius:999px;
+    background:#f4f7ea;
+    color:var(--brand-dark);
+    font-size:13px;
+    font-weight:700;
+}
+
+.room-footer{
+    margin-top:auto;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+}
+
+.room-capacity{
+    color:#444;
+    font-size:14px;
+    font-weight:600;
+}
+
+.book-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:12px 22px;
+    border:none;
+    border-radius:12px;
+    background:linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color:#fff;
+    font-size:14px;
+    font-weight:800;
+    cursor:pointer;
+    transition:0.2s ease;
+}
+
+.book-btn:hover{
+    transform:translateY(-2px);
+}
+
+.book-btn.disabled{
+    background:#b7b7b7;
+    pointer-events:none;
+    cursor:not-allowed;
+}
+
+/* =========================
+   INFO
+========================= */
+.info-box{
+    margin-top:36px;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:24px;
+    padding:24px;
+    box-shadow:var(--shadow);
+}
+
+.info-box h4{
+    font-size:22px;
+    margin-bottom:12px;
+}
+
+.info-box ul{
+    padding-left:18px;
+    color:#555;
+}
+
+.info-box li{
+    margin-bottom:8px;
+}
+
+/* =========================
+   FOOTER
+========================= */
+.footer{
+    margin-top:40px;
+    background:#fff;
+    border-top:1px solid #eee;
+}
+
+.footer-inner{
+    max-width:1280px;
+    margin:auto;
+    padding:20px 28px;
+    text-align:center;
+    color:#666;
+    font-size:14px;
+}
+
+/* =========================
+   MOBILE
+========================= */
+@media (max-width: 1100px){
+    .form-grid{
+        grid-template-columns:repeat(2, 1fr);
     }
-    form{
+
+    .rooms-grid{
+        grid-template-columns:repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 860px){
+    .nav-wrap{
+        flex-direction:column;
+        align-items:flex-start;
+    }
+
+    .nav-menu{
+        gap:20px;
+    }
+
+    .hero-box{
+        min-height:300px;
+        padding:28px;
+    }
+
+    .hero-content h2{
+        font-size:30px;
+    }
+
+    .search-card{
+        margin-top:20px;
+    }
+}
+
+@media (max-width: 640px){
+    .brand{
+        align-items:flex-start;
+    }
+
+    .brand img{
+        width:70px;
+        height:70px;
+    }
+
+    .brand-text h1{
+        font-size:18px;
+    }
+
+    .nav-menu{
+        gap:14px 18px;
+    }
+
+    .hero{
+        margin-top:20px;
+    }
+
+    .hero-box{
+        border-radius:22px;
+        min-height:250px;
+        padding:22px;
+    }
+
+    .hero-content h2{
+        font-size:25px;
+    }
+
+    .hero-content p{
+        font-size:14px;
+    }
+
+    .form-grid{
         grid-template-columns:1fr;
+    }
+
+    .rooms-grid{
+        grid-template-columns:1fr;
+    }
+
+    .section-head h3{
+        font-size:24px;
+    }
+
+    .room-title,
+    .room-price{
+        font-size:20px;
     }
 }
 </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>ข้อมูลการจองห้องพัก</h2>
+<header class="site-header">
+    <div class="nav-wrap">
+        <div class="brand">
+            <img src="uploads/logo.png" alt="โลโก้สถาบัน">
+            <div class="brand-text">
+                <h1>สถาบันวิจัยวลัยรุกขเวช</h1>
+                <p>มหาวิทยาลัยมหาสารคาม</p>
+            </div>
+        </div>
 
-    <div class="summary">
-        <p><strong>ประเภทห้อง:</strong> <?php echo htmlspecialchars($room_type); ?></p>
-        <p><strong>ราคา:</strong> ฿<?php echo number_format((float)$price, 0); ?> / คืน</p>
-        <p><strong>วันเช็คอิน:</strong> <?php echo htmlspecialchars($checkin); ?></p>
-        <p><strong>วันเช็คเอาท์:</strong> <?php echo htmlspecialchars($checkout); ?></p>
-        <p><strong>จำนวนผู้เข้าพัก:</strong> <?php echo htmlspecialchars($guests); ?> คน</p>
+        <nav class="nav-menu">
+            <a href="news.php">ข่าวสาร</a>
+            <a href="register.php">ลงทะเบียน</a>
+            <a href="evaluation.php">แบบประเมิน</a>
+            <a href="calendar.php">ปฏิทิน</a>
+            <a href="about.php">เกี่ยวกับ</a>
+            <a href="booking_room.php" class="active">จองห้องพัก</a>
+        </nav>
+    </div>
+</header>
+
+<section class="hero">
+    <div class="hero-box">
+        <div class="hero-content">
+            <div class="hero-badge">Room Reservation</div>
+            <h2>ระบบจองห้องพักและที่พักภายในสถาบัน</h2>
+            <p>
+                เลือกประเภทห้องพัก วันที่เข้าพัก และจำนวนผู้เข้าพักได้จากหน้านี้
+                เพื่ออำนวยความสะดวกในการเข้าพักสำหรับผู้มาติดต่อราชการ นักวิจัย
+                ผู้เข้าร่วมกิจกรรม และผู้ใช้งานทั่วไป
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="booking-search">
+    <div class="search-card">
+        <h3>ค้นหาห้องพักที่ว่าง</h3>
+
+        <form action="" method="GET">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="checkin">วันที่เข้าพัก</label>
+                    <input type="date" id="checkin" name="checkin" required value="<?php echo htmlspecialchars($checkin); ?>">
+                </div>
+
+                <div class="form-group">
+                    <label for="checkout">วันที่ออก</label>
+                    <input type="date" id="checkout" name="checkout" required value="<?php echo htmlspecialchars($checkout); ?>">
+                </div>
+
+                <div class="form-group">
+                    <label for="guests">จำนวนผู้เข้าพัก</label>
+                    <select id="guests" name="guests" required>
+                        <option value="">เลือกจำนวน</option>
+                        <option value="1" <?php echo ($guests === 1) ? 'selected' : ''; ?>>1 คน</option>
+                        <option value="2" <?php echo ($guests === 2) ? 'selected' : ''; ?>>2 คน</option>
+                        <option value="3" <?php echo ($guests === 3) ? 'selected' : ''; ?>>3 คน</option>
+                        <option value="4" <?php echo ($guests === 4) ? 'selected' : ''; ?>>4 คน</option>
+                        <option value="5" <?php echo ($guests === 5) ? 'selected' : ''; ?>>5 คน</option>
+                        <option value="6" <?php echo ($guests === 6) ? 'selected' : ''; ?>>6 คน</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="roomtype">ประเภทห้องพัก</label>
+                    <select id="roomtype" name="roomtype">
+                        <option value="" <?php echo ($roomtype === '') ? 'selected' : ''; ?>>ทั้งหมด</option>
+                        <option value="standard" <?php echo ($roomtype === 'standard') ? 'selected' : ''; ?>>Standard Room</option>
+                        <option value="deluxe" <?php echo ($roomtype === 'deluxe') ? 'selected' : ''; ?>>Deluxe Room</option>
+                        <option value="family" <?php echo ($roomtype === 'family') ? 'selected' : ''; ?>>Family Room</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="search-btn">ค้นหาห้องพัก</button>
+                </div>
+            </div>
+        </form>
+
+        <?php if ($isSearching): ?>
+            <a href="booking_room.php" class="reset-btn">ล้างการค้นหา</a>
+        <?php endif; ?>
+    </div>
+</section>
+
+<section class="section">
+    <div class="section-head">
+        <div>
+            <h3><?php echo $isSearching ? 'ผลการค้นหาห้องพัก' : 'ห้องพักแนะนำ'; ?></h3>
+            <p>
+                <?php if ($isSearching): ?>
+                    ระบบจะแสดงเฉพาะห้องที่ตรงกับประเภทห้องและจำนวนผู้เข้าพักที่คุณเลือก
+                <?php else: ?>
+                    ตัวอย่างห้องพักที่เปิดให้จองในระบบ สามารถปรับเปลี่ยนรูป ราคา และรายละเอียดแต่ละห้องได้ภายหลัง
+                <?php endif; ?>
+            </p>
+        </div>
     </div>
 
-    <form action="save_booking.php" method="POST">
-        <input type="hidden" name="room_type" value="<?php echo htmlspecialchars($room_type); ?>">
-        <input type="hidden" name="price" value="<?php echo htmlspecialchars($price); ?>">
-        <input type="hidden" name="checkin" value="<?php echo htmlspecialchars($checkin); ?>">
-        <input type="hidden" name="checkout" value="<?php echo htmlspecialchars($checkout); ?>">
-        <input type="hidden" name="guests" value="<?php echo htmlspecialchars($guests); ?>">
-
-        <div class="form-group">
-            <label>ชื่อ-นามสกุล</label>
-            <input type="text" name="full_name" required>
+    <?php if ($isSearching): ?>
+        <div class="search-result-note">
+            พบห้องพักที่ตรงเงื่อนไขจำนวน <?php echo count($filteredRooms); ?> ห้อง
         </div>
+    <?php endif; ?>
 
-        <div class="form-group">
-            <label>เบอร์โทรศัพท์</label>
-            <input type="text" name="phone" required>
-        </div>
+    <?php if (count($filteredRooms) > 0): ?>
+        <div class="rooms-grid">
+            <?php foreach ($filteredRooms as $room): ?>
+                <div class="room-card">
+                    <img src="<?php echo htmlspecialchars($room['image']); ?>" alt="<?php echo htmlspecialchars($room['name']); ?>" class="room-image">
 
-        <div class="form-group">
-            <label>อีเมล</label>
-            <input type="email" name="email">
-        </div>
+                    <div class="room-body">
+                        <div class="room-top">
+                            <div class="room-title"><?php echo htmlspecialchars($room['name']); ?></div>
+                            <div class="room-price">฿<?php echo number_format($room['price']); ?> <span>/ คืน</span></div>
+                        </div>
 
-        <div class="form-group">
-            <label>จำนวนผู้เข้าพัก</label>
-            <input type="number" value="<?php echo htmlspecialchars($guests); ?>" disabled>
-        </div>
+                        <div class="room-desc">
+                            <?php echo htmlspecialchars($room['desc']); ?>
+                        </div>
 
-        <div class="form-group full">
-            <label>หมายเหตุเพิ่มเติม</label>
-            <textarea name="note" placeholder="เช่น ขอเตียงเสริม, เข้าพักดึก, หรือข้อมูลอื่นๆ"></textarea>
-        </div>
+                        <div class="room-features">
+                            <?php foreach ($room['features'] as $feature): ?>
+                                <span class="feature"><?php echo htmlspecialchars($feature); ?></span>
+                            <?php endforeach; ?>
+                        </div>
 
-        <div class="actions">
-            <a href="booking_room.php?checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>" class="btn btn-back">ย้อนกลับ</a>
-            <button type="submit" class="btn btn-save">ยืนยันการจอง</button>
+                        <div class="room-footer">
+                            <div class="room-capacity"><?php echo htmlspecialchars($room['capacity_text']); ?></div>
+
+                            <?php if ($checkin !== '' && $checkout !== '' && $guests > 0): ?>
+                                <a class="book-btn"
+                                   href="booking_form.php?room_type=<?php echo urlencode($room['name']); ?>&price=<?php echo urlencode($room['price']); ?>&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
+                                    จองห้องนี้
+                                </a>
+                            <?php else: ?>
+                                <a class="book-btn disabled" href="javascript:void(0)">
+                                    กรุณาค้นหาก่อน
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
         </div>
-    </form>
-</div>
+    <?php else: ?>
+        <div class="no-room">
+            ไม่พบห้องพักที่ตรงกับเงื่อนไขที่เลือก กรุณาลองเปลี่ยนจำนวนผู้เข้าพักหรือประเภทห้องพักใหม่
+        </div>
+    <?php endif; ?>
+
+    <div class="info-box">
+        <h4>ข้อมูลการเข้าพัก</h4>
+        <ul>
+            <li>เวลาเช็คอินหลัง 14:00 น. และเช็คเอาต์ก่อน 12:00 น.</li>
+            <li>กรุณานำบัตรประชาชนหรือเอกสารยืนยันตัวตนมาแสดงในวันเข้าพัก</li>
+            <li>การจองจะสมบูรณ์เมื่อเจ้าหน้าที่ตรวจสอบและยืนยันการจองแล้ว</li>
+            <li>สามารถปรับส่วนนี้เป็นเงื่อนไขจริงของที่พักในระบบของคุณได้</li>
+        </ul>
+    </div>
+</section>
+
+<footer class="footer">
+    <div class="footer-inner">
+        © <?php echo date('Y'); ?> สถาบันวิจัยวลัยรุกขเวช มหาวิทยาลัยมหาสารคาม
+    </div>
+</footer>
+
+<script>
+const today = new Date().toISOString().split('T')[0];
+const checkinEl = document.getElementById('checkin');
+const checkoutEl = document.getElementById('checkout');
+
+checkinEl.setAttribute('min', today);
+
+if (!checkoutEl.value) {
+    checkoutEl.setAttribute('min', today);
+} else {
+    checkoutEl.setAttribute('min', checkinEl.value || today);
+}
+
+checkinEl.addEventListener('change', function() {
+    checkoutEl.value = '';
+    checkoutEl.setAttribute('min', this.value);
+});
+</script>
 
 </body>
 </html>

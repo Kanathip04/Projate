@@ -488,8 +488,6 @@ a{
     <section class="hero">
         <div class="hero-inner">
             <a href="index.php" class="back-home-btn">← กลับหน้าหลัก</a>
-
-            <div class="hero-badge">Room Reservation</div>
             <h1>ระบบจองห้องพักและที่พักภายในสถาบัน</h1>
             <p>
                 เลือกห้องพักที่ต้องการจากรายการด้านล่างได้เลย

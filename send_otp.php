@@ -89,7 +89,7 @@ try {
     $mail->Host       = 'smtp.gmail.com';
     $mail->SMTPAuth   = true;
     $mail->Username   = '67010974003@msu.ac.th';
-    $mail->Password   = 'ใส่AppPasswordใหม่ของคุณ';
+    $mail->Password   = 'uzotcwasteiaaroz';
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
     $mail->Port       = 587;
 

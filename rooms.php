@@ -1,43 +1,96 @@
 <?php
 date_default_timezone_set('Asia/Bangkok');
 
-/*
-    ตอนนี้ยังไม่ได้ดึงจากฐานข้อมูล
-    ผมทำเป็น array ไว้ก่อน เพื่อให้ใช้งานได้ทันที
-    ถ้าคุณอยากให้ดึงจาก DB ภายหลัง ผมแปลงให้ได้
-*/
-$rooms = [
-    [
-        "id" => 1,
-        "name" => "Deluxe Room",
-        "price" => 1200,
-        "size" => "28 ตร.ม.",
-        "bed" => "เตียงใหญ่ 1 เตียง",
-        "capacity" => "พักได้ 2 คน",
-        "image" => "uploads/room1.jpg",
-        "description" => "ห้องพักขนาดพอดีสำหรับผู้เข้าพัก 2 ท่าน พร้อมเครื่องปรับอากาศ Wi-Fi ฟรี และห้องน้ำส่วนตัว"
-    ],
-    [
-        "id" => 2,
-        "name" => "Superior Twin Room",
-        "price" => 1500,
-        "size" => "32 ตร.ม.",
-        "bed" => "เตียงเดี่ยว 2 เตียง",
-        "capacity" => "พักได้ 2 คน",
-        "image" => "uploads/room2.jpg",
-        "description" => "เหมาะสำหรับเพื่อนหรือผู้เข้าพักที่ต้องการแยกเตียง มีสิ่งอำนวยความสะดวกครบ"
-    ],
-    [
-        "id" => 3,
-        "name" => "Family Room",
-        "price" => 2200,
-        "size" => "40 ตร.ม.",
-        "bed" => "เตียงใหญ่ 1 + เตียงเดี่ยว 2",
-        "capacity" => "พักได้ 4 คน",
-        "image" => "uploads/room3.jpg",
-        "description" => "ห้องพักสำหรับครอบครัว พื้นที่กว้างขวาง เหมาะสำหรับเข้าพักหลายคน"
-    ]
-];
+/* =========================
+   เชื่อมต่อฐานข้อมูล
+========================= */
+$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
+$conn->set_charset("utf8mb4");
+
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+/* =========================
+   รับค่าค้นหา
+========================= */
+$checkin  = $_GET['checkin'] ?? '';
+$checkout = $_GET['checkout'] ?? '';
+$guests   = $_GET['guests'] ?? '';
+$type     = $_GET['type'] ?? '';
+
+/* =========================
+   ดึงประเภทห้องทั้งหมดไปใส่ select
+========================= */
+$roomTypes = [];
+$resType = $conn->query("SELECT DISTINCT room_type FROM rooms WHERE status = 1 ORDER BY room_type ASC");
+if ($resType && $resType->num_rows > 0) {
+    while ($rowType = $resType->fetch_assoc()) {
+        $roomTypes[] = $rowType['room_type'];
+    }
+}
+
+/* =========================
+   สร้าง SQL หลัก
+   status = 1 คือเปิดให้จอง
+========================= */
+$sql = "SELECT id, room_name, room_type, price, room_size, bed_type, capacity, image, description
+        FROM rooms
+        WHERE status = 1";
+
+$params = [];
+$types  = "";
+
+/* =========================
+   ค้นหาตามจำนวนผู้เข้าพัก
+========================= */
+if ($guests !== '') {
+    $sql .= " AND capacity >= ?";
+    $params[] = (int)$guests;
+    $types .= "i";
+}
+
+/* =========================
+   ค้นหาตามประเภทห้อง
+========================= */
+if ($type !== '') {
+    $sql .= " AND room_type = ?";
+    $params[] = $type;
+    $types .= "s";
+}
+
+/* =========================
+   กรองห้องที่ถูกจองแล้วในช่วงวันที่เลือก
+   ใช้ตาราง room_bookings
+   เฉพาะรายการที่ไม่ได้ยกเลิก
+========================= */
+if (!empty($checkin) && !empty($checkout)) {
+    $sql .= " AND id NOT IN (
+                SELECT room_id
+                FROM room_bookings
+                WHERE booking_status != 'cancelled'
+                AND (
+                    (? < checkout_date) AND (? > checkin_date)
+                )
+            )";
+    $params[] = $checkin;
+    $params[] = $checkout;
+    $types .= "ss";
+}
+
+$sql .= " ORDER BY id DESC";
+
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+    die("Prepare failed: " . $conn->error);
+}
+
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
+
+$stmt->execute();
+$result = $stmt->get_result();
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -313,6 +366,17 @@ a{
     background:var(--brand-dark);
 }
 
+/* EMPTY */
+.empty-box{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:20px;
+    padding:40px 25px;
+    text-align:center;
+    color:#6b7280;
+    box-shadow:var(--card-shadow);
+}
+
 /* FOOTER */
 .footer-note{
     width:min(1180px, 92%);
@@ -402,22 +466,24 @@ a{
             <div class="search-grid">
                 <div class="field">
                     <label>วันที่เข้าพัก</label>
-                    <input type="date" name="checkin">
+                    <input type="date" name="checkin" value="<?php echo htmlspecialchars($checkin); ?>">
                 </div>
 
                 <div class="field">
                     <label>วันที่ออก</label>
-                    <input type="date" name="checkout">
+                    <input type="date" name="checkout" value="<?php echo htmlspecialchars($checkout); ?>">
                 </div>
 
                 <div class="field">
                     <label>จำนวนผู้เข้าพัก</label>
                     <select name="guests">
                         <option value="">เลือกจำนวน</option>
-                        <option value="1">1 คน</option>
-                        <option value="2">2 คน</option>
-                        <option value="3">3 คน</option>
-                        <option value="4">4 คน</option>
+                        <option value="1" <?php if($guests=="1") echo "selected"; ?>>1 คน</option>
+                        <option value="2" <?php if($guests=="2") echo "selected"; ?>>2 คน</option>
+                        <option value="3" <?php if($guests=="3") echo "selected"; ?>>3 คน</option>
+                        <option value="4" <?php if($guests=="4") echo "selected"; ?>>4 คน</option>
+                        <option value="5" <?php if($guests=="5") echo "selected"; ?>>5 คน</option>
+                        <option value="6" <?php if($guests=="6") echo "selected"; ?>>6 คน</option>
                     </select>
                 </div>
 
@@ -425,9 +491,11 @@ a{
                     <label>ประเภทห้องพัก</label>
                     <select name="type">
                         <option value="">ทั้งหมด</option>
-                        <option value="Deluxe Room">Deluxe Room</option>
-                        <option value="Superior Twin Room">Superior Twin Room</option>
-                        <option value="Family Room">Family Room</option>
+                        <?php foreach($roomTypes as $roomType): ?>
+                            <option value="<?php echo htmlspecialchars($roomType); ?>" <?php if($type === $roomType) echo "selected"; ?>>
+                                <?php echo htmlspecialchars($roomType); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
 
@@ -440,48 +508,54 @@ a{
         <div class="section-head">
             <div>
                 <h3>ห้องพักแนะนำ</h3>
-                <p>เลือกห้องพักที่เหมาะสมกับจำนวนผู้เข้าพักและความต้องการของคุณ โดยข้อมูลห้องพักและลิงก์จองยังคงใช้แบบเดิมทั้งหมด</p>
+                <p>ข้อมูลห้องพักทั้งหมดถูกดึงจากฐานข้อมูลโดยตรง และเมื่อกดจองจะส่งข้อมูลไปหน้าแบบฟอร์มจองเหมือนเดิม</p>
             </div>
         </div>
 
-        <div class="room-grid">
-            <?php foreach($rooms as $room): ?>
-                <div class="room-card">
-                    <div class="room-image-wrap">
-                        <img src="<?php echo htmlspecialchars($room['image']); ?>" alt="<?php echo htmlspecialchars($room['name']); ?>" class="room-image">
-                        <div class="room-price-tag">฿<?php echo number_format($room['price']); ?> / คืน</div>
-                    </div>
-
-                    <div class="room-body">
-                        <div class="room-title"><?php echo htmlspecialchars($room['name']); ?></div>
-                        <div class="room-desc"><?php echo htmlspecialchars($room['description']); ?></div>
-
-                        <div class="room-meta">
-                            <div class="meta-item"><strong>ขนาดห้อง:</strong> <?php echo htmlspecialchars($room['size']); ?></div>
-                            <div class="meta-item"><strong>ประเภทเตียง:</strong> <?php echo htmlspecialchars($room['bed']); ?></div>
-                            <div class="meta-item"><strong>รองรับ:</strong> <?php echo htmlspecialchars($room['capacity']); ?></div>
+        <?php if ($result && $result->num_rows > 0): ?>
+            <div class="room-grid">
+                <?php while($room = $result->fetch_assoc()): ?>
+                    <div class="room-card">
+                        <div class="room-image-wrap">
+                            <img src="<?php echo htmlspecialchars($room['image']); ?>" alt="<?php echo htmlspecialchars($room['room_name']); ?>" class="room-image">
+                            <div class="room-price-tag">฿<?php echo number_format($room['price']); ?> / คืน</div>
                         </div>
 
-                        <div class="room-footer">
-                            <div class="price">
-                                ฿<?php echo number_format($room['price']); ?>
-                                <span>/ คืน</span>
+                        <div class="room-body">
+                            <div class="room-title"><?php echo htmlspecialchars($room['room_name']); ?></div>
+                            <div class="room-desc"><?php echo htmlspecialchars($room['description']); ?></div>
+
+                            <div class="room-meta">
+                                <div class="meta-item"><strong>ประเภทห้อง:</strong> <?php echo htmlspecialchars($room['room_type']); ?></div>
+                                <div class="meta-item"><strong>ขนาดห้อง:</strong> <?php echo htmlspecialchars($room['room_size']); ?></div>
+                                <div class="meta-item"><strong>ประเภทเตียง:</strong> <?php echo htmlspecialchars($room['bed_type']); ?></div>
+                                <div class="meta-item"><strong>รองรับ:</strong> <?php echo htmlspecialchars($room['capacity']); ?> คน</div>
                             </div>
 
-                            <a class="book-btn"
-                               href="booking_form.php?room_id=<?php echo urlencode($room['id']); ?>&room_name=<?php echo urlencode($room['name']); ?>&room_price=<?php echo urlencode($room['price']); ?>">
-                                จองห้องนี้
-                            </a>
+                            <div class="room-footer">
+                                <div class="price">
+                                    ฿<?php echo number_format($room['price']); ?>
+                                    <span>/ คืน</span>
+                                </div>
+
+                                <a class="book-btn"
+                                   href="booking_form.php?room_id=<?php echo urlencode($room['id']); ?>&room_name=<?php echo urlencode($room['room_name']); ?>&room_price=<?php echo urlencode($room['price']); ?>&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
+                                    จองห้องนี้
+                                </a>
+                            </div>
                         </div>
                     </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
+                <?php endwhile; ?>
+            </div>
+        <?php else: ?>
+            <div class="empty-box">
+                ไม่พบห้องพักที่ตรงกับเงื่อนไขที่เลือก
+            </div>
+        <?php endif; ?>
     </section>
 
     <div class="footer-note">
-        หมายเหตุ: หน้านี้ออกแบบใหม่เฉพาะส่วนการแสดงผล โดยยังคงข้อมูลห้องพักเดิม
-        และยังส่งค่าการจองไปหน้า <strong>booking_form.php</strong> แบบเดิม
+        หมายเหตุ: หน้านี้ดึงข้อมูลจากตาราง <strong>rooms</strong> และตรวจสอบการชนกันของวันจองจากตาราง <strong>room_bookings</strong>
     </div>
 
 </div>

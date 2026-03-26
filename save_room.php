@@ -16,6 +16,19 @@ if ($conn->connect_error) {
 }
 
 /* =========================
+   helper
+========================= */
+function redirect_back($message, $editId = 0) {
+    $_SESSION['room_msg'] = $message;
+    $url = "manage_rooms.php";
+    if ($editId > 0) {
+        $url .= "?edit=" . $editId;
+    }
+    header("Location: " . $url);
+    exit;
+}
+
+/* =========================
    ตรวจสอบว่าตาราง rooms มีอยู่จริง
 ========================= */
 $checkTable = $conn->query("SHOW TABLES LIKE 'rooms'");
@@ -25,20 +38,48 @@ if (!$checkTable || $checkTable->num_rows === 0) {
 
 /* =========================
    รับค่าจากฟอร์ม
+   รองรับชื่อ field สำรองเผื่อไฟล์เดิมบางจุดยังใช้ชื่อเก่า
 ========================= */
-$id          = isset($_POST['id']) ? (int)$_POST['id'] : 0;
-$room_name   = trim($_POST['room_name'] ?? '');
-$room_type   = trim($_POST['room_type'] ?? '');
-$description = trim($_POST['description'] ?? '');
+$id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+
+$room_name = trim(
+    $_POST['room_name']
+    ?? $_POST['name']
+    ?? $_POST['room_title']
+    ?? ''
+);
+
+$room_type = trim(
+    $_POST['room_type']
+    ?? $_POST['type']
+    ?? ''
+);
+
+$description = trim($_POST['description'] ?? $_POST['detail'] ?? '');
 $price       = isset($_POST['price']) ? (float)$_POST['price'] : 0;
 $total_rooms = isset($_POST['total_rooms']) ? (int)$_POST['total_rooms'] : 5;
-$max_guests  = isset($_POST['max_guests']) ? (int)$_POST['max_guests'] : 2;
+$max_guests  = isset($_POST['max_guests']) ? (int)$_POST['max_guests'] : (isset($_POST['capacity']) ? (int)$_POST['capacity'] : 2);
 $room_size   = trim($_POST['room_size'] ?? '');
 $bed_type    = trim($_POST['bed_type'] ?? '');
-$status      = trim($_POST['status'] ?? 'show');
 
+/* =========================
+   แปลงค่า status ให้ตรงกับฐานข้อมูล
+========================= */
+$status_raw = trim($_POST['status'] ?? 'show');
+
+if ($status_raw === 'show' || $status_raw === 'แสดง' || $status_raw === '1') {
+    $status = 'show';
+} elseif ($status_raw === 'hide' || $status_raw === 'ซ่อน' || $status_raw === '0') {
+    $status = 'hide';
+} else {
+    $status = 'show';
+}
+
+/* =========================
+   validate
+========================= */
 if ($room_name === '' || $room_type === '') {
-    die("กรุณากรอกชื่อห้องพักและประเภทห้อง");
+    redirect_back("กรุณากรอกชื่อห้องพักและประเภทห้อง", $id);
 }
 
 if ($total_rooms <= 0) {
@@ -47,10 +88,6 @@ if ($total_rooms <= 0) {
 
 if ($max_guests <= 0) {
     $max_guests = 2;
-}
-
-if ($status !== 'show' && $status !== 'hide') {
-    $status = 'show';
 }
 
 /* =========================
@@ -72,7 +109,7 @@ if (isset($_FILES['room_image']) && !empty($_FILES['room_image']['name'])) {
         $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 
         if (!in_array($ext, $allowed, true)) {
-            die("รองรับเฉพาะไฟล์รูป jpg, jpeg, png, webp, gif");
+            redirect_back("รองรับเฉพาะไฟล์รูป jpg, jpeg, png, webp, gif", $id);
         }
 
         $newName = 'room_' . time() . '_' . mt_rand(1000, 9999) . '.' . $ext;
@@ -81,10 +118,10 @@ if (isset($_FILES['room_image']) && !empty($_FILES['room_image']['name'])) {
         if (move_uploaded_file($_FILES['room_image']['tmp_name'], $target)) {
             $image_path = $target;
         } else {
-            die("อัปโหลดรูปไม่สำเร็จ");
+            redirect_back("อัปโหลดรูปไม่สำเร็จ", $id);
         }
     } else {
-        die("เกิดข้อผิดพลาดระหว่างอัปโหลดรูป");
+        redirect_back("เกิดข้อผิดพลาดระหว่างอัปโหลดรูป", $id);
     }
 }
 
@@ -93,7 +130,6 @@ if (isset($_FILES['room_image']) && !empty($_FILES['room_image']['name'])) {
 ========================= */
 if ($id > 0) {
 
-    // ดึงรูปเดิมก่อน
     $oldImage = '';
     $stmtOld = $conn->prepare("SELECT image_path FROM rooms WHERE id = ?");
     if (!$stmtOld) {
@@ -103,17 +139,16 @@ if ($id > 0) {
     $stmtOld->bind_param("i", $id);
     $stmtOld->execute();
     $resOld = $stmtOld->get_result();
+
     if ($resOld && $resOld->num_rows > 0) {
         $oldRow = $resOld->fetch_assoc();
         $oldImage = $oldRow['image_path'] ?? '';
     }
     $stmtOld->close();
 
-    // ถ้าไม่ได้อัปโหลดรูปใหม่ ให้ใช้รูปเดิม
     if ($image_path === '') {
         $image_path = $oldImage;
     } else {
-        // ถ้ามีรูปใหม่ และมีรูปเก่า ให้ลบรูปเก่า
         if (!empty($oldImage) && file_exists($oldImage)) {
             @unlink($oldImage);
         }
@@ -153,10 +188,11 @@ if ($id > 0) {
     );
 
     if (!$stmt->execute()) {
-        die("Execute UPDATE failed: " . $stmt->error);
+        redirect_back("อัปเดตข้อมูลไม่สำเร็จ: " . $stmt->error, $id);
     }
 
     $stmt->close();
+    $_SESSION['room_msg'] = "อัปเดตข้อมูลห้องพักเรียบร้อยแล้ว";
 
 } else {
 
@@ -193,12 +229,13 @@ if ($id > 0) {
     );
 
     if (!$stmt->execute()) {
-        die("Execute INSERT failed: " . $stmt->error);
+        redirect_back("บันทึกข้อมูลไม่สำเร็จ: " . $stmt->error, 0);
     }
 
     $stmt->close();
+    $_SESSION['room_msg'] = "บันทึกห้องพักเรียบร้อยแล้ว";
 }
 
-header("Location: manage_rooms.php?success=1");
+header("Location: manage_rooms.php");
 exit;
 ?>

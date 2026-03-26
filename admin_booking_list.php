@@ -381,21 +381,7 @@ include 'admin_layout_top.php';
     color:#6b7280;
 }
 .main-grid{
-    display:grid;
-    grid-template-columns: 360px minmax(0,1fr);
-    gap:22px;
-    align-items:start;
-}
-.panel{
-    background:#fff;
-    border-radius:24px;
-    padding:22px;
-    box-shadow:0 12px 30px rgba(15,23,42,.06);
-    border:1px solid #edf1f6;
-}
-.sticky-box{
-    position: sticky;
-    top: 20px;
+    display:block;
 }
 .section-title{
     margin:0 0 6px;
@@ -646,88 +632,6 @@ textarea.form-control{
             <div class="sub">รายการที่ถูกยกเลิก</div>
         </div>
     </div>
-
-    <div class="main-grid">
-        <div class="sticky-box">
-            <div class="panel">
-                <h2 class="section-title"><?php echo $edit_data ? 'แก้ไขรายการจอง' : 'แผงแก้ไขข้อมูล'; ?></h2>
-                <p class="section-desc">
-                    <?php echo $edit_data ? 'แก้ไขข้อมูลแล้วกดบันทึก' : 'กดปุ่ม “แก้ไข” จากตารางด้านขวาเพื่อโหลดข้อมูลเข้าฟอร์ม'; ?>
-                </p>
-
-                <?php if ($edit_data): ?>
-                    <form method="POST">
-                        <input type="hidden" name="action" value="update_booking">
-                        <input type="hidden" name="id" value="<?php echo (int)$edit_data['id']; ?>">
-
-                        <div class="form-group">
-                            <label>ชื่อผู้จอง</label>
-                            <input type="text" name="full_name" class="form-control" value="<?php echo h($edit_data['full_name']); ?>" required>
-                        </div>
-
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label>เบอร์โทร</label>
-                                <input type="text" name="phone" class="form-control" value="<?php echo h($edit_data['phone']); ?>" required>
-                            </div>
-                            <div class="form-group">
-                                <label>อีเมล</label>
-                                <input type="email" name="email" class="form-control" value="<?php echo h($edit_data['email']); ?>">
-                            </div>
-                        </div>
-
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label>ประเภท / ชื่อห้อง</label>
-                                <input type="text" name="room_type" class="form-control" value="<?php echo h($edit_data['room_type']); ?>" required>
-                            </div>
-                            <div class="form-group">
-                                <label>จำนวนผู้เข้าพัก</label>
-                                <input type="number" name="guests" class="form-control" min="1" value="<?php echo (int)$edit_data['guests']; ?>" required>
-                            </div>
-                        </div>
-
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label>วันเช็คอิน</label>
-                                <input type="date" name="checkin_date" class="form-control" value="<?php echo h($edit_data['checkin_date']); ?>" required>
-                            </div>
-                            <div class="form-group">
-                                <label>วันเช็คเอาท์</label>
-                                <input type="date" name="checkout_date" class="form-control" value="<?php echo h($edit_data['checkout_date']); ?>" required>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label>สถานะ</label>
-                            <select name="booking_status" class="form-control">
-                                <?php foreach ($statusOptions as $statusKey => $statusItem): ?>
-                                    <option value="<?php echo h($statusKey); ?>" <?php echo $edit_data['booking_status'] === $statusKey ? 'selected' : ''; ?>>
-                                        <?php echo h($statusItem['label']); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label>หมายเหตุ</label>
-                            <textarea name="note" class="form-control"><?php echo h($edit_data['note']); ?></textarea>
-                        </div>
-
-                        <div class="filter-actions">
-                            <button type="submit" class="btn btn-primary">บันทึกการแก้ไข</button>
-                            <a href="<?php echo h($currentPage); ?>" class="btn btn-secondary">ยกเลิก</a>
-                        </div>
-                    </form>
-                <?php else: ?>
-                    <div class="empty-box">
-                        ยังไม่ได้เลือกรายการที่ต้องการแก้ไข<br>
-                        ให้กดปุ่ม <strong>แก้ไข</strong> จากตารางรายการด้านขวา
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-
         <div class="panel">
             <div class="table-head">
                 <div>

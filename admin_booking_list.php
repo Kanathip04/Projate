@@ -294,27 +294,12 @@ include 'admin_layout_top.php';
     margin: 0 auto;
 }
 .hero-booking{
-    background: linear-gradient(135deg, #1f2a44 0%, #171934 100%);
+    background: linear-gradient(135deg, #d4dac4 0%, #7aa51a 100%);
     color: #fff;
     border-radius: 28px;
     padding: 28px;
     margin-bottom: 24px;
-    box-shadow: 0 18px 40px rgba(23,25,52,.25);
-}
-.hero-booking{
-    position: relative;
-}
-
-.hero-booking::before{
-    content:"";
-    position:absolute;
-    top:0;
-    left:0;
-    width:100%;
-    height:4px;
-    background:linear-gradient(90deg, #c7a056, #e0c58c);
-    border-top-left-radius:28px;
-    border-top-right-radius:28px;
+    box-shadow: 0 18px 40px rgba(99,132,17,.18);
 }
 .hero-booking h1{
     margin: 0 0 8px;
@@ -333,8 +318,18 @@ include 'admin_layout_top.php';
     flex-wrap: wrap;
 }
 .quick-link{
-    background: rgba(255,255,255,.08);
-    border:1px solid rgba(255,255,255,.18);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    text-decoration: none;
+    font-weight: 700;
+    border: 1px solid rgba(255,255,255,.25);
+    background: rgba(255,255,255,.14);
+    color: #fff;
+    transition: .2s ease;
 }
 .quick-link:hover{
     transform: translateY(-1px);
@@ -591,30 +586,6 @@ textarea.form-control{
 @media (max-width: 580px){
     .stats-grid{ grid-template-columns:1fr; }
     .panel, .stat-card, .hero-booking{ padding:18px; }
-}
-.hero-booking{
-    background: linear-gradient(135deg, #f8f5ef 0%, #eee7dc 100%);
-    color: #1d2238;
-    border-radius: 28px;
-    padding: 28px;
-    margin-bottom: 24px;
-    box-shadow: 0 12px 30px rgba(0,0,0,.05);
-    border:1px solid #e7dfd3;
-}
-.hero-booking{
-    position: relative;
-}
-
-.hero-booking::before{
-    content:"";
-    position:absolute;
-    top:0;
-    left:0;
-    width:100%;
-    height:4px;
-    background:linear-gradient(90deg, #c7a056, #e0c58c);
-    border-top-left-radius:28px;
-    border-top-right-radius:28px;
 }
 </style>
 

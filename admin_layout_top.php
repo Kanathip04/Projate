@@ -247,6 +247,11 @@ input, select, textarea, button{
                     <span class="text">รายการอนุมัติแล้ว</span>
                 </a>
 
+                <a href="admin_booking_archive.php" class="menu-item <?php echo ($activeMenu === 'booking_archive') ? 'active' : ''; ?>">
+                    <span class="icon">✅</span>
+                    <span class="text">รายการอนุมัติแล้ว</span>
+                </a>
+
                 <a href="admin_add_news.php" class="menu-item <?php echo ($activeMenu === 'news_add') ? 'active' : ''; ?>">
                     <span class="icon">📰</span>
                     <span class="text">เพิ่มข่าวสาร</span>

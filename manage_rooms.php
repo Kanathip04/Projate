@@ -15,297 +15,196 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-$pageTitle = "จัดการห้องพัก";
-$activeMenu = "rooms";
+/* =========================
+   ตรวจสอบว่าตาราง rooms มีอยู่จริง
+========================= */
+$checkTable = $conn->query("SHOW TABLES LIKE 'rooms'");
+if (!$checkTable || $checkTable->num_rows === 0) {
+    die("ไม่พบตาราง rooms");
+}
 
-$editData = null;
-if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
-    $editId = (int)$_GET['edit'];
-    $resEdit = $conn->query("SELECT * FROM rooms WHERE id = $editId LIMIT 1");
-    if ($resEdit && $resEdit->num_rows > 0) {
-        $editData = $resEdit->fetch_assoc();
+/* =========================
+   รับค่าจากฟอร์ม
+========================= */
+$id          = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+$room_name   = trim($_POST['room_name'] ?? '');
+$room_type   = trim($_POST['room_type'] ?? '');
+$description = trim($_POST['description'] ?? '');
+$price       = isset($_POST['price']) ? (float)$_POST['price'] : 0;
+$total_rooms = isset($_POST['total_rooms']) ? (int)$_POST['total_rooms'] : 5;
+$max_guests  = isset($_POST['max_guests']) ? (int)$_POST['max_guests'] : 2;
+$room_size   = trim($_POST['room_size'] ?? '');
+$bed_type    = trim($_POST['bed_type'] ?? '');
+
+/* =========================
+   แปลงค่า status ให้ตรงกับฐานข้อมูล
+========================= */
+$status_raw = trim($_POST['status'] ?? 'show');
+
+if ($status_raw === 'show' || $status_raw === 'แสดง' || $status_raw === '1') {
+    $status = 'show';
+} elseif ($status_raw === 'hide' || $status_raw === 'ซ่อน' || $status_raw === '0') {
+    $status = 'hide';
+} else {
+    $status = 'show';
+}
+
+if ($room_name === '' || $room_type === '') {
+    die("กรุณากรอกชื่อห้องพักและประเภทห้อง");
+}
+
+if ($total_rooms <= 0) {
+    $total_rooms = 5;
+}
+
+if ($max_guests <= 0) {
+    $max_guests = 2;
+}
+
+/* =========================
+   อัปโหลดรูป
+========================= */
+$image_path = '';
+
+if (!is_dir('uploads')) {
+    mkdir('uploads', 0777, true);
+}
+
+if (!is_dir('uploads/rooms')) {
+    mkdir('uploads/rooms', 0777, true);
+}
+
+if (isset($_FILES['room_image']) && !empty($_FILES['room_image']['name'])) {
+    if ($_FILES['room_image']['error'] === 0) {
+        $ext = strtolower(pathinfo($_FILES['room_image']['name'], PATHINFO_EXTENSION));
+        $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
+        if (!in_array($ext, $allowed, true)) {
+            die("รองรับเฉพาะไฟล์รูป jpg, jpeg, png, webp, gif");
+        }
+
+        $newName = 'room_' . time() . '_' . mt_rand(1000, 9999) . '.' . $ext;
+        $target  = 'uploads/rooms/' . $newName;
+
+        if (move_uploaded_file($_FILES['room_image']['tmp_name'], $target)) {
+            $image_path = $target;
+        } else {
+            die("อัปโหลดรูปไม่สำเร็จ");
+        }
+    } else {
+        die("เกิดข้อผิดพลาดระหว่างอัปโหลดรูป");
     }
 }
 
-$rooms = $conn->query("SELECT * FROM rooms ORDER BY id DESC");
+/* =========================
+   เพิ่ม / แก้ไขข้อมูล
+========================= */
+if ($id > 0) {
 
-include 'admin_layout_top.php';
+    $oldImage = '';
+    $stmtOld = $conn->prepare("SELECT image_path FROM rooms WHERE id = ?");
+    if (!$stmtOld) {
+        die("Prepare SELECT failed: " . $conn->error);
+    }
+
+    $stmtOld->bind_param("i", $id);
+    $stmtOld->execute();
+    $resOld = $stmtOld->get_result();
+
+    if ($resOld && $resOld->num_rows > 0) {
+        $oldRow = $resOld->fetch_assoc();
+        $oldImage = $oldRow['image_path'] ?? '';
+    }
+    $stmtOld->close();
+
+    if ($image_path === '') {
+        $image_path = $oldImage;
+    } else {
+        if (!empty($oldImage) && file_exists($oldImage)) {
+            @unlink($oldImage);
+        }
+    }
+
+    $sql = "UPDATE rooms SET
+                room_name   = ?,
+                room_type   = ?,
+                description = ?,
+                price       = ?,
+                total_rooms = ?,
+                max_guests  = ?,
+                room_size   = ?,
+                bed_type    = ?,
+                image_path  = ?,
+                status      = ?
+            WHERE id = ?";
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        die("Prepare UPDATE failed: " . $conn->error);
+    }
+
+    $stmt->bind_param(
+        "sssdiissssi",
+        $room_name,
+        $room_type,
+        $description,
+        $price,
+        $total_rooms,
+        $max_guests,
+        $room_size,
+        $bed_type,
+        $image_path,
+        $status,
+        $id
+    );
+
+    if (!$stmt->execute()) {
+        die("Execute UPDATE failed: " . $stmt->error);
+    }
+
+    $stmt->close();
+
+} else {
+
+    $sql = "INSERT INTO rooms (
+                room_name,
+                room_type,
+                description,
+                price,
+                total_rooms,
+                max_guests,
+                room_size,
+                bed_type,
+                image_path,
+                status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        die("Prepare INSERT failed: " . $conn->error);
+    }
+
+    $stmt->bind_param(
+        "sssdiissss",
+        $room_name,
+        $room_type,
+        $description,
+        $price,
+        $total_rooms,
+        $max_guests,
+        $room_size,
+        $bed_type,
+        $image_path,
+        $status
+    );
+
+    if (!$stmt->execute()) {
+        die("Execute INSERT failed: " . $stmt->error);
+    }
+
+    $stmt->close();
+}
+
+header("Location: manage_rooms.php?success=1");
+exit;
 ?>
-
-<style>
-.page-wrap{
-    padding: 24px;
-}
-.room-grid{
-    display:grid;
-    grid-template-columns: 1.1fr 1.6fr;
-    gap:24px;
-}
-.card{
-    background:#fff;
-    border-radius:18px;
-    box-shadow:0 8px 24px rgba(0,0,0,.08);
-    padding:20px;
-}
-.card h2{
-    margin:0 0 16px;
-    font-size:22px;
-}
-.form-group{
-    margin-bottom:14px;
-}
-.form-group label{
-    display:block;
-    font-weight:600;
-    margin-bottom:6px;
-}
-.form-group input,
-.form-group textarea,
-.form-group select{
-    width:100%;
-    padding:12px 14px;
-    border:1px solid #dcdcdc;
-    border-radius:12px;
-    outline:none;
-    font-size:15px;
-}
-.form-group textarea{
-    min-height:110px;
-    resize:vertical;
-}
-.btn{
-    display:inline-block;
-    padding:12px 18px;
-    border:none;
-    border-radius:12px;
-    cursor:pointer;
-    font-weight:700;
-    text-decoration:none;
-}
-.btn-save{
-    background:#638411;
-    color:#fff;
-}
-.btn-cancel{
-    background:#e9ecef;
-    color:#222;
-}
-.table-wrap{
-    overflow:auto;
-}
-.room-table{
-    width:100%;
-    border-collapse:collapse;
-}
-.room-table th,
-.room-table td{
-    padding:12px;
-    border-bottom:1px solid #eee;
-    text-align:left;
-    vertical-align:middle;
-}
-.room-thumb{
-    width:90px;
-    height:65px;
-    object-fit:cover;
-    border-radius:10px;
-    background:#f1f1f1;
-}
-.badge{
-    display:inline-block;
-    padding:6px 10px;
-    border-radius:999px;
-    font-size:13px;
-    font-weight:700;
-}
-.badge-show{
-    background:#e8f7e8;
-    color:#1f7a1f;
-}
-.badge-hide{
-    background:#fdeaea;
-    color:#b42318;
-}
-.action-btn{
-    padding:8px 12px;
-    border-radius:10px;
-    text-decoration:none;
-    font-size:14px;
-    font-weight:700;
-    display:inline-block;
-    margin-right:6px;
-}
-.edit-btn{
-    background:#e8f1ff;
-    color:#1d4ed8;
-}
-.delete-btn{
-    background:#ffeaea;
-    color:#d11a2a;
-}
-.preview-box{
-    margin-top:10px;
-}
-.preview-box img{
-    width:100%;
-    max-height:220px;
-    object-fit:cover;
-    border-radius:14px;
-    border:1px solid #e5e5e5;
-}
-@media (max-width: 980px){
-    .room-grid{
-        grid-template-columns:1fr;
-    }
-}
-</style>
-
-<div class="page-wrap">
-    <div class="room-grid">
-
-        <div class="card">
-            <h2><?= $editData ? 'แก้ไขห้องพัก' : 'เพิ่มห้องพักใหม่' ?></h2>
-
-            <form action="save_room.php" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="id" value="<?= $editData['id'] ?? '' ?>">
-
-                <div class="form-group">
-                    <label>ชื่อห้องพัก</label>
-                    <input type="text" name="room_name" required
-                           value="<?= htmlspecialchars($editData['room_name'] ?? '') ?>">
-                </div>
-
-                <div class="form-group">
-                    <label>ประเภทห้อง</label>
-                    <input type="text" name="room_type" required
-                           value="<?= htmlspecialchars($editData['room_type'] ?? '') ?>">
-                </div>
-
-                <div class="form-group">
-                    <label>รายละเอียด</label>
-                    <textarea name="description"><?= htmlspecialchars($editData['description'] ?? '') ?></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label>ราคา / คืน</label>
-                    <input type="number" step="0.01" name="price" required
-                           value="<?= htmlspecialchars($editData['price'] ?? '0') ?>">
-                </div>
-
-                <div class="form-group">
-                    <label>จำนวนห้องทั้งหมด</label>
-                    <input type="number" name="total_rooms" min="1" required
-                           value="<?= htmlspecialchars($editData['total_rooms'] ?? '5') ?>">
-                </div>
-
-                <div class="form-group">
-                    <label>จำนวนผู้เข้าพักสูงสุด</label>
-                    <input type="number" name="max_guests" min="1" required
-                           value="<?= htmlspecialchars($editData['max_guests'] ?? '2') ?>">
-                </div>
-
-                <div class="form-group">
-                    <label>ขนาดห้อง</label>
-                    <input type="text" name="room_size"
-                           value="<?= htmlspecialchars($editData['room_size'] ?? '') ?>"
-                           placeholder="เช่น 28 ตร.ม.">
-                </div>
-
-                <div class="form-group">
-                    <label>ประเภทเตียง</label>
-                    <input type="text" name="bed_type"
-                           value="<?= htmlspecialchars($editData['bed_type'] ?? '') ?>"
-                           placeholder="เช่น เตียงเดี่ยว / เตียงคู่">
-                </div>
-
-                <div class="form-group">
-                    <label>สถานะการแสดงผล</label>
-                    <select name="status">
-                        <option value="show" <?= (($editData['status'] ?? '') === 'show') ? 'selected' : '' ?>>แสดง</option>
-                        <option value="hide" <?= (($editData['status'] ?? '') === 'hide') ? 'selected' : '' ?>>ซ่อน</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>รูปหน้าห้องพัก</label>
-                    <input type="file" name="room_image" accept="image/*">
-                </div>
-
-                <?php if (!empty($editData['image_path'])): ?>
-                    <div class="preview-box">
-                        <img src="<?= htmlspecialchars($editData['image_path']) ?>" alt="room image">
-                    </div>
-                <?php endif; ?>
-
-                <div style="margin-top:18px; display:flex; gap:10px;">
-                    <button type="submit" class="btn btn-save">
-                        <?= $editData ? 'อัปเดตข้อมูล' : 'บันทึกห้องพัก' ?>
-                    </button>
-
-                    <?php if ($editData): ?>
-                        <a href="manage_rooms.php" class="btn btn-cancel">ยกเลิก</a>
-                    <?php endif; ?>
-                </div>
-            </form>
-        </div>
-
-        <div class="card">
-            <h2>รายการห้องพักทั้งหมด</h2>
-
-            <div class="table-wrap">
-                <table class="room-table">
-                    <thead>
-                        <tr>
-                            <th>รูป</th>
-                            <th>ชื่อห้อง</th>
-                            <th>ประเภท</th>
-                            <th>ราคา</th>
-                            <th>จำนวนห้อง</th>
-                            <th>สถานะ</th>
-                            <th>จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if ($rooms && $rooms->num_rows > 0): ?>
-                            <?php while ($row = $rooms->fetch_assoc()): ?>
-                                <tr>
-                                    <td>
-                                        <?php if (!empty($row['image_path'])): ?>
-                                            <img src="<?= htmlspecialchars($row['image_path']) ?>" class="room-thumb" alt="">
-                                        <?php else: ?>
-                                            <div class="room-thumb"></div>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td><?= htmlspecialchars($row['room_name']) ?></td>
-                                    <td><?= htmlspecialchars($row['room_type']) ?></td>
-                                    <td>฿<?= number_format($row['price'], 2) ?></td>
-                                    <td><?= (int)$row['total_rooms'] ?> ห้อง</td>
-                                    <td>
-                                        <?php if ($row['status'] === 'show'): ?>
-                                            <span class="badge badge-show">แสดง</span>
-                                        <?php else: ?>
-                                            <span class="badge badge-hide">ซ่อน</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <a class="action-btn edit-btn" href="manage_rooms.php?edit=<?= $row['id'] ?>">แก้ไข</a>
-                                        <a class="action-btn delete-btn"
-                                           href="delete_room.php?id=<?= $row['id'] ?>"
-                                           onclick="return confirm('ยืนยันการลบห้องพักนี้?')">ลบ</a>
-                                    </td>
-                                </tr>
-                            <?php endwhile; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="7" style="text-align:center;">ยังไม่มีข้อมูลห้องพัก</td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-    </div>
-</div>
-
-<?php include 'admin_layout_bottom.php'; ?>

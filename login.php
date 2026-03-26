@@ -289,7 +289,7 @@ unset($_SESSION['login_message']);
                     <div class="google-title">เข้าสู่ระบบด้วย Google</div>
 
                     <div id="g_id_onload"
-                        data-client_id="YOUR_GOOGLE_CLIENT_ID"
+                        data-client_id="242367893781-fdhogchm99o11ar9gk7kmbq4htf4loh4.apps.googleusercontent.com"
                         data-callback="handleGoogleCredential"
                         data-auto_prompt="false">
                     </div>

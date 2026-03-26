@@ -200,7 +200,7 @@ if ($stmt->execute()) {
             <p><strong>ผู้จอง:</strong> <?php echo htmlspecialchars($full_name); ?></p>
             <p><strong>จำนวนผู้เข้าพัก:</strong> <?php echo (int)$guests; ?> คน</p>
             <p><strong>สถานะ:</strong> รอการยืนยัน</p>
-            <a href="rooms.php" class="btn">กลับไปหน้าห้องพัก</a>
+            <a href="/Projate/booking_room.php" class="btn">กลับไปหน้าห้องพัก</a>
         </div>
     </body>
     </html>

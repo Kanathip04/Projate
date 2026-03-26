@@ -3,70 +3,52 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
 
-// ถ้าล็อกอินแล้วค่อยไปหน้า dashboard
-if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
-    header("Location: admin_dashboard.php");
-    exit;
-}
+// ล้าง session ชั่วคราวเพื่อหยุด loop
+unset($_SESSION['admin_logged_in']);
 ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Test</title>
+    <title>Login Debug</title>
     <style>
         body{
             font-family:Arial,sans-serif;
             background:#f5f5f5;
-            display:flex;
-            justify-content:center;
-            align-items:center;
             min-height:100vh;
+            display:flex;
+            align-items:center;
+            justify-content:center;
             margin:0;
         }
         .box{
             background:#fff;
+            width:100%;
+            max-width:420px;
             padding:30px;
             border-radius:16px;
             box-shadow:0 10px 25px rgba(0,0,0,.12);
-            width:100%;
-            max-width:400px;
+            text-align:center;
         }
-        h2{
-            margin:0 0 15px;
-        }
-        input{
-            width:100%;
-            height:45px;
-            margin-bottom:12px;
-            padding:0 12px;
-            border:1px solid #ccc;
-            border-radius:10px;
-            box-sizing:border-box;
-        }
-        button{
-            width:100%;
-            height:45px;
-            border:none;
-            border-radius:10px;
+        h1{margin:0 0 10px;}
+        p{color:#555; line-height:1.6;}
+        a{
+            display:inline-block;
+            margin-top:15px;
+            padding:12px 18px;
             background:#638411;
             color:#fff;
-            font-size:16px;
-            cursor:pointer;
-        }
-        button:hover{
-            background:#4f6a0d;
+            text-decoration:none;
+            border-radius:10px;
         }
     </style>
 </head>
 <body>
     <div class="box">
-        <h2>Login Test</h2>
-        <form action="check_login.php" method="post">
-            <input type="password" name="password" placeholder="กรอกรหัสผ่าน">
-            <button type="submit">เข้าสู่ระบบ</button>
-        </form>
+        <h1>หน้า Login ใช้งานได้</h1>
+        <p>ถ้าคุณเห็นหน้านี้ แปลว่าไฟล์ login.php เองไม่พังแล้ว</p>
+        <a href="admin_dashboard.php">ไปหน้า Dashboard</a>
     </div>
 </body>
 </html>

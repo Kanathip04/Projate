@@ -60,8 +60,8 @@ $hasRoomType    = in_array('room_type', $roomColumns, true);
 $hasPrice       = in_array('price', $roomColumns, true);
 $hasRoomSize    = in_array('room_size', $roomColumns, true);
 $hasBedType     = in_array('bed_type', $roomColumns, true);
-$hasCapacity    = in_array('capacity', $roomColumns, true);
-$hasImage       = in_array('image', $roomColumns, true);
+$hasMaxGuests   = in_array('max_guests', $roomColumns, true);
+$hasImagePath   = in_array('image_path', $roomColumns, true);
 $hasDescription = in_array('description', $roomColumns, true);
 $hasStatus      = in_array('status', $roomColumns, true);
 $hasTotalRooms  = in_array('total_rooms', $roomColumns, true);
@@ -107,10 +107,11 @@ if ($hasRoomType)    $selectFields[] = 'room_type';
 if ($hasPrice)       $selectFields[] = 'price';
 if ($hasRoomSize)    $selectFields[] = 'room_size';
 if ($hasBedType)     $selectFields[] = 'bed_type';
-if ($hasCapacity)    $selectFields[] = 'capacity';
-if ($hasImage)       $selectFields[] = 'image';
+if ($hasMaxGuests)   $selectFields[] = 'max_guests';
+if ($hasImagePath)   $selectFields[] = 'image_path';
 if ($hasDescription) $selectFields[] = 'description';
 if ($hasTotalRooms)  $selectFields[] = 'total_rooms';
+if ($hasStatus)      $selectFields[] = 'status';
 
 /* =========================
    สร้าง SQL หลัก
@@ -118,7 +119,7 @@ if ($hasTotalRooms)  $selectFields[] = 'total_rooms';
 $sql = "SELECT " . implode(", ", $selectFields) . " FROM rooms WHERE 1=1";
 
 if ($hasStatus) {
-    $sql .= " AND status = 1";
+    $sql .= " AND status = 'show'";
 }
 
 $sql .= " ORDER BY id DESC";
@@ -495,7 +496,7 @@ a{
                 <?php while($room = $result->fetch_assoc()): ?>
                     <?php
                         $roomId    = (int)$room['id'];
-                        $roomImage = (!empty($room['image'])) ? $room['image'] : 'uploads/no-image.png';
+                        $roomImage = (!empty($room['image_path'])) ? $room['image_path'] : 'uploads/no-image.png';
                         $roomDesc  = (!empty($room['description'])) ? $room['description'] : 'ไม่มีรายละเอียดเพิ่มเติม';
                         $roomPrice = isset($room['price']) ? (float)$room['price'] : 0;
 
@@ -504,9 +505,9 @@ a{
                             $totalRooms = 5;
                         }
 
-                        $approvedCount = isset($approvedMap[$roomId]) ? (int)$approvedMap[$roomId] : 0;
+                        $approvedCount  = isset($approvedMap[$roomId]) ? (int)$approvedMap[$roomId] : 0;
                         $availableRooms = max(0, $totalRooms - $approvedCount);
-                        $isFull = ($availableRooms <= 0);
+                        $isFull         = ($availableRooms <= 0);
                     ?>
                     <div class="room-card">
                         <div class="room-image-wrap">
@@ -550,8 +551,8 @@ a{
                                     <div class="meta-item"><strong>ประเภทเตียง:</strong> <?php echo htmlspecialchars($room['bed_type'] ?? '-'); ?></div>
                                 <?php endif; ?>
 
-                                <?php if ($hasCapacity): ?>
-                                    <div class="meta-item"><strong>รองรับ:</strong> <?php echo htmlspecialchars($room['capacity'] ?? '-'); ?> คน</div>
+                                <?php if ($hasMaxGuests): ?>
+                                    <div class="meta-item"><strong>รองรับ:</strong> <?php echo (int)($room['max_guests'] ?? 0); ?> คน</div>
                                 <?php endif; ?>
                             </div>
 
@@ -565,7 +566,7 @@ a{
                                     <span class="book-btn disabled">ห้องเต็ม</span>
                                 <?php else: ?>
                                     <a class="book-btn"
-                                       href="/Projate/booking_form.php?room_id=<?php echo $roomId; ?>">
+                                       href="booking_form.php?room_id=<?php echo $roomId; ?>">
                                        จองห้องนี้
                                     </a>
                                 <?php endif; ?>

@@ -257,10 +257,15 @@ input, select, textarea, button{
                     <span class="text">จัดการห้องพัก</span>
                 </a>
 
-                <a href="room_bookings_admin.php" class="menu-item <?php echo ($activeMenu === 'room_bookings') ? 'active' : ''; ?>">
+                <a href="manage_rooms.php" class="menu-item <?php echo ($activeMenu === 'rooms') ? 'active' : '' ?>">
                     <span class="icon">📋</span>
                     <span class="text">รายการจองห้องพัก</span>
                 </a>
+
+                <a href="room_bookings_admin.php" class="menu-item <?php echo ($activeMenu === 'room_bookings') ? 'active' : ''; ?>">
+                    <span class="icon">📋</span>
+                    <span class="text">รายการจองห้องพัก</span>
+                </a>                
 
                 <a href="admin_add_news.php" class="menu-item <?php echo ($activeMenu === 'news_add') ? 'active' : ''; ?>">
                     <span class="icon">📰</span>

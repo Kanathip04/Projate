@@ -1,12 +1,4 @@
 <?php
-session_start();
-
-/* ถ้าเว็บคุณมี login admin อยู่แล้ว ใช้อันนี้ได้ */
-if (!isset($_SESSION['admin_logged_in'])) {
-    header("Location: login.php");
-    exit;
-}
-
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 
@@ -40,7 +32,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $image_path = $about['image_path'] ?? '';
 
-    /* อัปโหลดรูปใหม่ */
     if (!empty($_FILES['about_image']['name'])) {
         $targetDir = "uploads/";
         if (!is_dir($targetDir)) {
@@ -93,38 +84,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         } else {
             $error = "เกิดข้อผิดพลาด: " . $conn->error;
         }
+
+        $stmt->close();
     }
 }
+
+$pageTitle = "แก้ไขข้อมูลหน้าประวัติ";
+$activeMenu = "about";
+include 'admin_layout_top.php';
 ?>
-<!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>แก้ไขข้อมูลประวัติ</title>
+
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{
-    --main:#09422A;
-    --main2:#176046;
-    --bg:#f4f6f8;
-    --white:#fff;
-    --text:#222;
-    --muted:#666;
-    --line:#dfe7e2;
-    --shadow:0 12px 30px rgba(0,0,0,.08);
-}
-body{
-    font-family:'Segoe UI',Tahoma,sans-serif;
-    background:var(--bg);
-    color:var(--text);
-    padding:30px;
-}
-.wrapper{
+.page-wrap{
     max-width:1100px;
-    margin:0 auto;
 }
-.topbar{
+.topbar-local{
     display:flex;
     justify-content:space-between;
     align-items:center;
@@ -132,16 +106,17 @@ body{
     gap:12px;
     flex-wrap:wrap;
 }
-.topbar h1{
+.topbar-local h1{
     font-size:32px;
-    color:var(--main);
+    color:#09422A;
+    margin:0;
 }
 .top-actions{
     display:flex;
     gap:10px;
     flex-wrap:wrap;
 }
-.btn{
+.btn-local{
     display:inline-block;
     text-decoration:none;
     border:none;
@@ -152,73 +127,73 @@ body{
     font-weight:700;
     transition:.25s ease;
 }
-.btn-main{
-    background:linear-gradient(135deg, var(--main), var(--main2));
+.btn-main-local{
+    background:linear-gradient(135deg, #09422A, #176046);
     color:#fff;
 }
-.btn-main:hover{transform:translateY(-2px)}
-.btn-light{
+.btn-main-local:hover{transform:translateY(-2px)}
+.btn-light-local{
     background:#fff;
-    color:var(--main);
-    border:1px solid var(--line);
+    color:#09422A;
+    border:1px solid #dfe7e2;
 }
-.card{
-    background:var(--white);
+.card-local{
+    background:#fff;
     border-radius:24px;
-    box-shadow:var(--shadow);
+    box-shadow:0 12px 30px rgba(0,0,0,.08);
     padding:28px;
 }
-.alert{
+.alert-local{
     padding:14px 16px;
     border-radius:14px;
     margin-bottom:18px;
     font-weight:600;
 }
-.success{
+.success-local{
     background:#eaf7ef;
     color:#176046;
     border:1px solid #cde8d7;
 }
-.error{
+.error-local{
     background:#fff0f0;
     color:#b42318;
     border:1px solid #f3c7c7;
 }
-.grid{
+.grid-local{
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:18px;
 }
-.form-group{
+.form-group-local{
     margin-bottom:18px;
 }
-.form-group.full{
+.form-group-local.full{
     grid-column:1 / -1;
 }
-label{
+.form-group-local label{
     display:block;
     margin-bottom:8px;
     font-weight:700;
-    color:var(--main);
+    color:#09422A;
 }
-input[type="text"],
-textarea,
-input[type="file"]{
+.form-group-local input[type="text"],
+.form-group-local textarea,
+.form-group-local input[type="file"]{
     width:100%;
-    border:1px solid var(--line);
+    border:1px solid #dfe7e2;
     border-radius:14px;
     padding:14px 15px;
     font-size:15px;
     background:#fff;
     outline:none;
 }
-textarea{
+.form-group-local textarea{
     min-height:130px;
     resize:vertical;
 }
-input[type="text"]:focus,
-textarea:focus{
-    border-color:var(--main2);
+.form-group-local input[type="text"]:focus,
+.form-group-local textarea:focus{
+    border-color:#176046;
     box-shadow:0 0 0 4px rgba(23,96,70,.08);
 }
 .preview-box{
@@ -236,7 +211,7 @@ textarea:focus{
     box-shadow:0 10px 24px rgba(0,0,0,.10);
 }
 .note{
-    color:var(--muted);
+    color:#666;
     font-size:14px;
     margin-top:6px;
 }
@@ -247,75 +222,71 @@ textarea:focus{
     flex-wrap:wrap;
 }
 @media(max-width:768px){
-    body{padding:16px}
-    .grid{grid-template-columns:1fr}
-    .topbar h1{font-size:24px}
+    .grid-local{grid-template-columns:1fr}
+    .topbar-local h1{font-size:24px}
 }
 </style>
-</head>
-<body>
 
-<div class="wrapper">
-    <div class="topbar">
+<div class="page-wrap">
+    <div class="topbar-local">
         <h1>แก้ไขข้อมูลหน้าประวัติ</h1>
         <div class="top-actions">
-            <a href="about_us.php" class="btn btn-light">ดูหน้าจริง</a>
-            <a href="admin_dashboard.php" class="btn btn-light">กลับแดชบอร์ด</a>
+            <a href="about_us.php" class="btn-local btn-light-local">ดูหน้าจริง</a>
         </div>
     </div>
 
-    <div class="card">
+    <div class="card-local">
         <?php if ($message): ?>
-            <div class="alert success"><?php echo $message; ?></div>
+            <div class="alert-local success-local"><?php echo htmlspecialchars($message); ?></div>
         <?php endif; ?>
 
         <?php if ($error): ?>
-            <div class="alert error"><?php echo $error; ?></div>
+            <div class="alert-local error-local"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
         <form method="POST" enctype="multipart/form-data">
-            <div class="grid">
-                <div class="form-group">
+            <div class="grid-local">
+                <div class="form-group-local">
                     <label>ข้อความหัวข้อย่อย</label>
                     <input type="text" name="section_tag" value="<?php echo htmlspecialchars($about['section_tag'] ?? ''); ?>">
                 </div>
 
-                <div class="form-group">
+                <div class="form-group-local">
                     <label>หัวข้อหลัก</label>
                     <input type="text" name="title" value="<?php echo htmlspecialchars($about['title'] ?? ''); ?>">
                 </div>
 
-                <div class="form-group full">
+                <div class="form-group-local full">
                     <label>ข้อความเกริ่นนำ</label>
                     <textarea name="lead_text"><?php echo htmlspecialchars($about['lead_text'] ?? ''); ?></textarea>
                 </div>
 
-                <div class="form-group full">
+                <div class="form-group-local full">
                     <label>ย่อหน้า 1</label>
                     <textarea name="paragraph1"><?php echo htmlspecialchars($about['paragraph1'] ?? ''); ?></textarea>
                 </div>
 
-                <div class="form-group full">
+                <div class="form-group-local full">
                     <label>ย่อหน้า 2</label>
                     <textarea name="paragraph2"><?php echo htmlspecialchars($about['paragraph2'] ?? ''); ?></textarea>
                 </div>
 
-                <div class="form-group full">
+                <div class="form-group-local full">
                     <label>ย่อหน้า 3</label>
                     <textarea name="paragraph3"><?php echo htmlspecialchars($about['paragraph3'] ?? ''); ?></textarea>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group-local">
                     <label>หัวข้อในกล่องบนรูป</label>
                     <input type="text" name="image_badge_title" value="<?php echo htmlspecialchars($about['image_badge_title'] ?? ''); ?>">
                 </div>
 
-                <div class="form-group">
+                <div class="form-group-local">
                     <label>ข้อความในกล่องบนรูป</label>
                     <input type="text" name="image_badge_text" value="<?php echo htmlspecialchars($about['image_badge_text'] ?? ''); ?>">
                 </div>
 
-                <div class="form-group full">
+                <div class="form-group-local full">
                     <label>อัปโหลดรูปใหม่</label>
                     <input type="file" name="about_image" accept=".jpg,.jpeg,.png,.webp">
                     <div class="note">รองรับไฟล์ jpg, jpeg, png, webp</div>
@@ -333,12 +304,14 @@ textarea:focus{
             </div>
 
             <div class="submit-wrap">
-                <button type="submit" class="btn btn-main">บันทึกข้อมูล</button>
-                <a href="about_us.php" class="btn btn-light">ยกเลิก</a>
+                <button type="submit" class="btn-local btn-main-local">บันทึกข้อมูล</button>
+                <a href="about_us.php" class="btn-local btn-light-local">ยกเลิก</a>
             </div>
         </form>
     </div>
 </div>
 
-</body>
-</html>
+<?php
+$conn->close();
+include 'admin_layout_bottom.php';
+?>

@@ -3,7 +3,7 @@ session_start();
 date_default_timezone_set('Asia/Bangkok');
 
 /* =========================
-   เชื่อมต่อฐานข้อมูล
+   DB Connection
 ========================= */
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
@@ -12,19 +12,13 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-/* =========================
-   ตัวแปรเริ่มต้น
-========================= */
-$success = "";
 $error = "";
+$success = "";
 
 $fullname = "";
 $email = "";
 $phone = "";
 
-/* =========================
-   สมัครสมาชิก
-========================= */
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $fullname = trim($_POST['fullname'] ?? '');
     $email = trim($_POST['email'] ?? '');
@@ -32,49 +26,79 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
 
-    // ตรวจสอบค่าว่าง
     if ($fullname === "" || $email === "" || $password === "" || $confirm_password === "") {
-        $error = "กรุณากรอกข้อมูลให้ครบทุกช่องที่จำเป็น";
-    }
-    // ตรวจสอบรูปแบบอีเมล
-    elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "กรุณากรอกข้อมูลให้ครบ";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "รูปแบบอีเมลไม่ถูกต้อง";
-    }
-    // ตรวจสอบความยาวรหัสผ่าน
-    elseif (strlen($password) < 6) {
+    } elseif (strlen($password) < 6) {
         $error = "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร";
-    }
-    // ตรวจสอบยืนยันรหัสผ่าน
-    elseif ($password !== $confirm_password) {
+    } elseif ($password !== $confirm_password) {
         $error = "รหัสผ่านและยืนยันรหัสผ่านไม่ตรงกัน";
     } else {
         // ตรวจสอบอีเมลซ้ำ
-        $checkStmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
-        $checkStmt->bind_param("s", $email);
-        $checkStmt->execute();
-        $checkStmt->store_result();
+        $stmtCheck = $conn->prepare("SELECT id, is_verified FROM users WHERE email = ?");
+        $stmtCheck->bind_param("s", $email);
+        $stmtCheck->execute();
+        $resultCheck = $stmtCheck->get_result();
 
-        if ($checkStmt->num_rows > 0) {
-            $error = "อีเมลนี้ถูกใช้งานแล้ว";
+        if ($resultCheck->num_rows > 0) {
+            $userRow = $resultCheck->fetch_assoc();
+
+            if ((int)$userRow['is_verified'] === 1) {
+                $error = "อีเมลนี้ถูกใช้งานแล้ว";
+            } else {
+                // ถ้ายังไม่ verify ให้ลบ OTP เก่าแล้วสร้าง OTP ใหม่
+                $userId = (int)$userRow['id'];
+
+                $otp = str_pad((string)rand(0, 999999), 6, "0", STR_PAD_LEFT);
+                $expiresAt = date("Y-m-d H:i:s", strtotime("+5 minutes"));
+
+                $conn->query("DELETE FROM user_otps WHERE user_id = {$userId} AND is_used = 0");
+
+                $stmtOtp = $conn->prepare("INSERT INTO user_otps (user_id, otp_code, expires_at, is_used) VALUES (?, ?, ?, 0)");
+                $stmtOtp->bind_param("iss", $userId, $otp, $expiresAt);
+                $stmtOtp->execute();
+                $stmtOtp->close();
+
+                $_SESSION['pending_user_id'] = $userId;
+                $_SESSION['pending_user_email'] = $email;
+                $_SESSION['debug_otp'] = $otp; // เอาไว้ทดสอบก่อน
+
+                header("Location: otp_verify.php");
+                exit;
+            }
         } else {
-            // เข้ารหัสรหัสผ่าน
+            // สร้าง user ใหม่
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-            // บันทึกข้อมูล
-            $insertStmt = $conn->prepare("INSERT INTO users (fullname, email, phone, password) VALUES (?, ?, ?, ?)");
-            $insertStmt->bind_param("ssss", $fullname, $email, $phone, $hashedPassword);
+            $stmtInsert = $conn->prepare("INSERT INTO users (fullname, email, phone, password, is_verified) VALUES (?, ?, ?, ?, 0)");
+            $stmtInsert->bind_param("ssss", $fullname, $email, $phone, $hashedPassword);
 
-            if ($insertStmt->execute()) {
-                $success = "สมัครสมาชิกสำเร็จ กำลังไปยังหน้าเข้าสู่ระบบ...";
-                header("refresh:2;url=login.php");
+            if ($stmtInsert->execute()) {
+                $userId = $stmtInsert->insert_id;
+
+                $otp = str_pad((string)rand(0, 999999), 6, "0", STR_PAD_LEFT);
+                $expiresAt = date("Y-m-d H:i:s", strtotime("+5 minutes"));
+
+                $stmtOtp = $conn->prepare("INSERT INTO user_otps (user_id, otp_code, expires_at, is_used) VALUES (?, ?, ?, 0)");
+                $stmtOtp->bind_param("iss", $userId, $otp, $expiresAt);
+                $stmtOtp->execute();
+                $stmtOtp->close();
+
+                $_SESSION['pending_user_id'] = $userId;
+                $_SESSION['pending_user_email'] = $email;
+                $_SESSION['debug_otp'] = $otp; // เอาไว้ทดสอบก่อน
+
+                header("Location: otp_verify.php");
+                exit;
             } else {
-                $error = "เกิดข้อผิดพลาดในการบันทึกข้อมูล";
+                $error = "เกิดข้อผิดพลาดในการสมัครสมาชิก";
             }
 
-            $insertStmt->close();
+            $stmtInsert->close();
         }
 
-        $checkStmt->close();
+        $stmtCheck->close();
     }
 }
 ?>
@@ -85,221 +109,165 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>สมัครสมาชิก</title>
     <style>
-        *{
-            margin:0;
-            padding:0;
-            box-sizing:border-box;
-        }
-
+        *{margin:0;padding:0;box-sizing:border-box;}
         body{
             font-family:'Segoe UI', Tahoma, sans-serif;
-            background: linear-gradient(135deg, #eef4e3, #f7f9f3);
+            background:linear-gradient(135deg,#eef4e3,#f7f9f3);
             min-height:100vh;
             display:flex;
-            align-items:center;
             justify-content:center;
+            align-items:center;
             padding:20px;
         }
-
-        .register-container{
+        .card{
             width:100%;
             max-width:480px;
             background:#fff;
             border-radius:22px;
-            box-shadow:0 15px 40px rgba(0,0,0,0.10);
             overflow:hidden;
+            box-shadow:0 20px 50px rgba(0,0,0,0.10);
             border:1px solid rgba(0,0,0,0.05);
         }
-
-        .register-header{
-            background: linear-gradient(135deg, #638411, #7aa51a);
+        .header{
+            background:linear-gradient(135deg,#638411,#7aa51a);
             color:#fff;
-            padding:30px 25px;
             text-align:center;
+            padding:28px 20px;
         }
-
-        .register-header h1{
+        .header h1{
             font-size:28px;
             margin-bottom:8px;
         }
-
-        .register-header p{
+        .header p{
             font-size:14px;
-            opacity:0.95;
+            opacity:.95;
         }
-
-        .register-body{
-            padding:28px 24px 24px;
+        .body{
+            padding:24px;
         }
-
         .alert{
             padding:12px 14px;
             border-radius:12px;
-            margin-bottom:18px;
             font-size:14px;
-            line-height:1.5;
-        }
-
-        .alert.error{
-            background:#ffe9e9;
-            color:#c62828;
-            border:1px solid #f5bcbc;
-        }
-
-        .alert.success{
-            background:#eaf7e8;
-            color:#2e7d32;
-            border:1px solid #b8dfb5;
-        }
-
-        .form-group{
             margin-bottom:16px;
         }
-
-        .form-group label{
+        .alert.error{
+            background:#ffe9e9;
+            color:#b42318;
+            border:1px solid #f0b2b2;
+        }
+        .form-group{
+            margin-bottom:15px;
+        }
+        label{
             display:block;
             margin-bottom:8px;
-            font-size:14px;
             font-weight:600;
             color:#333;
+            font-size:14px;
         }
-
         .form-control{
             width:100%;
             height:48px;
-            border:1px solid #dcdcdc;
+            border:1px solid #ddd;
             border-radius:12px;
             padding:0 14px;
             font-size:15px;
             outline:none;
-            transition:0.25s;
             background:#fafafa;
+            transition:.25s;
         }
-
         .form-control:focus{
             border-color:#7aa51a;
             background:#fff;
-            box-shadow:0 0 0 4px rgba(122,165,26,0.12);
+            box-shadow:0 0 0 4px rgba(122,165,26,.12);
         }
-
-        .register-btn{
+        .btn{
             width:100%;
             height:50px;
             border:none;
             border-radius:14px;
-            background: linear-gradient(135deg, #638411, #7aa51a);
+            background:linear-gradient(135deg,#638411,#7aa51a);
             color:#fff;
             font-size:16px;
             font-weight:700;
             cursor:pointer;
-            transition:0.25s;
             margin-top:4px;
         }
-
-        .register-btn:hover{
-            transform:translateY(-1px);
-            box-shadow:0 10px 20px rgba(99,132,17,0.20);
+        .btn:hover{
+            opacity:.95;
         }
-
-        .bottom-text{
-            margin-top:18px;
+        .bottom{
             text-align:center;
+            margin-top:16px;
             font-size:14px;
             color:#666;
         }
-
-        .bottom-text a{
+        .bottom a{
             color:#638411;
             text-decoration:none;
             font-weight:700;
         }
-
-        .bottom-text a:hover{
-            text-decoration:underline;
-        }
-
         .back-home{
-            display:inline-block;
+            display:block;
             margin-top:14px;
             text-align:center;
-            width:100%;
             color:#555;
             text-decoration:none;
             font-size:14px;
         }
-
         .back-home:hover{
             color:#638411;
-        }
-
-        @media (max-width: 520px){
-            .register-header h1{
-                font-size:24px;
-            }
-
-            .register-body{
-                padding:22px 18px 20px;
-            }
         }
     </style>
 </head>
 <body>
-
-<div class="register-container">
-    <div class="register-header">
-        <h1>สมัครสมาชิก</h1>
-        <p>กรอกข้อมูลเพื่อสร้างบัญชีผู้ใช้งาน</p>
-    </div>
-
-    <div class="register-body">
-
-        <?php if ($error !== ""): ?>
-            <div class="alert error"><?php echo $error; ?></div>
-        <?php endif; ?>
-
-        <?php if ($success !== ""): ?>
-            <div class="alert success"><?php echo $success; ?></div>
-        <?php endif; ?>
-
-        <form method="POST" action="">
-            <div class="form-group">
-                <label for="fullname">ชื่อ-นามสกุล</label>
-                <input type="text" id="fullname" name="fullname" class="form-control"
-                       value="<?php echo htmlspecialchars($fullname); ?>" required>
-            </div>
-
-            <div class="form-group">
-                <label for="email">อีเมล</label>
-                <input type="email" id="email" name="email" class="form-control"
-                       value="<?php echo htmlspecialchars($email); ?>" required>
-            </div>
-
-            <div class="form-group">
-                <label for="phone">เบอร์โทรศัพท์</label>
-                <input type="text" id="phone" name="phone" class="form-control"
-                       value="<?php echo htmlspecialchars($phone); ?>">
-            </div>
-
-            <div class="form-group">
-                <label for="password">รหัสผ่าน</label>
-                <input type="password" id="password" name="password" class="form-control" required>
-            </div>
-
-            <div class="form-group">
-                <label for="confirm_password">ยืนยันรหัสผ่าน</label>
-                <input type="password" id="confirm_password" name="confirm_password" class="form-control" required>
-            </div>
-
-            <button type="submit" class="register-btn">สมัครสมาชิก</button>
-        </form>
-
-        <div class="bottom-text">
-            มีบัญชีอยู่แล้ว? <a href="login.php">เข้าสู่ระบบ</a>
+    <div class="card">
+        <div class="header">
+            <h1>สมัครสมาชิก</h1>
+            <p>กรอกข้อมูลเพื่อสร้างบัญชีผู้ใช้งาน</p>
         </div>
 
-        <a href="index.php" class="back-home">← กลับหน้าแรก</a>
-    </div>
-</div>
+        <div class="body">
+            <?php if ($error !== ""): ?>
+                <div class="alert error"><?php echo htmlspecialchars($error); ?></div>
+            <?php endif; ?>
 
+            <form method="POST">
+                <div class="form-group">
+                    <label>ชื่อ-นามสกุล</label>
+                    <input type="text" name="fullname" class="form-control" value="<?php echo htmlspecialchars($fullname); ?>" required>
+                </div>
+
+                <div class="form-group">
+                    <label>อีเมล</label>
+                    <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($email); ?>" required>
+                </div>
+
+                <div class="form-group">
+                    <label>เบอร์โทรศัพท์</label>
+                    <input type="text" name="phone" class="form-control" value="<?php echo htmlspecialchars($phone); ?>">
+                </div>
+
+                <div class="form-group">
+                    <label>รหัสผ่าน</label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label>ยืนยันรหัสผ่าน</label>
+                    <input type="password" name="confirm_password" class="form-control" required>
+                </div>
+
+                <button type="submit" class="btn">สมัครสมาชิก</button>
+            </form>
+
+            <div class="bottom">
+                มีบัญชีอยู่แล้ว? <a href="login.php">เข้าสู่ระบบ</a>
+            </div>
+
+            <a href="index.php" class="back-home">← กลับหน้าแรก</a>
+        </div>
+    </div>
 </body>
 </html>

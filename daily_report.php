@@ -159,9 +159,13 @@ body{
 }
 
 .btn-search{
-    background:linear-gradient(135deg, #7e9f2d, #6b871f);
+    background:linear-gradient(135deg, #1f2a44, #171934);
     color:#fff;
-    box-shadow:0 8px 18px rgba(111, 146, 32, 0.20);
+    box-shadow:0 8px 18px rgba(23,25,52,0.25);
+}
+
+.btn-search:hover{
+    background:linear-gradient(135deg, #2a3558, #1c1f3f);
 }
 
 .btn-print{

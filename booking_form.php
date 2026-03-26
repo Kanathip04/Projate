@@ -75,8 +75,9 @@ button{margin-top:20px;width:100%;padding:14px;border:none;border-radius:12px;ba
 </head>
 <body>
 <div class="wrapper">
-    <a href="booking_room.php?checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>" class="back-link">← กลับไปหน้าห้องพัก</a>
-
+<a href="/Projate/rooms.php?checkin=<?php echo urlencode($_GET['checkin'] ?? ''); ?>&checkout=<?php echo urlencode($_GET['checkout'] ?? ''); ?>&guests=<?php echo urlencode($_GET['guests'] ?? ''); ?>" class="back-link">
+    ← กลับไปหน้าห้องพัก
+</a>
     <div class="card">
         <div class="header">
             <h1>กรอกข้อมูลการจอง</h1>

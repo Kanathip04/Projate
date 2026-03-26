@@ -70,47 +70,13 @@ if (!$hasId || !$hasRoomName) {
 }
 
 /* =========================
-   รับค่าค้นหา
+   ไม่ใช้ฟอร์มค้นหาแล้ว
+   แต่คงตัวแปรไว้เผื่อส่งต่อไป booking_form
 ========================= */
-$checkin  = trim($_GET['checkin'] ?? '');
-$checkout = trim($_GET['checkout'] ?? '');
-$guests   = trim($_GET['guests'] ?? '');
-$type     = trim($_GET['type'] ?? '');
-
-$error_message = "";
-
-/* =========================
-   ตรวจสอบข้อมูลวันที่
-========================= */
-if ($checkin !== '' && $checkout !== '') {
-    if ($checkin >= $checkout) {
-        $error_message = "วันที่ออกต้องมากกว่าวันที่เข้าพัก";
-    }
-}
-
-/* =========================
-   ดึงประเภทห้องทั้งหมดไปใส่ select
-========================= */
-$roomTypes = [];
-
-if ($hasRoomType) {
-    $typeSql = "SELECT DISTINCT room_type FROM rooms WHERE 1=1";
-
-    if ($hasStatus) {
-        $typeSql .= " AND status = 1";
-    }
-
-    $typeSql .= " ORDER BY room_type ASC";
-
-    $resType = $conn->query($typeSql);
-    if ($resType && $resType->num_rows > 0) {
-        while ($rowType = $resType->fetch_assoc()) {
-            if (!empty($rowType['room_type'])) {
-                $roomTypes[] = $rowType['room_type'];
-            }
-        }
-    }
-}
+$checkin  = '';
+$checkout = '';
+$guests   = '';
+$type     = '';
 
 /* =========================
    สร้าง SELECT แบบยืดหยุ่น
@@ -134,52 +100,6 @@ if ($hasStatus) {
     $sql .= " AND status = 1";
 }
 
-$params = [];
-$types  = "";
-
-/* =========================
-   ค้นหาตามจำนวนผู้เข้าพัก
-========================= */
-if ($guests !== '' && $hasCapacity) {
-    $sql .= " AND capacity >= ?";
-    $params[] = (int)$guests;
-    $types .= "i";
-}
-
-/* =========================
-   ค้นหาตามประเภทห้อง
-========================= */
-if ($type !== '' && $hasRoomType) {
-    $sql .= " AND room_type = ?";
-    $params[] = $type;
-    $types .= "s";
-}
-
-/* =========================
-   กรองห้องที่ถูกจองแล้วในช่วงวันที่เลือก
-========================= */
-if ($error_message === "" && $checkin !== '' && $checkout !== '' && tableExists($conn, 'room_bookings')) {
-
-    $bookingColumns = getTableColumns($conn, 'room_bookings');
-
-    $hasBookingRoomId     = in_array('room_id', $bookingColumns, true);
-    $hasBookingStatus     = in_array('booking_status', $bookingColumns, true);
-    $hasBookingCheckin    = in_array('checkin_date', $bookingColumns, true);
-    $hasBookingCheckout   = in_array('checkout_date', $bookingColumns, true);
-
-    if ($hasBookingRoomId && $hasBookingStatus && $hasBookingCheckin && $hasBookingCheckout) {
-        $sql .= " AND id NOT IN (
-                    SELECT room_id
-                    FROM room_bookings
-                    WHERE booking_status != 'cancelled'
-                    AND ((? < checkout_date) AND (? > checkin_date))
-                )";
-        $params[] = $checkin;
-        $params[] = $checkout;
-        $types .= "ss";
-    }
-}
-
 $sql .= " ORDER BY id DESC";
 
 /* =========================
@@ -188,10 +108,6 @@ $sql .= " ORDER BY id DESC";
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     die("Prepare failed: " . $conn->error);
-}
-
-if (!empty($params)) {
-    $stmt->bind_param($types, ...$params);
 }
 
 $stmt->execute();
@@ -218,8 +134,6 @@ $result = $stmt->get_result();
     --line:#e5e7eb;
     --white:#ffffff;
     --bg:#f8fafc;
-    --danger:#dc2626;
-    --danger-bg:#fef2f2;
     --card-shadow:0 12px 35px rgba(0,0,0,.08);
 }
 body{
@@ -277,83 +191,11 @@ a{
     color:rgba(255,255,255,.92);
     max-width:760px;
 }
-.search-box{
-    width:min(1180px, 92%);
-    margin:-55px auto 30px;
-    background:var(--white);
-    border-radius:26px;
-    box-shadow:var(--card-shadow);
-    border:1px solid #eef1f4;
-    position:relative;
-    z-index:5;
-    padding:26px;
-}
-.search-box h2{
-    font-size:30px;
-    margin-bottom:8px;
-    color:#111827;
-}
-.search-box p{
-    color:var(--muted);
-    margin-bottom:22px;
-}
-.search-grid{
-    display:grid;
-    grid-template-columns:repeat(4, 1fr) 180px;
-    gap:14px;
-}
-.field label{
-    display:block;
-    font-size:14px;
-    font-weight:600;
-    margin-bottom:8px;
-    color:#374151;
-}
-.field input,
-.field select{
-    width:100%;
-    height:52px;
-    border:1px solid var(--line);
-    border-radius:14px;
-    padding:0 14px;
-    font-size:15px;
-    background:#fff;
-    outline:none;
-}
-.field input:focus,
-.field select:focus{
-    border-color:var(--brand);
-    box-shadow:0 0 0 4px rgba(111,132,40,.12);
-}
-.search-btn{
-    border:none;
-    height:52px;
-    border-radius:14px;
-    background:var(--brand);
-    color:#fff;
-    font-size:16px;
-    font-weight:700;
-    cursor:pointer;
-    margin-top:30px;
-    transition:.2s ease;
-}
-.search-btn:hover{
-    background:var(--brand-dark);
-    transform:translateY(-1px);
-}
-.alert-error{
-    margin-top:18px;
-    background:var(--danger-bg);
-    color:var(--danger);
-    border:1px solid #fecaca;
-    border-radius:14px;
-    padding:14px 16px;
-    font-size:15px;
-    font-weight:600;
-}
 .section{
     width:min(1180px, 92%);
-    margin:0 auto 60px;
+    margin:-40px auto 60px;
+    position:relative;
+    z-index:5;
 }
 .section-head{
     display:flex;
@@ -493,14 +335,6 @@ a{
     color:#3f4b1d;
     line-height:1.8;
 }
-@media (max-width: 1024px){
-    .search-grid{
-        grid-template-columns:repeat(2, 1fr);
-    }
-    .search-btn{
-        margin-top:0;
-    }
-}
 @media (max-width: 768px){
     .hero{
         padding:50px 16px 100px;
@@ -511,16 +345,8 @@ a{
     .hero p{
         font-size:15px;
     }
-    .search-box{
-        margin-top:-45px;
-        padding:20px;
-        border-radius:20px;
-    }
-    .search-box h2{
-        font-size:24px;
-    }
-    .search-grid{
-        grid-template-columns:1fr;
+    .section{
+        margin-top:-30px;
     }
     .section-head{
         flex-direction:column;
@@ -554,61 +380,10 @@ a{
             <div class="hero-badge">Room Reservation</div>
             <h1>ระบบจองห้องพักและที่พักภายในสถาบัน</h1>
             <p>
-                เลือกประเภทห้องพัก วันที่เข้าพัก และจำนวนผู้เข้าพักได้จากหน้านี้
-                เพื่ออำนวยความสะดวกในการเข้าพักสำหรับผู้มาติดต่อราชการ นักวิจัย
-                ผู้เข้าร่วมกิจกรรม และผู้ใช้งานทั่วไป
+                เลือกห้องพักที่ต้องการจากรายการด้านล่างได้เลย
+                เมื่อกดจอง ระบบจะพาไปยังหน้าแบบฟอร์มสำหรับกรอกข้อมูลการจองต่อทันที
             </p>
         </div>
-    </section>
-
-    <section class="search-box">
-        <h2>ค้นหาห้องพักว่าง</h2>
-        <p>กรอกข้อมูลเบื้องต้นเพื่อค้นหาห้องพักที่เหมาะสมกับการเข้าพักของคุณ</p>
-
-        <form action="" method="get">
-            <div class="search-grid">
-                <div class="field">
-                    <label>วันที่เข้าพัก</label>
-                    <input type="date" name="checkin" value="<?php echo htmlspecialchars($checkin); ?>">
-                </div>
-
-                <div class="field">
-                    <label>วันที่ออก</label>
-                    <input type="date" name="checkout" value="<?php echo htmlspecialchars($checkout); ?>">
-                </div>
-
-                <div class="field">
-                    <label>จำนวนผู้เข้าพัก</label>
-                    <select name="guests">
-                        <option value="">เลือกจำนวน</option>
-                        <option value="1" <?php if($guests=="1") echo "selected"; ?>>1 คน</option>
-                        <option value="2" <?php if($guests=="2") echo "selected"; ?>>2 คน</option>
-                        <option value="3" <?php if($guests=="3") echo "selected"; ?>>3 คน</option>
-                        <option value="4" <?php if($guests=="4") echo "selected"; ?>>4 คน</option>
-                        <option value="5" <?php if($guests=="5") echo "selected"; ?>>5 คน</option>
-                        <option value="6" <?php if($guests=="6") echo "selected"; ?>>6 คน</option>
-                    </select>
-                </div>
-
-                <div class="field">
-                    <label>ประเภทห้องพัก</label>
-                    <select name="type">
-                        <option value="">ทั้งหมด</option>
-                        <?php foreach($roomTypes as $roomType): ?>
-                            <option value="<?php echo htmlspecialchars($roomType); ?>" <?php if($type === $roomType) echo "selected"; ?>>
-                                <?php echo htmlspecialchars($roomType); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <button type="submit" class="search-btn">ค้นหาห้องพัก</button>
-            </div>
-
-            <?php if ($error_message !== ""): ?>
-                <div class="alert-error"><?php echo htmlspecialchars($error_message); ?></div>
-            <?php endif; ?>
-        </form>
     </section>
 
     <section class="section">
@@ -663,10 +438,11 @@ a{
                                     ฿<?php echo number_format($roomPrice); ?>
                                     <span>/ คืน</span>
                                 </div>
-<a class="book-btn"
-   href="/Projate/booking_form.php?room_id=<?php echo (int)$room['id']; ?>&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
-   จองห้องนี้
-</a>
+
+                                <a class="book-btn"
+                                   href="/Projate/booking_form.php?room_id=<?php echo (int)$room['id']; ?>">
+                                   จองห้องนี้
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -674,7 +450,7 @@ a{
             </div>
         <?php else: ?>
             <div class="empty-box">
-                ไม่พบห้องพักที่ตรงกับเงื่อนไขที่เลือก
+                ไม่พบข้อมูลห้องพัก
             </div>
         <?php endif; ?>
     </section>

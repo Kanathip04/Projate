@@ -252,7 +252,7 @@ input, select, textarea, button{
                     <span class="text">รายการอนุมัติย้อนหลัง</span>
                 </a>
 
-                <a href="manage_rooms.php" class="menu-item <?php echo ($activeMenu === 'manage_rooms') ? 'active' : ''; ?>">
+                <a href="manage_rooms.php" class="menu-item <?php echo ($activeMenu === 'rooms') ? 'active' : ''; ?>">
                     <span class="icon">🛏️</span>
                     <span class="text">จัดการห้องพัก</span>
                 </a>

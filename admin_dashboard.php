@@ -232,11 +232,8 @@ include "admin_layout_top.php";
           <?php if ($result && $result->num_rows > 0): ?>
             <?php $n = 1; while ($row = $result->fetch_assoc()): ?>
               <?php
-              $badgeClass = match($row['user_type']) {
-                'นักศึกษา' => 'badge-blue',
-                'บุคลากร'  => 'badge-orange',
-                default    => 'badge-green',
-              };
+              $badgeClass = ($row['user_type'] == 'นักศึกษา') ? 'badge-blue'
+                          : (($row['user_type'] == 'บุคลากร') ? 'badge-orange' : 'badge-green');
               $t = '-';
               if (!empty($row['created_at'])) {
                 $ts = strtotime($row['created_at']);

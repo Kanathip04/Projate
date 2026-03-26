@@ -592,6 +592,30 @@ textarea.form-control{
     .stats-grid{ grid-template-columns:1fr; }
     .panel, .stat-card, .hero-booking{ padding:18px; }
 }
+.hero-booking{
+    background: linear-gradient(135deg, #f8f5ef 0%, #eee7dc 100%);
+    color: #1d2238;
+    border-radius: 28px;
+    padding: 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.05);
+    border:1px solid #e7dfd3;
+}
+.hero-booking{
+    position: relative;
+}
+
+.hero-booking::before{
+    content:"";
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:4px;
+    background:linear-gradient(90deg, #c7a056, #e0c58c);
+    border-top-left-radius:28px;
+    border-top-right-radius:28px;
+}
 </style>
 
 <div class="booking-page">

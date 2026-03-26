@@ -25,8 +25,16 @@ function redirect_back($message, $editId = 0) {
     exit;
 }
 
+function hasColumn(mysqli $conn, string $table, string $column): bool {
+    $table = $conn->real_escape_string($table);
+    $column = $conn->real_escape_string($column);
+    $sql = "SHOW COLUMNS FROM `$table` LIKE '$column'";
+    $res = $conn->query($sql);
+    return $res && $res->num_rows > 0;
+}
+
 /* =========================
-   ตรวจสอบตาราง
+   ตรวจสอบตาราง rooms
 ========================= */
 $checkTable = $conn->query("SHOW TABLES LIKE 'rooms'");
 if (!$checkTable || $checkTable->num_rows === 0) {
@@ -35,19 +43,20 @@ if (!$checkTable || $checkTable->num_rows === 0) {
 
 /* =========================
    รับค่าจากฟอร์ม
+   รองรับหลายชื่อ field กันพลาด
 ========================= */
 $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
 
-$room_name = trim($_POST['room_name'] ?? '');
-$room_type = trim($_POST['room_type'] ?? '');
-$description = trim($_POST['description'] ?? '');
-$price = isset($_POST['price']) ? (float)$_POST['price'] : 0;
-$total_rooms = isset($_POST['total_rooms']) ? (int)$_POST['total_rooms'] : 5;
-$max_guests = isset($_POST['max_guests']) ? (int)$_POST['max_guests'] : 2;
-$room_size = trim($_POST['room_size'] ?? '');
-$bed_type = trim($_POST['bed_type'] ?? '');
+$room_name   = trim($_POST['room_name'] ?? $_POST['name'] ?? '');
+$room_type   = trim($_POST['room_type'] ?? $_POST['type'] ?? '');
+$description = trim($_POST['description'] ?? $_POST['room_detail'] ?? $_POST['detail'] ?? '');
+$price       = isset($_POST['price']) ? (float)$_POST['price'] : 0;
+$total_rooms = isset($_POST['total_rooms']) ? (int)$_POST['total_rooms'] : ((isset($_POST['room_total'])) ? (int)$_POST['room_total'] : 5);
+$max_guests  = isset($_POST['max_guests']) ? (int)$_POST['max_guests'] : ((isset($_POST['guests'])) ? (int)$_POST['guests'] : 2);
+$room_size   = trim($_POST['room_size'] ?? $_POST['size'] ?? '');
+$bed_type    = trim($_POST['bed_type'] ?? $_POST['bed'] ?? '');
 
-$status_raw = trim($_POST['status'] ?? 'show');
+$status_raw = trim($_POST['status'] ?? $_POST['display_status'] ?? 'show');
 if ($status_raw === 'show' || $status_raw === 'แสดง' || $status_raw === '1') {
     $status = 'show';
 } elseif ($status_raw === 'hide' || $status_raw === 'ซ่อน' || $status_raw === '0') {
@@ -60,8 +69,15 @@ if ($room_name === '' || $room_type === '') {
     redirect_back("กรุณากรอกชื่อห้องพักและประเภทห้อง", $id);
 }
 
-if ($total_rooms <= 0) $total_rooms = 5;
-if ($max_guests <= 0) $max_guests = 2;
+if ($price < 0) {
+    $price = 0;
+}
+if ($total_rooms <= 0) {
+    $total_rooms = 5;
+}
+if ($max_guests <= 0) {
+    $max_guests = 2;
+}
 
 /* =========================
    เตรียมโฟลเดอร์อัปโหลด
@@ -148,23 +164,41 @@ if (isset($_FILES['room_image']) && is_array($_FILES['room_image'])) {
 }
 
 /* =========================
+   ตรวจสอบคอลัมน์จริงในตาราง
+========================= */
+$descColumn  = hasColumn($conn, 'rooms', 'description') ? 'description' : (hasColumn($conn, 'rooms', 'room_detail') ? 'room_detail' : '');
+$imageColumn = hasColumn($conn, 'rooms', 'image_path') ? 'image_path' : (hasColumn($conn, 'rooms', 'room_image') ? 'room_image' : '');
+$statusColumn = hasColumn($conn, 'rooms', 'status') ? 'status' : '';
+
+if ($descColumn === '') {
+    redirect_back("ตาราง rooms ไม่มีคอลัมน์ description หรือ room_detail", $id);
+}
+if ($imageColumn === '') {
+    redirect_back("ตาราง rooms ไม่มีคอลัมน์ image_path หรือ room_image", $id);
+}
+if ($statusColumn === '') {
+    redirect_back("ตาราง rooms ไม่มีคอลัมน์ status", $id);
+}
+
+/* =========================
    เพิ่ม / แก้ไขข้อมูล
 ========================= */
 if ($id > 0) {
 
     $oldImage = '';
-    $stmtOld = $conn->prepare("SELECT image_path FROM rooms WHERE id = ?");
+
+    $sqlOld = "SELECT `$imageColumn` FROM rooms WHERE id = ? LIMIT 1";
+    $stmtOld = $conn->prepare($sqlOld);
     if (!$stmtOld) {
-        die("Prepare SELECT failed: " . $conn->error);
+        redirect_back("Prepare SELECT failed: " . $conn->error, $id);
     }
 
     $stmtOld->bind_param("i", $id);
     $stmtOld->execute();
-    $resOld = $stmtOld->get_result();
+    $stmtOld->bind_result($oldImageValue);
 
-    if ($resOld && $resOld->num_rows > 0) {
-        $oldRow = $resOld->fetch_assoc();
-        $oldImage = $oldRow['image_path'] ?? '';
+    if ($stmtOld->fetch()) {
+        $oldImage = $oldImageValue ?? '';
     }
     $stmtOld->close();
 
@@ -180,21 +214,21 @@ if ($id > 0) {
     }
 
     $sql = "UPDATE rooms SET
-                room_name   = ?,
-                room_type   = ?,
-                description = ?,
-                price       = ?,
+                room_name = ?,
+                room_type = ?,
+                `$descColumn` = ?,
+                price = ?,
                 total_rooms = ?,
-                max_guests  = ?,
-                room_size   = ?,
-                bed_type    = ?,
-                image_path  = ?,
-                status      = ?
+                max_guests = ?,
+                room_size = ?,
+                bed_type = ?,
+                `$imageColumn` = ?,
+                `$statusColumn` = ?
             WHERE id = ?";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
-        die("Prepare UPDATE failed: " . $conn->error);
+        redirect_back("Prepare UPDATE failed: " . $conn->error, $id);
     }
 
     $stmt->bind_param(
@@ -213,7 +247,9 @@ if ($id > 0) {
     );
 
     if (!$stmt->execute()) {
-        redirect_back("อัปเดตข้อมูลไม่สำเร็จ: " . $stmt->error, $id);
+        $err = $stmt->error;
+        $stmt->close();
+        redirect_back("อัปเดตข้อมูลไม่สำเร็จ: " . $err, $id);
     }
 
     $stmt->close();
@@ -224,19 +260,19 @@ if ($id > 0) {
     $sql = "INSERT INTO rooms (
                 room_name,
                 room_type,
-                description,
+                `$descColumn`,
                 price,
                 total_rooms,
                 max_guests,
                 room_size,
                 bed_type,
-                image_path,
-                status
+                `$imageColumn`,
+                `$statusColumn`
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
-        die("Prepare INSERT failed: " . $conn->error);
+        redirect_back("Prepare INSERT failed: " . $conn->error, 0);
     }
 
     $stmt->bind_param(
@@ -254,7 +290,9 @@ if ($id > 0) {
     );
 
     if (!$stmt->execute()) {
-        redirect_back("บันทึกข้อมูลไม่สำเร็จ: " . $stmt->error, 0);
+        $err = $stmt->error;
+        $stmt->close();
+        redirect_back("บันทึกข้อมูลไม่สำเร็จ: " . $err, 0);
     }
 
     $stmt->close();

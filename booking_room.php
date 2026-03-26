@@ -659,8 +659,9 @@ a{
 
                 <div class="room-footer">
                     <div class="room-capacity">รองรับ 2 คน</div>
-                    <a class="book-btn" href="booking_form.php?room_type=Standard Room&price=800&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
-                        จองห้องนี้
+                    <a class="book-btn"
+                    href="booking_form.php?room_id=<?php echo urlencode($room['id']); ?>&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
+                    จองห้องนี้
                     </a>
                 </div>
             </div>

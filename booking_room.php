@@ -43,19 +43,6 @@ function getTableColumns($conn, $tableName) {
 }
 
 /* =========================
-   ฟังก์ชันหา table การจอง
-========================= */
-function findBookingTable($conn) {
-    $candidates = ['bookings', 'room_bookings', 'booking_rooms'];
-    foreach ($candidates as $table) {
-        if (tableExists($conn, $table)) {
-            return $table;
-        }
-    }
-    return null;
-}
-
-/* =========================
    ตรวจสอบว่ามีตาราง rooms หรือไม่
 ========================= */
 if (!tableExists($conn, 'rooms')) {
@@ -77,9 +64,6 @@ $hasCapacity    = in_array('capacity', $roomColumns, true);
 $hasImage       = in_array('image', $roomColumns, true);
 $hasDescription = in_array('description', $roomColumns, true);
 $hasStatus      = in_array('status', $roomColumns, true);
-
-/* ถ้ามีคอลัมน์จำนวนห้องอยู่แล้วจะใช้คอลัมน์นี้
-   ถ้าไม่มี จะใช้ค่า default = 5 */
 $hasTotalRooms  = in_array('total_rooms', $roomColumns, true);
 
 if (!$hasId || !$hasRoomName) {
@@ -87,44 +71,21 @@ if (!$hasId || !$hasRoomName) {
 }
 
 /* =========================
-   ข้อมูลฟอร์มที่ไม่ใช้แล้ว
+   ดึงจำนวนการจองที่อนุมัติแล้วจาก room_bookings
 ========================= */
-$checkin  = '';
-$checkout = '';
-$guests   = '';
-$type     = '';
+$approvedMap = [];
 
-/* =========================
-   หา table การจอง
-========================= */
-$bookingTable = findBookingTable($conn);
-$approvedMap = []; // เก็บจำนวนที่อนุมัติแล้วแยกตาม room_id
-
-if ($bookingTable) {
-    $bookingColumns = getTableColumns($conn, $bookingTable);
+if (tableExists($conn, 'room_bookings')) {
+    $bookingColumns = getTableColumns($conn, 'room_bookings');
 
     $hasBookingRoomId = in_array('room_id', $bookingColumns, true);
+    $hasBookingStatus = in_array('booking_status', $bookingColumns, true);
 
-    $statusColumn = null;
-    $candidateStatusColumns = ['status', 'booking_status', 'approval_status', 'approve_status'];
-    foreach ($candidateStatusColumns as $col) {
-        if (in_array($col, $bookingColumns, true)) {
-            $statusColumn = $col;
-            break;
-        }
-    }
-
-    if ($hasBookingRoomId && $statusColumn !== null) {
+    if ($hasBookingRoomId && $hasBookingStatus) {
         $sqlApproved = "
             SELECT room_id, COUNT(*) AS approved_total
-            FROM {$bookingTable}
-            WHERE (
-                {$statusColumn} = 'approved'
-                OR {$statusColumn} = 'อนุมัติ'
-                OR {$statusColumn} = 'Approved'
-                OR {$statusColumn} = 'APPROVED'
-                OR {$statusColumn} = 1
-            )
+            FROM room_bookings
+            WHERE booking_status = 'approved'
             GROUP BY room_id
         ";
 

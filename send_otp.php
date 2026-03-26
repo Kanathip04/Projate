@@ -12,11 +12,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_once 'config.php';
 
-if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
-    die('ไม่พบ vendor/autoload.php กรุณาติดตั้ง PHPMailer ก่อน');
-}
-
-require __DIR__ . '/vendor/autoload.php';
+/*
+|--------------------------------------------------------------------------
+| โหลด PHPMailer แบบ manual
+|--------------------------------------------------------------------------
+| ใช้วิธีนี้แทน autoload ไปก่อน เพื่อแก้ปัญหา class not found บน server
+*/
+require __DIR__ . '/vendor/phpmailer/phpmailer/src/Exception.php';
+require __DIR__ . '/vendor/phpmailer/phpmailer/src/PHPMailer.php';
+require __DIR__ . '/vendor/phpmailer/phpmailer/src/SMTP.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -95,13 +99,12 @@ try {
     $mail->Host       = 'smtp.gmail.com';
     $mail->SMTPAuth   = true;
     $mail->Username   = '67010974003@msu.ac.th';
-    $mail->setFrom('67010974003@msu.ac.th', 'OTP Verification');
-    $mail->Password   = 'uzotcwasteiaaroz';         // เปลี่ยนเป็น App Password 16 หลัก
+    $mail->Password   = 'ใส่AppPasswordใหม่ของคุณตรงนี้';
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
     $mail->Port       = 587;
 
     $mail->CharSet = 'UTF-8';
-    $mail->setFrom('yourprojectotp@gmail.com', 'OTP Verification');
+    $mail->setFrom('67010974003@msu.ac.th', 'OTP Verification');
     $mail->addAddress($email, $user['fullname'] ?? '');
 
     $mail->isHTML(true);

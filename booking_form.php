@@ -1,9 +1,6 @@
 <?php
 date_default_timezone_set('Asia/Bangkok');
 
-/* =========================
-   เชื่อมต่อฐานข้อมูล
-========================= */
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 
@@ -11,9 +8,6 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-/* =========================
-   รับค่าจาก URL
-========================= */
 $room_id  = isset($_GET['room_id']) ? (int)$_GET['room_id'] : 0;
 $checkin  = trim($_GET['checkin'] ?? '');
 $checkout = trim($_GET['checkout'] ?? '');
@@ -23,13 +17,12 @@ if ($room_id <= 0) {
     die("ไม่พบข้อมูลห้องพัก");
 }
 
-/* =========================
-   ดึงข้อมูลห้องจากฐานข้อมูล
-========================= */
-$stmt = $conn->prepare("SELECT id, room_name, room_type, price, room_size, bed_type, capacity, image, description 
-                        FROM rooms 
-                        WHERE id = ? AND status = 1 
-                        LIMIT 1");
+$stmt = $conn->prepare("
+    SELECT id, room_name, room_type, price, room_size, bed_type, capacity, image, description
+    FROM rooms
+    WHERE id = ? AND status = 1
+    LIMIT 1
+");
 $stmt->bind_param("i", $room_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -40,9 +33,6 @@ if (!$result || $result->num_rows === 0) {
 
 $room = $result->fetch_assoc();
 
-/* =========================
-   ตั้งค่าค่าเริ่มต้นให้ฟอร์ม
-========================= */
 if ($guests === '' || !is_numeric($guests) || (int)$guests < 1) {
     $guests = 1;
 }
@@ -55,7 +45,6 @@ if ($checkout === '') {
     $checkout = date('Y-m-d', strtotime('+1 day'));
 }
 
-/* ป้องกัน checkout น้อยกว่าหรือเท่ากับ checkin */
 if ($checkout <= $checkin) {
     $checkout = date('Y-m-d', strtotime($checkin . ' +1 day'));
 }
@@ -69,11 +58,7 @@ $roomImage = !empty($room['image']) ? $room['image'] : 'uploads/no-image.png';
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>กรอกข้อมูลการจองห้องพัก</title>
 <style>
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
+*{margin:0;padding:0;box-sizing:border-box}
 :root{
     --brand:#6f8428;
     --brand-dark:#58691f;
@@ -86,12 +71,12 @@ $roomImage = !empty($room['image']) ? $room['image'] : 'uploads/no-image.png';
     --shadow:0 12px 35px rgba(0,0,0,.08);
 }
 body{
-    font-family:'Segoe UI', Tahoma, sans-serif;
+    font-family:'Segoe UI',Tahoma,sans-serif;
     background:#f4f7fb;
     color:#222;
 }
 .wrapper{
-    width:min(1100px, 92%);
+    width:min(1100px,92%);
     margin:40px auto;
 }
 .topbar{
@@ -107,17 +92,14 @@ body{
     grid-template-columns:380px 1fr;
     gap:24px;
 }
-.info-card,
-.form-card{
+.info-card,.form-card{
     background:#fff;
     border-radius:24px;
     box-shadow:var(--shadow);
     overflow:hidden;
     border:1px solid #ebeff5;
 }
-.info-card{
-    align-self:start;
-}
+.info-card{align-self:start}
 .room-image{
     width:100%;
     height:260px;
@@ -125,9 +107,7 @@ body{
     display:block;
     background:#ddd;
 }
-.info-body{
-    padding:22px;
-}
+.info-body{padding:22px}
 .room-type{
     display:inline-block;
     padding:8px 14px;
@@ -168,9 +148,7 @@ body{
     font-size:14px;
     color:#374151;
 }
-.info-item strong{
-    color:#111827;
-}
+.info-item strong{color:#111827}
 .room-desc{
     color:#4b5563;
     line-height:1.7;
@@ -185,12 +163,8 @@ body{
     font-size:30px;
     margin-bottom:8px;
 }
-.form-header p{
-    opacity:.95;
-}
-.form-body{
-    padding:24px;
-}
+.form-header p{opacity:.95}
+.form-body{padding:24px}
 .form-grid{
     display:grid;
     grid-template-columns:repeat(2,1fr);
@@ -208,7 +182,7 @@ label{
     margin-bottom:8px;
     color:#1f2937;
 }
-input, textarea, select{
+input,textarea,select{
     width:100%;
     padding:13px 14px;
     border:1px solid #d8dee8;
@@ -217,7 +191,7 @@ input, textarea, select{
     outline:none;
     background:#fff;
 }
-input:focus, textarea:focus, select:focus{
+input:focus,textarea:focus,select:focus{
     border-color:var(--brand);
     box-shadow:0 0 0 3px rgba(111,132,40,.12);
 }
@@ -236,11 +210,6 @@ textarea{
     padding:15px;
     border-radius:14px;
     cursor:pointer;
-    transition:.2s ease;
-}
-.submit-btn:hover{
-    opacity:.96;
-    transform:translateY(-1px);
 }
 .note{
     margin-top:12px;
@@ -248,31 +217,20 @@ textarea{
     color:#666;
     line-height:1.6;
 }
-@media (max-width: 900px){
-    .main-grid{
-        grid-template-columns:1fr;
-    }
+@media (max-width:900px){
+    .main-grid{grid-template-columns:1fr}
 }
-@media (max-width: 768px){
-    .form-grid{
-        grid-template-columns:1fr;
-    }
-    .form-header h1{
-        font-size:24px;
-    }
-    .form-body{
-        padding:18px;
-    }
-    .info-body{
-        padding:18px;
-    }
+@media (max-width:768px){
+    .form-grid{grid-template-columns:1fr}
+    .form-header h1{font-size:24px}
+    .form-body{padding:18px}
+    .info-body{padding:18px}
 }
 </style>
 </head>
 <body>
 
 <div class="wrapper">
-
     <div class="topbar">
         <a href="rooms.php?checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>" class="back-link">
             ← กลับไปหน้าห้องพัก
@@ -280,20 +238,16 @@ textarea{
     </div>
 
     <div class="main-grid">
-
         <div class="info-card">
-            <img src="<?php echo htmlspecialchars($roomImage); ?>" 
-                 alt="<?php echo htmlspecialchars($room['room_name']); ?>" 
+            <img src="<?php echo htmlspecialchars($roomImage); ?>"
+                 alt="<?php echo htmlspecialchars($room['room_name']); ?>"
                  class="room-image"
                  onerror="this.src='uploads/no-image.png'">
 
             <div class="info-body">
                 <div class="room-type"><?php echo htmlspecialchars($room['room_type']); ?></div>
                 <div class="room-title"><?php echo htmlspecialchars($room['room_name']); ?></div>
-                <div class="room-price">
-                    ฿<?php echo number_format((float)$room['price']); ?>
-                    <span>/ คืน</span>
-                </div>
+                <div class="room-price">฿<?php echo number_format((float)$room['price']); ?> <span>/ คืน</span></div>
 
                 <div class="info-list">
                     <div class="info-item"><strong>ขนาดห้อง:</strong> <?php echo htmlspecialchars($room['room_size']); ?></div>
@@ -301,9 +255,7 @@ textarea{
                     <div class="info-item"><strong>รองรับสูงสุด:</strong> <?php echo htmlspecialchars($room['capacity']); ?> คน</div>
                 </div>
 
-                <div class="room-desc">
-                    <?php echo nl2br(htmlspecialchars($room['description'])); ?>
-                </div>
+                <div class="room-desc"><?php echo nl2br(htmlspecialchars($room['description'])); ?></div>
             </div>
         </div>
 
@@ -315,7 +267,6 @@ textarea{
 
             <div class="form-body">
                 <form action="save_booking.php" method="POST">
-                    
                     <input type="hidden" name="room_id" value="<?php echo htmlspecialchars($room['id']); ?>">
                     <input type="hidden" name="room_name" value="<?php echo htmlspecialchars($room['room_name']); ?>">
                     <input type="hidden" name="room_price" value="<?php echo htmlspecialchars($room['price']); ?>">
@@ -343,12 +294,12 @@ textarea{
 
                         <div class="form-group">
                             <label>วันเช็คอิน</label>
-                            <input type="date" name="checkin_date" required value="<?php echo htmlspecialchars($checkin); ?>" min="<?php echo date('Y-m-d'); ?>">
+                            <input type="date" name="checkin_date" required value="<?php echo htmlspecialchars($checkin); ?>">
                         </div>
 
                         <div class="form-group">
                             <label>วันเช็คเอาท์</label>
-                            <input type="date" name="checkout_date" required value="<?php echo htmlspecialchars($checkout); ?>" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>">
+                            <input type="date" name="checkout_date" required value="<?php echo htmlspecialchars($checkout); ?>">
                         </div>
 
                         <div class="form-group">
@@ -366,18 +317,15 @@ textarea{
 
                         <div class="form-group full">
                             <label>หมายเหตุเพิ่มเติม</label>
-                            <textarea name="note" placeholder="เช่น ต้องการเตียงเสริม, เช็คอินดึก, หรือข้อมูลอื่นๆ"></textarea>
+                            <textarea name="note"></textarea>
                         </div>
                     </div>
 
                     <button type="submit" class="submit-btn">ยืนยันการจอง</button>
-                    <div class="note">
-                        เมื่อกดบันทึกแล้ว ข้อมูลจะถูกส่งไปที่ไฟล์ <strong>save_booking.php</strong> เพื่อบันทึกลงฐานข้อมูลและแสดงในระบบหลังบ้าน
-                    </div>
+                    <div class="note">เมื่อกดแล้วข้อมูลจะถูกส่งไป save_booking.php</div>
                 </form>
             </div>
         </div>
-
     </div>
 </div>
 

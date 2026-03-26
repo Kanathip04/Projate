@@ -657,10 +657,10 @@ a{
                                     ฿<?php echo number_format($roomPrice); ?>
                                     <span>/ คืน</span>
                                 </div>
-                                <a class="book-btn"
-                                   href="booking_form.php?room_id=<?php echo urlencode($room['id']); ?>&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
+                                    <a class="book-btn"
+                                    href="booking_form.php?room_id=<?php echo urlencode($room['id']); ?>&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
                                     จองห้องนี้
-                                </a>
+                                    </a>
                             </div>
                         </div>
                     </div>

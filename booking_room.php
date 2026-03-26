@@ -197,6 +197,22 @@ a{
     position:relative;
     z-index:2;
 }
+.back-home-btn{
+    display:inline-block;
+    margin-bottom:20px;
+    padding:10px 18px;
+    border-radius:999px;
+    font-size:14px;
+    font-weight:600;
+    color:#fff;
+    background:rgba(255,255,255,0.15);
+    border:1px solid rgba(255,255,255,0.35);
+    backdrop-filter:blur(8px);
+    transition:.25s ease;
+}
+.back-home-btn:hover{
+    background:rgba(255,255,255,0.25);
+}
 .hero-badge{
     display:inline-block;
     padding:10px 18px;
@@ -462,23 +478,6 @@ a{
     .book-btn{
         width:100%;
     }
-    .back-home-btn{
-    display:inline-block;
-    margin-bottom:20px;
-    padding:10px 18px;
-    border-radius:999px;
-    font-size:14px;
-    font-weight:600;
-    color:#fff;
-    background:rgba(255,255,255,0.15);
-    border:1px solid rgba(255,255,255,0.35);
-    backdrop-filter:blur(8px);
-    transition:.25s ease;
-    }
-
-    .back-home-btn:hover{
-        background:rgba(255,255,255,0.25);
-    }
 }
 </style>
 </head>
@@ -487,7 +486,9 @@ a{
 <div class="page-wrap">
 
     <section class="hero">
-        <a href="index.php" class="back-home-btn">← กลับหน้าหลัก</a>
+        <div class="hero-inner">
+            <a href="index.php" class="back-home-btn">← กลับหน้าหลัก</a>
+
             <div class="hero-badge">Room Reservation</div>
             <h1>ระบบจองห้องพักและที่พักภายในสถาบัน</h1>
             <p>
@@ -582,9 +583,8 @@ a{
                                 <?php if ($isFull): ?>
                                     <span class="book-btn disabled">ห้องเต็ม</span>
                                 <?php else: ?>
-                                    <a class="book-btn"
-                                       href="booking_form.php?room_id=<?php echo $roomId; ?>">
-                                       จองห้องนี้
+                                    <a class="book-btn" href="booking_form.php?room_id=<?php echo $roomId; ?>">
+                                        จองห้องนี้
                                     </a>
                                 <?php endif; ?>
                             </div>

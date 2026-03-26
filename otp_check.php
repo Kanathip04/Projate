@@ -1,14 +1,12 @@
 <?php
 session_start();
-date_default_timezone_set('Asia/Bangkok');
-
 require_once 'config.php';
 
-$email = $_SESSION['otp_email'] ?? '';
 $otp = trim($_POST['otp'] ?? '');
+$email = $_SESSION['otp_email'] ?? '';
 
 if (empty($email)) {
-    $_SESSION['otp_error'] = 'กรุณาเริ่มเข้าสู่ระบบใหม่อีกครั้ง';
+    $_SESSION['otp_error'] = 'ไม่พบอีเมลสำหรับยืนยัน OTP';
     header('Location: login.php');
     exit;
 }
@@ -20,43 +18,61 @@ if (empty($otp)) {
 }
 
 $stmt = $conn->prepare("
-    SELECT id, otp_code, expires_at, is_used
-    FROM email_otps
-    WHERE email = ? AND otp_code = ?
+    SELECT * 
+    FROM email_otps 
+    WHERE email = ? 
+      AND otp_code = ? 
+      AND is_used = 0 
+      AND expires_at >= NOW()
     ORDER BY id DESC
     LIMIT 1
 ");
 $stmt->bind_param("ss", $email, $otp);
 $stmt->execute();
 $result = $stmt->get_result();
-$row = $result->fetch_assoc();
+$otpRow = $result->fetch_assoc();
 $stmt->close();
 
-if (!$row) {
-    $_SESSION['otp_error'] = 'OTP ไม่ถูกต้อง';
+if (!$otpRow) {
+    $_SESSION['otp_error'] = 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ';
     header('Location: otp_verify.php');
     exit;
 }
 
-if ((int)$row['is_used'] === 1) {
-    $_SESSION['otp_error'] = 'OTP นี้ถูกใช้งานแล้ว';
-    header('Location: otp_verify.php');
-    exit;
-}
-
-if (strtotime($row['expires_at']) < time()) {
-    $_SESSION['otp_error'] = 'OTP หมดอายุแล้ว กรุณาขอใหม่';
-    header('Location: otp_verify.php');
-    exit;
-}
-
+// mark OTP used
 $stmt = $conn->prepare("UPDATE email_otps SET is_used = 1 WHERE id = ?");
-$stmt->bind_param("i", $row['id']);
+$stmt->bind_param("i", $otpRow['id']);
 $stmt->execute();
 $stmt->close();
 
-$_SESSION['otp_verified'] = true;
-$_SESSION['otp_message'] = 'ยืนยันอีเมลสำเร็จ กรุณาใส่รหัสผ่านเพื่อเข้าสู่ระบบ';
+// อัปเดตสถานะยืนยันอีเมล
+$stmt = $conn->prepare("UPDATE users SET is_verified = 1 WHERE email = ?");
+$stmt->bind_param("s", $email);
+$stmt->execute();
+$stmt->close();
 
-header('Location: password_login.php');
+// ดึงข้อมูล user
+$stmt = $conn->prepare("SELECT id, fullname, email FROM users WHERE email = ? LIMIT 1");
+$stmt->bind_param("s", $email);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+$stmt->close();
+
+if (!$user) {
+    $_SESSION['otp_error'] = 'ไม่พบบัญชีผู้ใช้';
+    header('Location: login.php');
+    exit;
+}
+
+// login ทันที
+$_SESSION['user_id'] = $user['id'];
+$_SESSION['user_name'] = $user['fullname'];
+$_SESSION['user_email'] = $user['email'];
+
+// ล้าง session OTP
+unset($_SESSION['otp_email'], $_SESSION['otp_message'], $_SESSION['otp_error']);
+
+// ไปหน้าหลักหลัง login
+header('Location: index.php');
 exit;

@@ -14,10 +14,21 @@ if ($conn->connect_error) {
 /* =========================
    รับค่าค้นหา
 ========================= */
-$checkin  = $_GET['checkin'] ?? '';
-$checkout = $_GET['checkout'] ?? '';
-$guests   = $_GET['guests'] ?? '';
-$type     = $_GET['type'] ?? '';
+$checkin  = trim($_GET['checkin'] ?? '');
+$checkout = trim($_GET['checkout'] ?? '');
+$guests   = trim($_GET['guests'] ?? '');
+$type     = trim($_GET['type'] ?? '');
+
+$error_message = "";
+
+/* =========================
+   ตรวจสอบข้อมูลวันที่
+========================= */
+if ($checkin !== '' && $checkout !== '') {
+    if ($checkin >= $checkout) {
+        $error_message = "วันที่ออกต้องมากกว่าวันที่เข้าพัก";
+    }
+}
 
 /* =========================
    ดึงประเภทห้องทั้งหมดไปใส่ select
@@ -64,7 +75,7 @@ if ($type !== '') {
    ใช้ตาราง room_bookings
    เฉพาะรายการที่ไม่ได้ยกเลิก
 ========================= */
-if (!empty($checkin) && !empty($checkout)) {
+if ($error_message === "" && !empty($checkin) && !empty($checkout)) {
     $sql .= " AND id NOT IN (
                 SELECT room_id
                 FROM room_bookings
@@ -113,6 +124,8 @@ $result = $stmt->get_result();
     --line:#e5e7eb;
     --white:#ffffff;
     --bg:#f8fafc;
+    --danger:#dc2626;
+    --danger-bg:#fef2f2;
     --card-shadow:0 12px 35px rgba(0,0,0,.08);
 }
 body{
@@ -237,6 +250,17 @@ a{
 .search-btn:hover{
     background:var(--brand-dark);
     transform:translateY(-1px);
+}
+
+.alert-error{
+    margin-top:18px;
+    background:var(--danger-bg);
+    color:var(--danger);
+    border:1px solid #fecaca;
+    border-radius:14px;
+    padding:14px 16px;
+    font-size:15px;
+    font-weight:600;
 }
 
 /* SECTION */
@@ -501,6 +525,10 @@ a{
 
                 <button type="submit" class="search-btn">ค้นหาห้องพัก</button>
             </div>
+
+            <?php if ($error_message !== ""): ?>
+                <div class="alert-error"><?php echo htmlspecialchars($error_message); ?></div>
+            <?php endif; ?>
         </form>
     </section>
 
@@ -508,16 +536,22 @@ a{
         <div class="section-head">
             <div>
                 <h3>ห้องพักแนะนำ</h3>
-                <p>ข้อมูลห้องพักทั้งหมดถูกดึงจากฐานข้อมูลโดยตรง และเมื่อกดจองจะส่งข้อมูลไปหน้าแบบฟอร์มจองเหมือนเดิม</p>
+                <p>ข้อมูลห้องพักทั้งหมดถูกดึงจากฐานข้อมูลโดยตรง และเมื่อกดจองจะส่งข้อมูลไปหน้าแบบฟอร์มจอง</p>
             </div>
         </div>
 
         <?php if ($result && $result->num_rows > 0): ?>
             <div class="room-grid">
                 <?php while($room = $result->fetch_assoc()): ?>
+                    <?php
+                        $roomImage = !empty($room['image']) ? $room['image'] : 'uploads/no-image.png';
+                    ?>
                     <div class="room-card">
                         <div class="room-image-wrap">
-                            <img src="<?php echo htmlspecialchars($room['image']); ?>" alt="<?php echo htmlspecialchars($room['room_name']); ?>" class="room-image">
+                            <img src="<?php echo htmlspecialchars($roomImage); ?>"
+                                 alt="<?php echo htmlspecialchars($room['room_name']); ?>"
+                                 class="room-image"
+                                 onerror="this.src='uploads/no-image.png'">
                             <div class="room-price-tag">฿<?php echo number_format($room['price']); ?> / คืน</div>
                         </div>
 
@@ -538,8 +572,9 @@ a{
                                     <span>/ คืน</span>
                                 </div>
 
-                                <a class="book-btn"
-                                   href="booking_form.php?room_id=<?php echo urlencode($room['id']); ?>&room_name=<?php echo urlencode($room['room_name']); ?>&room_price=<?php echo urlencode($room['price']); ?>&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
+                                <a
+                                    class="book-btn"
+                                    href="booking_form.php?room_id=<?php echo urlencode($room['id']); ?>&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
                                     จองห้องนี้
                                 </a>
                             </div>

@@ -31,23 +31,80 @@ if ($checkin !== '' && $checkout !== '') {
 }
 
 /* =========================
+   ตรวจสอบคอลัมน์ในตาราง rooms
+========================= */
+$roomColumns = [];
+$colRes = $conn->query("SHOW COLUMNS FROM rooms");
+if ($colRes) {
+    while ($col = $colRes->fetch_assoc()) {
+        $roomColumns[] = $col['Field'];
+    }
+}
+
+$hasRoomSize    = in_array('room_size', $roomColumns, true);
+$hasBedType     = in_array('bed_type', $roomColumns, true);
+$hasDescription = in_array('description', $roomColumns, true);
+$hasImage       = in_array('image', $roomColumns, true);
+$hasCapacity    = in_array('capacity', $roomColumns, true);
+$hasStatus      = in_array('status', $roomColumns, true);
+$hasRoomType    = in_array('room_type', $roomColumns, true);
+
+/* =========================
    ดึงประเภทห้องทั้งหมดไปใส่ select
 ========================= */
 $roomTypes = [];
-$resType = $conn->query("SELECT DISTINCT room_type FROM rooms WHERE status = 1 ORDER BY room_type ASC");
-if ($resType && $resType->num_rows > 0) {
-    while ($rowType = $resType->fetch_assoc()) {
-        $roomTypes[] = $rowType['room_type'];
+if ($hasRoomType) {
+    $sqlType = "SELECT DISTINCT room_type FROM rooms";
+    if ($hasStatus) {
+        $sqlType .= " WHERE status = 1";
+    }
+    $sqlType .= " ORDER BY room_type ASC";
+
+    $resType = $conn->query($sqlType);
+    if ($resType && $resType->num_rows > 0) {
+        while ($rowType = $resType->fetch_assoc()) {
+            if (!empty($rowType['room_type'])) {
+                $roomTypes[] = $rowType['room_type'];
+            }
+        }
     }
 }
 
 /* =========================
-   สร้าง SQL หลัก
-   status = 1 คือเปิดให้จอง
+   สร้าง SELECT แบบยืดหยุ่น
 ========================= */
-$sql = "SELECT id, room_name, room_type, price, room_size, bed_type, capacity, image, description
-        FROM rooms
-        WHERE status = 1";
+$selectFields = [
+    "id",
+    "room_name",
+    "room_type",
+    "price",
+    "capacity"
+];
+
+if ($hasRoomSize) {
+    $selectFields[] = "room_size";
+}
+
+if ($hasBedType) {
+    $selectFields[] = "bed_type";
+}
+
+if ($hasImage) {
+    $selectFields[] = "image";
+}
+
+if ($hasDescription) {
+    $selectFields[] = "description";
+}
+
+/* =========================
+   สร้าง SQL หลัก
+========================= */
+$sql = "SELECT " . implode(", ", $selectFields) . " FROM rooms WHERE 1=1";
+
+if ($hasStatus) {
+    $sql .= " AND status = 1";
+}
 
 $params = [];
 $types  = "";
@@ -55,7 +112,7 @@ $types  = "";
 /* =========================
    ค้นหาตามจำนวนผู้เข้าพัก
 ========================= */
-if ($guests !== '') {
+if ($guests !== '' && $hasCapacity) {
     $sql .= " AND capacity >= ?";
     $params[] = (int)$guests;
     $types .= "i";
@@ -64,7 +121,7 @@ if ($guests !== '') {
 /* =========================
    ค้นหาตามประเภทห้อง
 ========================= */
-if ($type !== '') {
+if ($type !== '' && $hasRoomType) {
     $sql .= " AND room_type = ?";
     $params[] = $type;
     $types .= "s";
@@ -73,20 +130,22 @@ if ($type !== '') {
 /* =========================
    กรองห้องที่ถูกจองแล้วในช่วงวันที่เลือก
    ใช้ตาราง room_bookings
-   เฉพาะรายการที่ไม่ได้ยกเลิก
 ========================= */
-if ($error_message === "" && !empty($checkin) && !empty($checkout)) {
-    $sql .= " AND id NOT IN (
-                SELECT room_id
-                FROM room_bookings
-                WHERE booking_status != 'cancelled'
-                AND (
-                    (? < checkout_date) AND (? > checkin_date)
-                )
-            )";
-    $params[] = $checkin;
-    $params[] = $checkout;
-    $types .= "ss";
+if ($error_message === "" && $checkin !== '' && $checkout !== '') {
+    $checkBookingTable = $conn->query("SHOW TABLES LIKE 'room_bookings'");
+    if ($checkBookingTable && $checkBookingTable->num_rows > 0) {
+        $sql .= " AND id NOT IN (
+                    SELECT room_id
+                    FROM room_bookings
+                    WHERE booking_status != 'cancelled'
+                    AND (
+                        (? < checkout_date) AND (? > checkin_date)
+                    )
+                )";
+        $params[] = $checkin;
+        $params[] = $checkout;
+        $types .= "ss";
+    }
 }
 
 $sql .= " ORDER BY id DESC";
@@ -139,8 +198,6 @@ a{
 .page-wrap{
     min-height:100vh;
 }
-
-/* HERO */
 .hero{
     background:
         linear-gradient(135deg, rgba(62,79,14,.92), rgba(111,132,40,.88)),
@@ -185,8 +242,6 @@ a{
     color:rgba(255,255,255,.92);
     max-width:760px;
 }
-
-/* SEARCH BOX */
 .search-box{
     width:min(1180px, 92%);
     margin:-55px auto 30px;
@@ -251,7 +306,6 @@ a{
     background:var(--brand-dark);
     transform:translateY(-1px);
 }
-
 .alert-error{
     margin-top:18px;
     background:var(--danger-bg);
@@ -262,8 +316,6 @@ a{
     font-size:15px;
     font-weight:600;
 }
-
-/* SECTION */
 .section{
     width:min(1180px, 92%);
     margin:0 auto 60px;
@@ -284,8 +336,6 @@ a{
     max-width:700px;
     line-height:1.7;
 }
-
-/* ROOM GRID */
 .room-grid{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(320px,1fr));
@@ -389,8 +439,6 @@ a{
 .book-btn:hover{
     background:var(--brand-dark);
 }
-
-/* EMPTY */
 .empty-box{
     background:#fff;
     border:1px solid #e5e7eb;
@@ -400,8 +448,6 @@ a{
     color:#6b7280;
     box-shadow:var(--card-shadow);
 }
-
-/* FOOTER */
 .footer-note{
     width:min(1180px, 92%);
     margin:0 auto 50px;
@@ -412,8 +458,6 @@ a{
     color:#3f4b1d;
     line-height:1.8;
 }
-
-/* RESPONSIVE */
 @media (max-width: 1024px){
     .search-grid{
         grid-template-columns:repeat(2, 1fr);
@@ -545,36 +589,44 @@ a{
                 <?php while($room = $result->fetch_assoc()): ?>
                     <?php
                         $roomImage = !empty($room['image']) ? $room['image'] : 'uploads/no-image.png';
+                        $roomDesc  = !empty($room['description']) ? $room['description'] : 'ไม่มีรายละเอียดเพิ่มเติม';
                     ?>
                     <div class="room-card">
                         <div class="room-image-wrap">
                             <img src="<?php echo htmlspecialchars($roomImage); ?>"
-                                 alt="<?php echo htmlspecialchars($room['room_name']); ?>"
+                                 alt="<?php echo htmlspecialchars($room['room_name'] ?? 'Room'); ?>"
                                  class="room-image"
                                  onerror="this.src='uploads/no-image.png'">
-                            <div class="room-price-tag">฿<?php echo number_format($room['price']); ?> / คืน</div>
+                            <div class="room-price-tag">฿<?php echo number_format((float)($room['price'] ?? 0)); ?> / คืน</div>
                         </div>
 
                         <div class="room-body">
-                            <div class="room-title"><?php echo htmlspecialchars($room['room_name']); ?></div>
-                            <div class="room-desc"><?php echo htmlspecialchars($room['description']); ?></div>
+                            <div class="room-title"><?php echo htmlspecialchars($room['room_name'] ?? '-'); ?></div>
+                            <div class="room-desc"><?php echo htmlspecialchars($roomDesc); ?></div>
 
                             <div class="room-meta">
-                                <div class="meta-item"><strong>ประเภทห้อง:</strong> <?php echo htmlspecialchars($room['room_type']); ?></div>
-                                <div class="meta-item"><strong>ขนาดห้อง:</strong> <?php echo htmlspecialchars($room['room_size']); ?></div>
-                                <div class="meta-item"><strong>ประเภทเตียง:</strong> <?php echo htmlspecialchars($room['bed_type']); ?></div>
-                                <div class="meta-item"><strong>รองรับ:</strong> <?php echo htmlspecialchars($room['capacity']); ?> คน</div>
+                                <div class="meta-item"><strong>ประเภทห้อง:</strong> <?php echo htmlspecialchars($room['room_type'] ?? '-'); ?></div>
+
+                                <?php if ($hasRoomSize): ?>
+                                    <div class="meta-item"><strong>ขนาดห้อง:</strong> <?php echo htmlspecialchars($room['room_size'] ?? '-'); ?></div>
+                                <?php endif; ?>
+
+                                <?php if ($hasBedType): ?>
+                                    <div class="meta-item"><strong>ประเภทเตียง:</strong> <?php echo htmlspecialchars($room['bed_type'] ?? '-'); ?></div>
+                                <?php endif; ?>
+
+                                <div class="meta-item"><strong>รองรับ:</strong> <?php echo htmlspecialchars($room['capacity'] ?? '0'); ?> คน</div>
                             </div>
 
                             <div class="room-footer">
                                 <div class="price">
-                                    ฿<?php echo number_format($room['price']); ?>
+                                    ฿<?php echo number_format((float)($room['price'] ?? 0)); ?>
                                     <span>/ คืน</span>
                                 </div>
-                                    <a class="book-btn"
-                                    href="booking_form.php?room_id=<?php echo urlencode($room['id']); ?>&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
-                                    จองห้องนี้
-                                    </a>
+                                <a class="book-btn"
+                                   href="booking_form.php?room_id=<?php echo urlencode($room['id']); ?>&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
+                                   จองห้องนี้
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -588,7 +640,7 @@ a{
     </section>
 
     <div class="footer-note">
-        หมายเหตุ: หน้านี้ดึงข้อมูลจากตาราง <strong>rooms</strong> และตรวจสอบการชนกันของวันจองจากตาราง <strong>room_bookings</strong>
+        หมายเหตุ: หน้านี้ดึงข้อมูลจากตาราง <strong>rooms</strong> และตรวจสอบการชนกันของวันจองจากตาราง <strong>room_bookings</strong> ถ้ามีตารางดังกล่าว
     </div>
 
 </div>

@@ -53,41 +53,107 @@ $roomImage = !empty($room['image']) ? $room['image'] : 'uploads/no-image.png';
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>กรอกข้อมูลการจองห้องพัก</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f4f7fb;color:#222}
+.wrapper{width:min(1000px,92%);margin:40px auto}
+.card{background:#fff;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.08);overflow:hidden}
+.header{background:linear-gradient(135deg,#6f8428,#58691f);color:#fff;padding:24px}
+.header h1{font-size:28px;margin-bottom:8px}
+.content{padding:24px}
+.room-box{background:#f8fafc;border:1px solid #e5e7eb;border-radius:16px;padding:18px;margin-bottom:20px}
+.room-box h3{margin-bottom:8px}
+.room-box p{margin-bottom:6px}
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.form-group{display:flex;flex-direction:column}
+.form-group.full{grid-column:1 / -1}
+label{font-weight:700;margin-bottom:8px}
+input,textarea,select{padding:12px 14px;border:1px solid #d1d5db;border-radius:12px;font-size:15px}
+textarea{min-height:100px;resize:vertical}
+button{margin-top:20px;width:100%;padding:14px;border:none;border-radius:12px;background:#6f8428;color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+.back-link{display:inline-block;margin-bottom:16px;color:#58691f;text-decoration:none;font-weight:700}
+@media (max-width:768px){
+  .form-grid{grid-template-columns:1fr}
+}
+</style>
 </head>
 <body>
-    <h2>ห้องที่เลือก: <?php echo htmlspecialchars($room['room_name']); ?></h2>
-    <p>ราคา: <?php echo number_format((float)$room['price']); ?> บาท / คืน</p>
+<div class="wrapper">
+    <a href="booking_room.php?checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>" class="back-link">← กลับไปหน้าห้องพัก</a>
 
-    <form action="save_booking.php" method="POST">
-        <input type="hidden" name="room_id" value="<?php echo $room['id']; ?>">
-        <input type="hidden" name="room_name" value="<?php echo htmlspecialchars($room['room_name']); ?>">
-        <input type="hidden" name="room_price" value="<?php echo htmlspecialchars($room['price']); ?>">
+    <div class="card">
+        <div class="header">
+            <h1>กรอกข้อมูลการจอง</h1>
+            <p>กรุณากรอกข้อมูลให้ครบถ้วน</p>
+        </div>
 
-        <label>ชื่อผู้จอง</label>
-        <input type="text" name="customer_name" required>
+        <div class="content">
+            <div class="room-box">
+                <h3><?php echo htmlspecialchars($room['room_name']); ?></h3>
+                <p><strong>ประเภทห้อง:</strong> <?php echo htmlspecialchars($room['room_type']); ?></p>
+                <p><strong>ราคา:</strong> ฿<?php echo number_format((float)$room['price']); ?> / คืน</p>
+                <p><strong>รองรับ:</strong> <?php echo htmlspecialchars($room['capacity']); ?> คน</p>
+            </div>
 
-        <label>เบอร์โทร</label>
-        <input type="text" name="phone" required>
+            <form action="save_booking.php" method="POST">
+                <input type="hidden" name="room_id" value="<?php echo htmlspecialchars($room['id']); ?>">
+                <input type="hidden" name="room_name" value="<?php echo htmlspecialchars($room['room_name']); ?>">
+                <input type="hidden" name="room_price" value="<?php echo htmlspecialchars($room['price']); ?>">
 
-        <label>อีเมล</label>
-        <input type="email" name="email">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>ชื่อผู้จอง</label>
+                        <input type="text" name="customer_name" required>
+                    </div>
 
-        <label>จำนวนผู้ใหญ่</label>
-        <input type="number" name="adults" min="1" value="<?php echo (int)$guests; ?>" required>
+                    <div class="form-group">
+                        <label>เบอร์โทร</label>
+                        <input type="text" name="phone" required>
+                    </div>
 
-        <label>วันเช็คอิน</label>
-        <input type="date" name="checkin_date" value="<?php echo htmlspecialchars($checkin); ?>" required>
+                    <div class="form-group">
+                        <label>อีเมล</label>
+                        <input type="email" name="email">
+                    </div>
 
-        <label>วันเช็คเอาท์</label>
-        <input type="date" name="checkout_date" value="<?php echo htmlspecialchars($checkout); ?>" required>
+                    <div class="form-group">
+                        <label>จำนวนผู้ใหญ่</label>
+                        <input type="number" name="adults" min="1" value="<?php echo (int)$guests; ?>" required>
+                    </div>
 
-        <label>จำนวนเด็ก</label>
-        <input type="number" name="children" min="0" value="0">
+                    <div class="form-group">
+                        <label>วันเช็คอิน</label>
+                        <input type="date" name="checkin_date" value="<?php echo htmlspecialchars($checkin); ?>" required>
+                    </div>
 
-        <label>หมายเหตุ</label>
-        <textarea name="note"></textarea>
+                    <div class="form-group">
+                        <label>วันเช็คเอาท์</label>
+                        <input type="date" name="checkout_date" value="<?php echo htmlspecialchars($checkout); ?>" required>
+                    </div>
 
-        <button type="submit">ยืนยันการจอง</button>
-    </form>
+                    <div class="form-group">
+                        <label>จำนวนเด็ก</label>
+                        <input type="number" name="children" min="0" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label>วิธีชำระเงิน</label>
+                        <select name="payment_method">
+                            <option value="โอนเงิน">โอนเงิน</option>
+                            <option value="ชำระเงินสด">ชำระเงินสด</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group full">
+                        <label>หมายเหตุเพิ่มเติม</label>
+                        <textarea name="note"></textarea>
+                    </div>
+                </div>
+
+                <button type="submit">ยืนยันการจอง</button>
+            </form>
+        </div>
+    </div>
+</div>
 </body>
 </html>

@@ -2,7 +2,7 @@
 session_start();
 
 if (isset($_SESSION['user_id'])) {
-    header("Location: dashboard.php");
+    header("Location: admin_dashboard.php");
     exit;
 }
 
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     setcookie('remember_token', bin2hex(random_bytes(32)), time() + 60*60*24*30, '/', '', false, true);
                 }
 
-                header("Location: dashboard.php");
+                header("Location: admin_dashboard.php");
                 exit;
             } else {
                 $error_message = 'รหัสผ่านไม่ถูกต้อง';

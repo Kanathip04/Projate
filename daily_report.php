@@ -70,9 +70,23 @@ include "admin_layout_top.php";
 ?>
 
 <style>
-.filter-group input:focus{
-    border-color:#c7a056;
-    box-shadow:0 0 0 4px rgba(199,160,86,0.15);
+:root{
+    --bg-main:#f6f2ea;
+    --panel:#ffffff;
+    --panel-soft:#fcfbf8;
+    --text-main:#1d2238;
+    --text-muted:#8b8fa3;
+    --line:#ece7dd;
+    --gold:#d3b16f;
+    --navy:#171934;
+    --navy-2:#23284b;
+    --blue:#1f6fd1;
+    --orange:#f26a00;
+    --green:#7b9627;
+    --shadow:0 10px 30px rgba(24, 30, 58, 0.08);
+    --radius-xl:22px;
+    --radius-lg:18px;
+    --radius-md:14px;
 }
 
 body{
@@ -243,16 +257,14 @@ body{
 }
 
 .card::before{
-    background:#c7a056; /* ทอง */
+    content:"";
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:4px;
+    background:var(--green);
 }
-
-.card.total::before{ background:linear-gradient(90deg, #c7a056, #e0c58c); }
-.card.student::before{ background:linear-gradient(90deg, #f26a00, #ff8f3d); }
-
-/* ❌ เดิมเป็นเขียว → เปลี่ยนเป็นน้ำเงิน */
-.card.staff::before{ background:linear-gradient(90deg, #1f6fd1, #4c93ea); }
-
-.card.tourist::before{ background:linear-gradient(90deg, #1f6fd1, #4c93ea); }
 
 .card.total::before{ background:linear-gradient(90deg, #c7a056, #e0c58c); }
 .card.student::before{ background:linear-gradient(90deg, #f26a00, #ff8f3d); }
@@ -401,9 +413,9 @@ td{
 }
 
 .badge.staff{
-    background:#eef4ff;
-    color:#1f6fd1;
-    border-color:#d6e4ff;
+    background:#edf8ee;
+    color:#3e8e49;
+    border-color:#cdebd1;
 }
 
 .badge.tourist{

@@ -1,10 +1,10 @@
 <?php
 session_start();
 
-if (isset($_SESSION['user_id'])) {
-    header("Location: admin_dashboard.php");
-    exit;
-}
+// ล้าง session เก่าออกก่อนเสมอเมื่อเข้าหน้า login
+session_unset();
+session_destroy();
+session_start();
 
 require_once 'config.php';
 

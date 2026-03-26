@@ -1,4 +1,10 @@
 <?php
+session_start();
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+header("Expires: 0");
+
 date_default_timezone_set('Asia/Bangkok');
 
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
@@ -75,8 +81,9 @@ button{margin-top:20px;width:100%;padding:14px;border:none;border-radius:12px;ba
 </head>
 <body>
 <div class="wrapper">
-<a href="/Projate/rooms.php?checkin=<?php echo urlencode($_GET['checkin'] ?? ''); ?>&checkout=<?php echo urlencode($_GET['checkout'] ?? ''); ?>&guests=<?php echo urlencode($_GET['guests'] ?? ''); ?>" class="back-link">
-    ← กลับไปหน้าห้องพัก
+<a href="/Projate/booking_room.php?checkin=<?php echo urlencode($_GET['checkin'] ?? ''); ?>&checkout=<?php echo urlencode($_GET['checkout'] ?? ''); ?>&guests=<?php echo urlencode($_GET['guests'] ?? ''); ?>"
+   class="back-link">
+   ← กลับไปหน้าห้องพัก
 </a>
     <div class="card">
         <div class="header">

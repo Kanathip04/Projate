@@ -1,4 +1,10 @@
 <?php
+session_start();
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+header("Expires: 0");
+
 date_default_timezone_set('Asia/Bangkok');
 
 /* =========================
@@ -658,7 +664,7 @@ a{
                                     <span>/ คืน</span>
                                 </div>
 <a class="book-btn"
-   href="/Projate/booking_form.php?room_id=<?php echo urlencode($room['id']); ?>&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
+   href="/Projate/booking_form.php?room_id=<?php echo (int)$room['id']; ?>&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
    จองห้องนี้
 </a>
                             </div>

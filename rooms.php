@@ -481,51 +481,6 @@ a{
             </p>
         </div>
     </section>
-
-    <section class="search-box">
-        <h2>ค้นหาห้องพักว่าง</h2>
-        <p>กรอกข้อมูลเบื้องต้นเพื่อค้นหาห้องพักที่เหมาะสมกับการเข้าพักของคุณ</p>
-
-        <form action="" method="get">
-            <div class="search-grid">
-                <div class="field">
-                    <label>วันที่เข้าพัก</label>
-                    <input type="date" name="checkin" value="<?php echo htmlspecialchars($checkin); ?>">
-                </div>
-
-                <div class="field">
-                    <label>วันที่ออก</label>
-                    <input type="date" name="checkout" value="<?php echo htmlspecialchars($checkout); ?>">
-                </div>
-
-                <div class="field">
-                    <label>จำนวนผู้เข้าพัก</label>
-                    <select name="guests">
-                        <option value="">เลือกจำนวน</option>
-                        <option value="1" <?php if($guests=="1") echo "selected"; ?>>1 คน</option>
-                        <option value="2" <?php if($guests=="2") echo "selected"; ?>>2 คน</option>
-                        <option value="3" <?php if($guests=="3") echo "selected"; ?>>3 คน</option>
-                        <option value="4" <?php if($guests=="4") echo "selected"; ?>>4 คน</option>
-                        <option value="5" <?php if($guests=="5") echo "selected"; ?>>5 คน</option>
-                        <option value="6" <?php if($guests=="6") echo "selected"; ?>>6 คน</option>
-                    </select>
-                </div>
-
-                <div class="field">
-                    <label>ประเภทห้องพัก</label>
-                    <select name="type">
-                        <option value="">ทั้งหมด</option>
-                        <?php foreach($roomTypes as $roomType): ?>
-                            <option value="<?php echo htmlspecialchars($roomType); ?>" <?php if($type === $roomType) echo "selected"; ?>>
-                                <?php echo htmlspecialchars($roomType); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <button type="submit" class="search-btn">ค้นหาห้องพัก</button>
-            </div>
-
             <?php if ($error_message !== ""): ?>
                 <div class="alert-error"><?php echo htmlspecialchars($error_message); ?></div>
             <?php endif; ?>

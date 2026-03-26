@@ -572,7 +572,7 @@ a{
                                     <span>/ คืน</span>
                                 </div>
                                     <a class="book-btn"
-                                    href="booking_form.php?room_id=<?= urlencode($room['id']) ?>&checkin=<?= urlencode($checkin) ?>&checkout=<?= urlencode($checkout) ?>&guests=<?= urlencode($guests) ?>">
+                                    href="booking_form.php?room_id=<?php echo urlencode($room['id']); ?>&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
                                     จองห้องนี้
                                     </a>
                             </div>

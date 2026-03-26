@@ -44,8 +44,6 @@ if ($checkin === '') {
 if ($checkout === '' || $checkout <= $checkin) {
     $checkout = date('Y-m-d', strtotime($checkin . ' +1 day'));
 }
-
-$roomImage = !empty($room['image']) ? $room['image'] : 'uploads/no-image.png';
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -72,9 +70,7 @@ input,textarea,select{padding:12px 14px;border:1px solid #d1d5db;border-radius:1
 textarea{min-height:100px;resize:vertical}
 button{margin-top:20px;width:100%;padding:14px;border:none;border-radius:12px;background:#6f8428;color:#fff;font-size:16px;font-weight:700;cursor:pointer}
 .back-link{display:inline-block;margin-bottom:16px;color:#58691f;text-decoration:none;font-weight:700}
-@media (max-width:768px){
-  .form-grid{grid-template-columns:1fr}
-}
+@media (max-width:768px){.form-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>

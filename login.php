@@ -2,9 +2,6 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
-
-// ล้าง session ชั่วคราวเพื่อหยุด loop
-unset($_SESSION['admin_logged_in']);
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -33,22 +30,39 @@ unset($_SESSION['admin_logged_in']);
         }
         h1{margin:0 0 10px;}
         p{color:#555; line-height:1.6;}
-        a{
-            display:inline-block;
-            margin-top:15px;
-            padding:12px 18px;
+        input{
+            width:100%;
+            height:45px;
+            margin:12px 0;
+            padding:0 12px;
+            border:1px solid #ccc;
+            border-radius:10px;
+            box-sizing:border-box;
+        }
+        button{ 
+            width:100%;
+            height:45px;
+            border:none;
+            border-radius:10px;
             background:#638411;
             color:#fff;
-            text-decoration:none;
-            border-radius:10px;
+            font-size:16px;
+            cursor:pointer;
+        }
+        button:hover{
+            background:#4f6a0d;
         }
     </style>
 </head>
 <body>
     <div class="box">
         <h1>หน้า Login ใช้งานได้</h1>
-        <p>ถ้าคุณเห็นหน้านี้ แปลว่าไฟล์ login.php เองไม่พังแล้ว</p>
-        <a href="admin_dashboard.php">ไปหน้า Dashboard</a>
+        <p>ทดสอบสร้าง session login ก่อนเข้า Dashboard</p>
+
+        <form action="check_login.php" method="post">
+            <input type="password" name="password" placeholder="กรอกรหัสผ่าน" required>
+            <button type="submit">เข้าสู่ระบบ</button>
+        </form>
     </div>
 </body>
 </html>

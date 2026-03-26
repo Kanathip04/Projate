@@ -1,13 +1,4 @@
 <?php
-
-session_start();
-
-// ถ้ายังไม่ได้ login → ไป login
-if (!isset($_SESSION['admin_logged_in'])) {
-    header("Location: login.php");
-    exit;
-}
-
 session_start();
 
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");

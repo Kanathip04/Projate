@@ -1,4 +1,13 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (!isset($_SESSION['admin_logged_in'])) {
+    header("Location: login.php");
+    exit;
+}
+
 if (!isset($pageTitle)) {
     $pageTitle = "Admin Panel";
 }
@@ -54,6 +63,7 @@ body{
     top:0;
     display:flex;
     flex-direction:column;
+    z-index:1000;
 }
 
 .sidebar h2{
@@ -135,6 +145,7 @@ body{
     margin-left:230px;
     width:calc(100% - 230px);
     padding:26px;
+    min-height:100vh;
 }
 
 .content-card{
@@ -168,7 +179,7 @@ body{
     background:var(--brand2);
 }
 
-input, select, textarea{
+input, select, textarea, button{
     font-family:inherit;
 }
 
@@ -184,6 +195,10 @@ input, select, textarea{
 }
 
 @media (max-width: 700px){
+    .wrapper{
+        flex-direction:column;
+    }
+
     .sidebar{
         width:100%;
         min-height:auto;
@@ -195,10 +210,6 @@ input, select, textarea{
         margin-left:0;
         width:100%;
         padding:18px;
-    }
-
-    .wrapper{
-        flex-direction:column;
     }
 }
 </style>
@@ -226,23 +237,23 @@ input, select, textarea{
                     <span class="text">เปลี่ยนรูปหน้าเว็บ</span>
                 </a>
 
-                <a href="admin_booking_list.php" class="menu-item <?php echo ($activeMenu === 'banner') ? 'active' : ''; ?>">
-                    <span class="icon">🖼️</span>
+                <a href="admin_booking_list.php" class="menu-item <?php echo ($activeMenu === 'booking') ? 'active' : ''; ?>">
+                    <span class="icon">🏨</span>
                     <span class="text">ข้อมูลการเข้าพัก</span>
                 </a>
 
-                <a href="admin_add_news.php" class="menu-item <?php echo ($activeMenu === 'news_manage') ? 'active' : ''; ?>">
+                <a href="admin_add_news.php" class="menu-item <?php echo ($activeMenu === 'news_add') ? 'active' : ''; ?>">
                     <span class="icon">📰</span>
-                    <span class="text">จัดการข่าว</span>
+                    <span class="text">เพิ่มข่าวสาร</span>
                 </a>
 
-                <a href="manage_news.php" class="menu-item <?php echo ($activeMenu === 'news_edit') ? 'active' : ''; ?>">
+                <a href="manage_news.php" class="menu-item <?php echo ($activeMenu === 'news_manage') ? 'active' : ''; ?>">
                     <span class="icon">✏️</span>
                     <span class="text">จัดการข่าว</span>
                 </a>
 
-                <a href="edit_about.php" class="menu-item <?php echo ($activeMenu === 'news_edit') ? 'active' : ''; ?>">
-                    <span class="icon">✏️</span>
+                <a href="edit_about.php" class="menu-item <?php echo ($activeMenu === 'about') ? 'active' : ''; ?>">
+                    <span class="icon">📝</span>
                     <span class="text">จัดการเกี่ยวกับ</span>
                 </a>
 

@@ -294,7 +294,7 @@ include 'admin_layout_top.php';
     margin: 0 auto;
 }
 .hero-booking{
-    background: linear-gradient(135deg, #d4dac4 0%, #7aa51a 100%);
+    background: linear-gradient(135deg, #638411 0%, #7aa51a 100%);
     color: #fff;
     border-radius: 28px;
     padding: 28px;

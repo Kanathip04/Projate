@@ -43,6 +43,19 @@ function getTableColumns($conn, $tableName) {
 }
 
 /* =========================
+   ฟังก์ชันหา table การจอง
+========================= */
+function findBookingTable($conn) {
+    $candidates = ['bookings', 'room_bookings', 'booking_rooms'];
+    foreach ($candidates as $table) {
+        if (tableExists($conn, $table)) {
+            return $table;
+        }
+    }
+    return null;
+}
+
+/* =========================
    ตรวจสอบว่ามีตาราง rooms หรือไม่
 ========================= */
 if (!tableExists($conn, 'rooms')) {
@@ -52,7 +65,7 @@ if (!tableExists($conn, 'rooms')) {
 $roomColumns = getTableColumns($conn, 'rooms');
 
 /* =========================
-   เช็คคอลัมน์ที่อาจมี/ไม่มี
+   เช็คคอลัมน์ของ rooms
 ========================= */
 $hasId          = in_array('id', $roomColumns, true);
 $hasRoomName    = in_array('room_name', $roomColumns, true);
@@ -65,17 +78,64 @@ $hasImage       = in_array('image', $roomColumns, true);
 $hasDescription = in_array('description', $roomColumns, true);
 $hasStatus      = in_array('status', $roomColumns, true);
 
+/* ถ้ามีคอลัมน์จำนวนห้องอยู่แล้วจะใช้คอลัมน์นี้
+   ถ้าไม่มี จะใช้ค่า default = 5 */
+$hasTotalRooms  = in_array('total_rooms', $roomColumns, true);
+
 if (!$hasId || !$hasRoomName) {
     die("ตาราง rooms ต้องมีคอลัมน์ id และ room_name อย่างน้อย");
 }
 
 /* =========================
-   ไม่ใช้ฟอร์มค้นหาแล้ว
+   ข้อมูลฟอร์มที่ไม่ใช้แล้ว
 ========================= */
 $checkin  = '';
 $checkout = '';
 $guests   = '';
 $type     = '';
+
+/* =========================
+   หา table การจอง
+========================= */
+$bookingTable = findBookingTable($conn);
+$approvedMap = []; // เก็บจำนวนที่อนุมัติแล้วแยกตาม room_id
+
+if ($bookingTable) {
+    $bookingColumns = getTableColumns($conn, $bookingTable);
+
+    $hasBookingRoomId = in_array('room_id', $bookingColumns, true);
+
+    $statusColumn = null;
+    $candidateStatusColumns = ['status', 'booking_status', 'approval_status', 'approve_status'];
+    foreach ($candidateStatusColumns as $col) {
+        if (in_array($col, $bookingColumns, true)) {
+            $statusColumn = $col;
+            break;
+        }
+    }
+
+    if ($hasBookingRoomId && $statusColumn !== null) {
+        $sqlApproved = "
+            SELECT room_id, COUNT(*) AS approved_total
+            FROM {$bookingTable}
+            WHERE (
+                {$statusColumn} = 'approved'
+                OR {$statusColumn} = 'อนุมัติ'
+                OR {$statusColumn} = 'Approved'
+                OR {$statusColumn} = 'APPROVED'
+                OR {$statusColumn} = 1
+            )
+            GROUP BY room_id
+        ";
+
+        $resApproved = $conn->query($sqlApproved);
+        if ($resApproved) {
+            while ($row = $resApproved->fetch_assoc()) {
+                $approvedMap[(int)$row['room_id']] = (int)$row['approved_total'];
+            }
+        }
+    }
+}
 
 /* =========================
    สร้าง SELECT แบบยืดหยุ่น
@@ -89,6 +149,7 @@ if ($hasBedType)     $selectFields[] = 'bed_type';
 if ($hasCapacity)    $selectFields[] = 'capacity';
 if ($hasImage)       $selectFields[] = 'image';
 if ($hasDescription) $selectFields[] = 'description';
+if ($hasTotalRooms)  $selectFields[] = 'total_rooms';
 
 /* =========================
    สร้าง SQL หลัก
@@ -128,12 +189,19 @@ $result = $stmt->get_result();
     --brand:#6f8428;
     --brand-dark:#58691f;
     --brand-light:#f4f8ea;
+    --brand-soft:#eef5dc;
     --text:#1f2937;
     --muted:#6b7280;
     --line:#e5e7eb;
     --white:#ffffff;
     --bg:#f8fafc;
-    --card-shadow:0 12px 35px rgba(0,0,0,.08);
+    --danger:#d92d20;
+    --danger-bg:#fff1f1;
+    --info:#1d4ed8;
+    --info-bg:#eff6ff;
+    --success:#15803d;
+    --success-bg:#ecfdf3;
+    --card-shadow:0 14px 35px rgba(0,0,0,.08);
 }
 body{
     font-family:'Segoe UI', Tahoma, sans-serif;
@@ -209,7 +277,7 @@ a{
 }
 .section-head p{
     color:var(--muted);
-    max-width:700px;
+    max-width:760px;
     line-height:1.7;
 }
 .room-grid{
@@ -250,6 +318,28 @@ a{
     font-weight:700;
     backdrop-filter:blur(8px);
 }
+.room-stock-badge{
+    position:absolute;
+    top:16px;
+    left:16px;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:10px 14px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:700;
+    backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.25);
+}
+.room-stock-badge.available{
+    background:rgba(21,128,61,.88);
+    color:#fff;
+}
+.room-stock-badge.full{
+    background:rgba(217,45,32,.88);
+    color:#fff;
+}
 .room-body{
     padding:22px;
 }
@@ -283,6 +373,42 @@ a{
 .meta-item strong{
     color:#111827;
 }
+.booking-summary{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+}
+.summary-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:10px 14px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:700;
+    border:1px solid transparent;
+}
+.summary-pill.total{
+    background:var(--info-bg);
+    color:var(--info);
+    border-color:#dbeafe;
+}
+.summary-pill.booked{
+    background:var(--brand-soft);
+    color:var(--brand-dark);
+    border-color:#dfe9bf;
+}
+.summary-pill.left{
+    background:var(--success-bg);
+    color:var(--success);
+    border-color:#d1fadf;
+}
+.summary-pill.full{
+    background:var(--danger-bg);
+    color:var(--danger);
+    border-color:#fecaca;
+}
 .room-footer{
     display:flex;
     justify-content:space-between;
@@ -304,16 +430,23 @@ a{
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    min-width:150px;
+    min-width:160px;
     padding:13px 18px;
     border-radius:14px;
     background:var(--brand);
     color:#fff;
     font-weight:700;
     transition:.2s ease;
+    border:none;
+    cursor:pointer;
 }
 .book-btn:hover{
     background:var(--brand-dark);
+}
+.book-btn.disabled{
+    background:#9ca3af;
+    cursor:not-allowed;
+    pointer-events:none;
 }
 .empty-box{
     background:#fff;
@@ -381,6 +514,7 @@ a{
             <p>
                 เลือกห้องพักที่ต้องการจากรายการด้านล่างได้เลย
                 เมื่อกดจอง ระบบจะพาไปยังหน้าแบบฟอร์มสำหรับกรอกข้อมูลการจองต่อทันที
+                และจำนวนห้องที่แสดงจะอัปเดตตามรายการที่อนุมัติแล้วจากหลังบ้าน
             </p>
         </div>
     </section>
@@ -389,7 +523,9 @@ a{
         <div class="section-head">
             <div>
                 <h3>ห้องพักแนะนำ</h3>
-                <p>ข้อมูลห้องพักทั้งหมดถูกดึงจากฐานข้อมูลโดยตรง และเมื่อกดจองจะส่งข้อมูลไปหน้าแบบฟอร์มจอง</p>
+                <p>
+                    แสดงจำนวนห้องทั้งหมด จำนวนที่ถูกอนุมัติการจองแล้ว และจำนวนห้องคงเหลือของแต่ละรายการ
+                </p>
             </div>
         </div>
 
@@ -397,9 +533,19 @@ a{
             <div class="room-grid">
                 <?php while($room = $result->fetch_assoc()): ?>
                     <?php
+                        $roomId    = (int)$room['id'];
                         $roomImage = (!empty($room['image'])) ? $room['image'] : 'uploads/no-image.png';
                         $roomDesc  = (!empty($room['description'])) ? $room['description'] : 'ไม่มีรายละเอียดเพิ่มเติม';
                         $roomPrice = isset($room['price']) ? (float)$room['price'] : 0;
+
+                        $totalRooms = $hasTotalRooms ? (int)$room['total_rooms'] : 5;
+                        if ($totalRooms <= 0) {
+                            $totalRooms = 5;
+                        }
+
+                        $approvedCount = isset($approvedMap[$roomId]) ? (int)$approvedMap[$roomId] : 0;
+                        $availableRooms = max(0, $totalRooms - $approvedCount);
+                        $isFull = ($availableRooms <= 0);
                     ?>
                     <div class="room-card">
                         <div class="room-image-wrap">
@@ -407,12 +553,28 @@ a{
                                  alt="<?php echo htmlspecialchars($room['room_name']); ?>"
                                  class="room-image"
                                  onerror="this.src='uploads/no-image.png'">
+
                             <div class="room-price-tag">฿<?php echo number_format($roomPrice); ?> / คืน</div>
+
+                            <div class="room-stock-badge <?php echo $isFull ? 'full' : 'available'; ?>">
+                                <?php echo $isFull ? 'ห้องเต็ม' : 'ว่าง ' . $availableRooms . '/' . $totalRooms; ?>
+                            </div>
                         </div>
 
                         <div class="room-body">
                             <div class="room-title"><?php echo htmlspecialchars($room['room_name']); ?></div>
                             <div class="room-desc"><?php echo htmlspecialchars($roomDesc); ?></div>
+
+                            <div class="booking-summary">
+                                <div class="summary-pill total">จำนวนทั้งหมด <?php echo $totalRooms; ?> ห้อง</div>
+                                <div class="summary-pill booked">จองแล้ว <?php echo $approvedCount; ?>/<?php echo $totalRooms; ?></div>
+
+                                <?php if ($isFull): ?>
+                                    <div class="summary-pill full">คงเหลือ 0 ห้อง</div>
+                                <?php else: ?>
+                                    <div class="summary-pill left">คงเหลือ <?php echo $availableRooms; ?> ห้อง</div>
+                                <?php endif; ?>
+                            </div>
 
                             <div class="room-meta">
                                 <?php if ($hasRoomType): ?>
@@ -438,10 +600,14 @@ a{
                                     <span>/ คืน</span>
                                 </div>
 
-                                <a class="book-btn"
-                                   href="/Projate/booking_form.php?room_id=<?php echo (int)$room['id']; ?>">
-                                   จองห้องนี้
-                                </a>
+                                <?php if ($isFull): ?>
+                                    <span class="book-btn disabled">ห้องเต็ม</span>
+                                <?php else: ?>
+                                    <a class="book-btn"
+                                       href="/Projate/booking_form.php?room_id=<?php echo $roomId; ?>">
+                                       จองห้องนี้
+                                    </a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -455,7 +621,10 @@ a{
     </section>
 
     <div class="footer-note">
-        หมายเหตุ: หน้านี้จะพยายามดึงข้อมูลจากตาราง rooms เท่าที่มีจริงในฐานข้อมูล และจะไม่พังแม้บางคอลัมน์ยังไม่ได้สร้าง
+        หมายเหตุ:
+        จำนวน “จองแล้ว” จะนับเฉพาะรายการที่มีสถานะอนุมัติจากหลังบ้านเท่านั้น
+        และถ้าคุณมีคอลัมน์ <strong>total_rooms</strong> ในตาราง <strong>rooms</strong>
+        ระบบจะใช้ค่าจริงจากฐานข้อมูล แต่ถ้ายังไม่มี ระบบจะใช้ค่าเริ่มต้นเป็น 5 ห้องต่อรายการ
     </div>
 
 </div>

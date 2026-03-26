@@ -537,8 +537,6 @@ textarea.form-control{
                                 <td><?php echo h($row['created_at']); ?></td>
                                 <td>
                                     <div class="action-group">
-                                        <a href="admin_booking_archive.php?edit=<?php echo (int)$row['id']; ?>&search=<?php echo urlencode($search); ?>" class="btn btn-info btn-sm">แก้ไข</a>
-
                                         <form method="POST" style="display:inline;" onsubmit="return confirm('ต้องการกู้คืนข้อมูลนี้ใช่หรือไม่?');">
                                             <input type="hidden" name="action" value="restore_booking">
                                             <input type="hidden" name="id" value="<?php echo (int)$row['id']; ?>">

@@ -726,14 +726,6 @@ textarea.form-control{
                                                 <button type="submit" class="btn btn-approve btn-sm">อนุมัติ</button>
                                             </form>
                                         <?php endif; ?>
-
-                                        <a
-                                            class="btn btn-info btn-sm"
-                                            href="<?php echo h($currentPage); ?>?edit=<?php echo (int)$row['id']; ?>&search=<?php echo urlencode($search); ?>"
-                                        >
-                                            แก้ไข
-                                        </a>
-
                                         <form method="POST" class="inline-form" onsubmit="return confirm('ยืนยันการลบข้อมูลนี้?');">
                                             <input type="hidden" name="action" value="delete_booking">
                                             <input type="hidden" name="id" value="<?php echo (int)$row['id']; ?>">

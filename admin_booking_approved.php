@@ -651,13 +651,6 @@ textarea.form-control{
 
                                 <td>
                                     <div class="action-group">
-                                        <a
-                                            class="btn btn-info btn-sm"
-                                            href="<?php echo h($currentPage); ?>?edit=<?php echo (int)$row['id']; ?>&search=<?php echo urlencode($search); ?>"
-                                        >
-                                            แก้ไข
-                                        </a>
-
                                         <form method="POST" class="inline-form" onsubmit="return confirm('ย้ายรายการนี้กลับไปหน้ารออนุมัติใช่หรือไม่?');">
                                             <input type="hidden" name="action" value="set_pending">
                                             <input type="hidden" name="id" value="<?php echo (int)$row['id']; ?>">

@@ -41,10 +41,15 @@ if (!isset($activeMenu)) {
     --line:#e8e8e8;
 }
 
+html, body{
+    height:100%;
+}
+
 body{
     font-family:Tahoma, sans-serif;
     background:var(--bg);
     color:var(--text);
+    overflow-x:hidden;
 }
 
 .wrapper{
@@ -54,10 +59,10 @@ body{
 
 .sidebar{
     width:230px;
-    min-height:100vh;
+    height:100vh;
     background:var(--dark);
     color:#fff;
-    padding:22px 16px;
+    padding:22px 16px 16px;
     position:fixed;
     left:0;
     top:0;
@@ -71,13 +76,38 @@ body{
     font-size:18px;
     font-weight:800;
     text-align:center;
-    margin:8px 0 30px;
+    margin:8px 0 22px;
+    flex-shrink:0;
+}
+
+.sidebar-scroll{
+    flex:1;
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding-right:6px;
+}
+
+/* แถบเลื่อน */
+.sidebar-scroll::-webkit-scrollbar{
+    width:8px;
+}
+.sidebar-scroll::-webkit-scrollbar-track{
+    background:rgba(255,255,255,.06);
+    border-radius:10px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb{
+    background:rgba(133,179,21,.85);
+    border-radius:10px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover{
+    background:rgba(133,179,21,1);
 }
 
 .sidebar-menu{
     display:flex;
     flex-direction:column;
     gap:8px;
+    padding-bottom:14px;
 }
 
 .menu-item{
@@ -91,7 +121,7 @@ body{
     text-decoration:none;
     font-size:14px;
     font-weight:700;
-    line-height:1.2;
+    line-height:1.25;
     transition:0.2s ease;
 }
 
@@ -102,7 +132,8 @@ body{
 }
 
 .menu-item .text{
-    white-space:nowrap;
+    display:block;
+    word-break:break-word;
 }
 
 .menu-item:hover{
@@ -115,8 +146,10 @@ body{
 }
 
 .sidebar-footer{
-    margin-top:auto;
-    padding-top:16px;
+    padding-top:14px;
+    flex-shrink:0;
+    border-top:1px solid rgba(255,255,255,.08);
+    margin-top:10px;
 }
 
 .back-btn{
@@ -201,9 +234,14 @@ input, select, textarea, button{
 
     .sidebar{
         width:100%;
+        height:auto;
         min-height:auto;
         position:relative;
         border-radius:0 0 18px 18px;
+    }
+
+    .sidebar-scroll{
+        max-height:320px;
     }
 
     .main{
@@ -218,10 +256,11 @@ input, select, textarea, button{
 
 <div class="wrapper">
     <div class="sidebar">
-        <div>
-            <h2>Admin Panel</h2>
+        <h2>Admin Panel</h2>
 
+        <div class="sidebar-scroll">
             <div class="sidebar-menu">
+
                 <a href="admin_dashboard.php" class="menu-item <?php echo ($activeMenu === 'dashboard') ? 'active' : ''; ?>">
                     <span class="icon">📄</span>
                     <span class="text">Dashboard</span>
@@ -257,15 +296,10 @@ input, select, textarea, button{
                     <span class="text">จัดการห้องพัก</span>
                 </a>
 
-                <a href="manage_rooms.php" class="menu-item <?php echo ($activeMenu === 'rooms') ? 'active' : '' ?>">
-                    <span class="icon">📋</span>
-                    <span class="text">รายการจองห้องพัก</span>
-                </a>
-
                 <a href="room_bookings_admin.php" class="menu-item <?php echo ($activeMenu === 'room_bookings') ? 'active' : ''; ?>">
                     <span class="icon">📋</span>
                     <span class="text">รายการจองห้องพัก</span>
-                </a>                
+                </a>
 
                 <a href="admin_add_news.php" class="menu-item <?php echo ($activeMenu === 'news_add') ? 'active' : ''; ?>">
                     <span class="icon">📰</span>
@@ -286,6 +320,7 @@ input, select, textarea, button{
                     <span class="icon">🔐</span>
                     <span class="text">เปลี่ยนรหัสผ่าน</span>
                 </a>
+
             </div>
         </div>
 

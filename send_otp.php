@@ -94,8 +94,9 @@ try {
     $mail->isSMTP();
     $mail->Host       = 'smtp.gmail.com';
     $mail->SMTPAuth   = true;
-    $mail->Username   = 'yourprojectotp@gmail.com'; // เปลี่ยนเป็นเมลจริง
-    $mail->Password   = 'xxxxxxxxxxxxxxxx';         // เปลี่ยนเป็น App Password 16 หลัก
+    $mail->Username   = '67010974003@msu.ac.th';
+    $mail->setFrom('67010974003@msu.ac.th', 'OTP Verification');
+    $mail->Password   = 'uzotcwasteiaaroz';         // เปลี่ยนเป็น App Password 16 หลัก
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
     $mail->Port       = 587;
 

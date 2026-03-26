@@ -18,12 +18,31 @@ if ($conn->connect_error) {
 $pageTitle = "จัดการห้องพัก";
 $activeMenu = "rooms";
 
+function hasColumn(mysqli $conn, string $table, string $column): bool {
+    $table = $conn->real_escape_string($table);
+    $column = $conn->real_escape_string($column);
+    $sql = "SHOW COLUMNS FROM `$table` LIKE '$column'";
+    $res = $conn->query($sql);
+    return $res && $res->num_rows > 0;
+}
+
+$descColumn   = hasColumn($conn, 'rooms', 'description') ? 'description' : (hasColumn($conn, 'rooms', 'room_detail') ? 'room_detail' : '');
+$imageColumn  = hasColumn($conn, 'rooms', 'image_path') ? 'image_path' : (hasColumn($conn, 'rooms', 'room_image') ? 'room_image' : '');
+$statusColumn = hasColumn($conn, 'rooms', 'status') ? 'status' : '';
+
 $editData = null;
+
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     $editId = (int)$_GET['edit'];
-    $resEdit = $conn->query("SELECT * FROM rooms WHERE id = $editId LIMIT 1");
-    if ($resEdit && $resEdit->num_rows > 0) {
-        $editData = $resEdit->fetch_assoc();
+    $stmtEdit = $conn->prepare("SELECT * FROM rooms WHERE id = ? LIMIT 1");
+    if ($stmtEdit) {
+        $stmtEdit->bind_param("i", $editId);
+        $stmtEdit->execute();
+        $resultEdit = $stmtEdit->get_result();
+        if ($resultEdit && $resultEdit->num_rows > 0) {
+            $editData = $resultEdit->fetch_assoc();
+        }
+        $stmtEdit->close();
     }
 }
 
@@ -34,11 +53,11 @@ include 'admin_layout_top.php';
 
 <style>
 .page-wrap{
-    padding: 24px;
+    padding:24px;
 }
 .room-grid{
     display:grid;
-    grid-template-columns: 1.1fr 1.6fr;
+    grid-template-columns:1.1fr 1.6fr;
     gap:24px;
 }
 .card{
@@ -153,6 +172,22 @@ include 'admin_layout_top.php';
     border-radius:14px;
     border:1px solid #e5e5e5;
 }
+.alert{
+    margin-bottom:16px;
+    padding:12px 14px;
+    border-radius:12px;
+    font-weight:600;
+}
+.alert-success{
+    background:#e8f7e8;
+    color:#1f7a1f;
+    border:1px solid #b7e0b7;
+}
+.alert-error{
+    background:#fdeaea;
+    color:#b42318;
+    border:1px solid #f5b5b5;
+}
 @media (max-width: 980px){
     .room-grid{
         grid-template-columns:1fr;
@@ -161,13 +196,21 @@ include 'admin_layout_top.php';
 </style>
 
 <div class="page-wrap">
+
+    <?php if (!empty($_SESSION['room_msg'])): ?>
+        <div class="alert <?= (!empty($_SESSION['room_msg_type']) && $_SESSION['room_msg_type'] === 'success') ? 'alert-success' : 'alert-error' ?>">
+            <?= htmlspecialchars($_SESSION['room_msg']) ?>
+        </div>
+        <?php unset($_SESSION['room_msg'], $_SESSION['room_msg_type']); ?>
+    <?php endif; ?>
+
     <div class="room-grid">
 
         <div class="card">
             <h2><?= $editData ? 'แก้ไขห้องพัก' : 'เพิ่มห้องพักใหม่' ?></h2>
 
             <form action="save_room.php" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="id" value="<?= $editData['id'] ?? '' ?>">
+                <input type="hidden" name="id" value="<?= htmlspecialchars($editData['id'] ?? '') ?>">
 
                 <div class="form-group">
                     <label>ชื่อห้องพัก</label>
@@ -183,12 +226,12 @@ include 'admin_layout_top.php';
 
                 <div class="form-group">
                     <label>รายละเอียด</label>
-                    <textarea name="description"><?= htmlspecialchars($editData['description'] ?? '') ?></textarea>
+                    <textarea name="description"><?= htmlspecialchars($editData[$descColumn] ?? '') ?></textarea>
                 </div>
 
                 <div class="form-group">
                     <label>ราคา / คืน</label>
-                    <input type="number" step="0.01" name="price" required
+                    <input type="number" step="0.01" name="price" min="0" required
                            value="<?= htmlspecialchars($editData['price'] ?? '0') ?>">
                 </div>
 
@@ -221,8 +264,8 @@ include 'admin_layout_top.php';
                 <div class="form-group">
                     <label>สถานะการแสดงผล</label>
                     <select name="status">
-                        <option value="show" <?= (($editData['status'] ?? '') === 'show') ? 'selected' : '' ?>>แสดง</option>
-                        <option value="hide" <?= (($editData['status'] ?? '') === 'hide') ? 'selected' : '' ?>>ซ่อน</option>
+                        <option value="show" <?= (($editData[$statusColumn] ?? 'show') === 'show') ? 'selected' : '' ?>>แสดง</option>
+                        <option value="hide" <?= (($editData[$statusColumn] ?? '') === 'hide') ? 'selected' : '' ?>>ซ่อน</option>
                     </select>
                 </div>
 
@@ -231,9 +274,9 @@ include 'admin_layout_top.php';
                     <input type="file" name="room_image" accept="image/*">
                 </div>
 
-                <?php if (!empty($editData['image_path'])): ?>
+                <?php if (!empty($editData[$imageColumn] ?? '')): ?>
                     <div class="preview-box">
-                        <img src="<?= htmlspecialchars($editData['image_path']) ?>" alt="room image">
+                        <img src="<?= htmlspecialchars($editData[$imageColumn]) ?>" alt="room image">
                     </div>
                 <?php endif; ?>
 
@@ -270,27 +313,27 @@ include 'admin_layout_top.php';
                             <?php while ($row = $rooms->fetch_assoc()): ?>
                                 <tr>
                                     <td>
-                                        <?php if (!empty($row['image_path'])): ?>
-                                            <img src="<?= htmlspecialchars($row['image_path']) ?>" class="room-thumb" alt="">
+                                        <?php if (!empty($row[$imageColumn] ?? '')): ?>
+                                            <img src="<?= htmlspecialchars($row[$imageColumn]) ?>" class="room-thumb" alt="">
                                         <?php else: ?>
                                             <div class="room-thumb"></div>
                                         <?php endif; ?>
                                     </td>
-                                    <td><?= htmlspecialchars($row['room_name']) ?></td>
-                                    <td><?= htmlspecialchars($row['room_type']) ?></td>
-                                    <td>฿<?= number_format($row['price'], 2) ?></td>
-                                    <td><?= (int)$row['total_rooms'] ?> ห้อง</td>
+                                    <td><?= htmlspecialchars($row['room_name'] ?? '') ?></td>
+                                    <td><?= htmlspecialchars($row['room_type'] ?? '') ?></td>
+                                    <td>฿<?= number_format((float)($row['price'] ?? 0), 2) ?></td>
+                                    <td><?= (int)($row['total_rooms'] ?? 0) ?> ห้อง</td>
                                     <td>
-                                        <?php if ($row['status'] === 'show'): ?>
+                                        <?php if (($row[$statusColumn] ?? 'show') === 'show'): ?>
                                             <span class="badge badge-show">แสดง</span>
                                         <?php else: ?>
                                             <span class="badge badge-hide">ซ่อน</span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <a class="action-btn edit-btn" href="manage_rooms.php?edit=<?= $row['id'] ?>">แก้ไข</a>
+                                        <a class="action-btn edit-btn" href="manage_rooms.php?edit=<?= (int)$row['id'] ?>">แก้ไข</a>
                                         <a class="action-btn delete-btn"
-                                           href="delete_room.php?id=<?= $row['id'] ?>"
+                                           href="delete_room.php?id=<?= (int)$row['id'] ?>"
                                            onclick="return confirm('ยืนยันการลบห้องพักนี้?')">ลบ</a>
                                     </td>
                                 </tr>

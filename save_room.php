@@ -15,12 +15,15 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-function redirect_back($message, $editId = 0) {
+function redirect_back($message, $editId = 0, $type = 'error') {
     $_SESSION['room_msg'] = $message;
+    $_SESSION['room_msg_type'] = $type;
+
     $url = "manage_rooms.php";
     if ($editId > 0) {
         $url .= "?edit=" . $editId;
     }
+
     header("Location: " . $url);
     exit;
 }
@@ -43,7 +46,6 @@ if (!$checkTable || $checkTable->num_rows === 0) {
 
 /* =========================
    รับค่าจากฟอร์ม
-   รองรับหลายชื่อ field กันพลาด
 ========================= */
 $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
 
@@ -80,13 +82,31 @@ if ($max_guests <= 0) {
 }
 
 /* =========================
+   ตรวจสอบคอลัมน์จริงในตาราง
+========================= */
+$descColumn   = hasColumn($conn, 'rooms', 'description') ? 'description' : (hasColumn($conn, 'rooms', 'room_detail') ? 'room_detail' : '');
+$imageColumn  = hasColumn($conn, 'rooms', 'image_path') ? 'image_path' : (hasColumn($conn, 'rooms', 'room_image') ? 'room_image' : '');
+$statusColumn = hasColumn($conn, 'rooms', 'status') ? 'status' : '';
+
+if ($descColumn === '') {
+    redirect_back("ตาราง rooms ไม่มีคอลัมน์ description หรือ room_detail", $id);
+}
+if ($imageColumn === '') {
+    redirect_back("ตาราง rooms ไม่มีคอลัมน์ image_path หรือ room_image", $id);
+}
+if ($statusColumn === '') {
+    redirect_back("ตาราง rooms ไม่มีคอลัมน์ status", $id);
+}
+
+/* =========================
    เตรียมโฟลเดอร์อัปโหลด
 ========================= */
-$uploadDir = __DIR__ . '/uploads/rooms/';
+$uploadRoot = __DIR__ . '/uploads';
+$uploadDir  = __DIR__ . '/uploads/rooms/';
 $dbUploadPathPrefix = 'uploads/rooms/';
 
-if (!is_dir(__DIR__ . '/uploads')) {
-    if (!mkdir(__DIR__ . '/uploads', 0777, true)) {
+if (!is_dir($uploadRoot)) {
+    if (!mkdir($uploadRoot, 0777, true)) {
         redirect_back("สร้างโฟลเดอร์ uploads ไม่สำเร็จ", $id);
     }
 }
@@ -107,7 +127,6 @@ if (!is_writable($uploadDir)) {
 $image_path = '';
 
 if (isset($_FILES['room_image']) && is_array($_FILES['room_image'])) {
-
     if ($_FILES['room_image']['error'] !== UPLOAD_ERR_NO_FILE) {
 
         if ($_FILES['room_image']['error'] !== UPLOAD_ERR_OK) {
@@ -123,9 +142,9 @@ if (isset($_FILES['room_image']) && is_array($_FILES['room_image'])) {
             redirect_back($msg, $id);
         }
 
-        $tmpName = $_FILES['room_image']['tmp_name'];
+        $tmpName      = $_FILES['room_image']['tmp_name'];
         $originalName = $_FILES['room_image']['name'];
-        $fileSize = (int)$_FILES['room_image']['size'];
+        $fileSize     = (int)$_FILES['room_image']['size'];
 
         if (!is_uploaded_file($tmpName)) {
             redirect_back("ไม่พบไฟล์อัปโหลดที่ถูกต้อง", $id);
@@ -164,27 +183,9 @@ if (isset($_FILES['room_image']) && is_array($_FILES['room_image'])) {
 }
 
 /* =========================
-   ตรวจสอบคอลัมน์จริงในตาราง
-========================= */
-$descColumn  = hasColumn($conn, 'rooms', 'description') ? 'description' : (hasColumn($conn, 'rooms', 'room_detail') ? 'room_detail' : '');
-$imageColumn = hasColumn($conn, 'rooms', 'image_path') ? 'image_path' : (hasColumn($conn, 'rooms', 'room_image') ? 'room_image' : '');
-$statusColumn = hasColumn($conn, 'rooms', 'status') ? 'status' : '';
-
-if ($descColumn === '') {
-    redirect_back("ตาราง rooms ไม่มีคอลัมน์ description หรือ room_detail", $id);
-}
-if ($imageColumn === '') {
-    redirect_back("ตาราง rooms ไม่มีคอลัมน์ image_path หรือ room_image", $id);
-}
-if ($statusColumn === '') {
-    redirect_back("ตาราง rooms ไม่มีคอลัมน์ status", $id);
-}
-
-/* =========================
    เพิ่ม / แก้ไขข้อมูล
 ========================= */
 if ($id > 0) {
-
     $oldImage = '';
 
     $sqlOld = "SELECT `$imageColumn` FROM rooms WHERE id = ? LIMIT 1";
@@ -253,10 +254,9 @@ if ($id > 0) {
     }
 
     $stmt->close();
-    $_SESSION['room_msg'] = "อัปเดตข้อมูลห้องพักเรียบร้อยแล้ว";
+    redirect_back("อัปเดตข้อมูลห้องพักเรียบร้อยแล้ว", $id, 'success');
 
 } else {
-
     $sql = "INSERT INTO rooms (
                 room_name,
                 room_type,
@@ -296,9 +296,6 @@ if ($id > 0) {
     }
 
     $stmt->close();
-    $_SESSION['room_msg'] = "บันทึกห้องพักเรียบร้อยแล้ว";
+    redirect_back("บันทึกห้องพักเรียบร้อยแล้ว", 0, 'success');
 }
-
-header("Location: manage_rooms.php");
-exit;
 ?>

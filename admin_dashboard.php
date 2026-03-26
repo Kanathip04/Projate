@@ -7,17 +7,25 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     header("Location: login.php");
     exit;
 }
+
+$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
+$conn->set_charset("utf8mb4");
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
 ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
+    <title>Dashboard</title>
 </head>
 <body>
-    <h1>เข้าสู่ระบบสำเร็จ</h1>
-    <p>Session admin_logged_in = <?php var_dump($_SESSION['admin_logged_in']); ?></p>
-    <p><a href="logout.php">ออกจากระบบ</a></p>
+    <h1>Dashboard เดิม</h1>
+    <p>ตอนนี้ล็อกอินผ่านแล้ว</p>
+
+    <!-- ค่อยเอา HTML dashboard เดิมของคุณมาใส่ตรงนี้ -->
+
 </body>
 </html>

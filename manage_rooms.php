@@ -131,8 +131,8 @@ include 'admin_layout_top.php';
                 <div class="form-group">
                     <label>สถานะการแสดงผล</label>
                     <select name="status">
-                        <option value="show" <?= (($editData['status'] ?? 'show') === 'show') ? 'selected' : '' ?>>แสดง</option>
-                        <option value="hide" <?= (($editData['status'] ?? '') === 'hide') ? 'selected' : '' ?>>ซ่อน</option>
+                        <option value="1" <?= ((string)($editData['status'] ?? '1') === '1') ? 'selected' : '' ?>>แสดง</option>
+                        <option value="0" <?= ((string)($editData['status'] ?? '1') === '0') ? 'selected' : '' ?>>ซ่อน</option>
                     </select>
                 </div>
 
@@ -188,7 +188,7 @@ include 'admin_layout_top.php';
                                     <td>฿<?= number_format((float)($row['price'] ?? 0), 2) ?></td>
                                     <td><?= (int)($row['total_rooms'] ?? 0) ?> ห้อง</td>
                                     <td>
-                                        <?php if (($row['status'] ?? 'show') === 'show'): ?>
+                                        <?php if ((string)($row['status'] ?? '1') === '1'): ?>
                                             <span class="badge badge-show">แสดง</span>
                                         <?php else: ?>
                                             <span class="badge badge-hide">ซ่อน</span>

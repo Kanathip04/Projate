@@ -28,14 +28,6 @@ function redirect_back($message, $editId = 0, $type = 'error') {
     exit;
 }
 
-function hasColumn(mysqli $conn, string $table, string $column): bool {
-    $table = $conn->real_escape_string($table);
-    $column = $conn->real_escape_string($column);
-    $sql = "SHOW COLUMNS FROM `$table` LIKE '$column'";
-    $res = $conn->query($sql);
-    return $res && $res->num_rows > 0;
-}
-
 $checkTable = $conn->query("SHOW TABLES LIKE 'rooms'");
 if (!$checkTable || $checkTable->num_rows === 0) {
     die("ไม่พบตาราง rooms");
@@ -51,13 +43,11 @@ $total_rooms = isset($_POST['total_rooms']) ? (int)$_POST['total_rooms'] : 5;
 $max_guests  = isset($_POST['max_guests']) ? (int)$_POST['max_guests'] : 2;
 $room_size   = trim($_POST['room_size'] ?? '');
 $bed_type    = trim($_POST['bed_type'] ?? '');
+$capacity    = $max_guests;
 
-$status_raw = trim($_POST['status'] ?? 'show');
-if ($status_raw === 'hide') {
-    $status = 'hide';
-} else {
-    $status = 'show';
-}
+/* แก้ตรงนี้: status ใช้ 1/0 */
+$status_raw = $_POST['status'] ?? '1';
+$status = ($status_raw == '0') ? 0 : 1;
 
 if ($room_name === '' || $room_type === '') {
     redirect_back("กรุณากรอกชื่อห้องพักและประเภทห้อง", $id);
@@ -67,23 +57,9 @@ if ($price < 0) $price = 0;
 if ($total_rooms <= 0) $total_rooms = 5;
 if ($max_guests <= 0) $max_guests = 2;
 
-$descColumn   = hasColumn($conn, 'rooms', 'description') ? 'description' : '';
-$imageColumn  = hasColumn($conn, 'rooms', 'image_path') ? 'image_path' : '';
-$statusColumn = hasColumn($conn, 'rooms', 'status') ? 'status' : '';
-
-if ($descColumn === '') {
-    redirect_back("ตาราง rooms ไม่มีคอลัมน์ description", $id);
-}
-if ($imageColumn === '') {
-    redirect_back("ตาราง rooms ไม่มีคอลัมน์ image_path", $id);
-}
-if ($statusColumn === '') {
-    redirect_back("ตาราง rooms ไม่มีคอลัมน์ status", $id);
-}
-
 $uploadRoot = __DIR__ . '/uploads';
 $uploadDir  = __DIR__ . '/uploads/rooms/';
-$dbUploadPathPrefix = 'uploads/rooms/';
+$dbUploadPath = '';
 
 if (!is_dir($uploadRoot)) {
     mkdir($uploadRoot, 0777, true);
@@ -93,10 +69,8 @@ if (!is_dir($uploadDir)) {
 }
 
 if (!is_writable($uploadDir)) {
-    redirect_back("โฟลเดอร์ uploads/rooms เขียนไฟล์ไม่ได้", $id);
+    redirect_back("โฟลเดอร์ uploads/rooms เขียนไฟล์ไม่ได้");
 }
-
-$image_path = '';
 
 if (isset($_FILES['room_image']) && is_array($_FILES['room_image'])) {
     if ($_FILES['room_image']['error'] !== UPLOAD_ERR_NO_FILE) {
@@ -135,21 +109,18 @@ if (isset($_FILES['room_image']) && is_array($_FILES['room_image'])) {
 
         $newName = 'room_' . date('Ymd_His') . '_' . mt_rand(1000, 9999) . '.' . $ext;
         $targetFullPath = $uploadDir . $newName;
-        $dbPath = $dbUploadPathPrefix . $newName;
+        $dbUploadPath = 'uploads/rooms/' . $newName;
 
         if (!move_uploaded_file($tmpName, $targetFullPath)) {
             redirect_back("ย้ายไฟล์รูปไม่สำเร็จ", $id);
         }
-
-        $image_path = $dbPath;
     }
 }
 
 if ($id > 0) {
-    $oldImage = '';
 
-    $sqlOld = "SELECT image_path FROM rooms WHERE id = ? LIMIT 1";
-    $stmtOld = $conn->prepare($sqlOld);
+    $oldImagePath = '';
+    $stmtOld = $conn->prepare("SELECT image_path FROM rooms WHERE id = ? LIMIT 1");
     if (!$stmtOld) {
         redirect_back("Prepare SELECT failed: " . $conn->error, $id);
     }
@@ -157,17 +128,16 @@ if ($id > 0) {
     $stmtOld->bind_param("i", $id);
     $stmtOld->execute();
     $stmtOld->bind_result($oldImageValue);
-
     if ($stmtOld->fetch()) {
-        $oldImage = $oldImageValue ?? '';
+        $oldImagePath = $oldImageValue ?? '';
     }
     $stmtOld->close();
 
-    if ($image_path === '') {
-        $image_path = $oldImage;
+    if ($dbUploadPath === '') {
+        $dbUploadPath = $oldImagePath;
     } else {
-        if (!empty($oldImage)) {
-            $oldFullPath = __DIR__ . '/' . ltrim($oldImage, '/');
+        if (!empty($oldImagePath)) {
+            $oldFullPath = __DIR__ . '/' . ltrim($oldImagePath, '/');
             if (file_exists($oldFullPath)) {
                 @unlink($oldFullPath);
             }
@@ -177,14 +147,15 @@ if ($id > 0) {
     $sql = "UPDATE rooms SET
                 room_name = ?,
                 room_type = ?,
-                description = ?,
                 price = ?,
-                total_rooms = ?,
-                max_guests = ?,
+                description = ?,
+                status = ?,
                 room_size = ?,
                 bed_type = ?,
-                image_path = ?,
-                status = ?
+                capacity = ?,
+                total_rooms = ?,
+                max_guests = ?,
+                image_path = ?
             WHERE id = ?";
 
     $stmt = $conn->prepare($sql);
@@ -193,17 +164,18 @@ if ($id > 0) {
     }
 
     $stmt->bind_param(
-        "sssdiissssi",
+        "ssdisssiiisi",
         $room_name,
         $room_type,
-        $description,
         $price,
-        $total_rooms,
-        $max_guests,
+        $description,
+        $status,
         $room_size,
         $bed_type,
-        $image_path,
-        $status,
+        $capacity,
+        $total_rooms,
+        $max_guests,
+        $dbUploadPath,
         $id
     );
 
@@ -221,39 +193,45 @@ if ($id > 0) {
     $sql = "INSERT INTO rooms (
                 room_name,
                 room_type,
-                description,
                 price,
-                total_rooms,
-                max_guests,
+                image,
+                description,
+                status,
                 room_size,
                 bed_type,
-                image_path,
-                status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                capacity,
+                total_rooms,
+                max_guests,
+                image_path
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    $image = $dbUploadPath;
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
-        redirect_back("Prepare INSERT failed: " . $conn->error, 0);
+        redirect_back("Prepare INSERT failed: " . $conn->error);
     }
 
     $stmt->bind_param(
-        "sssdiissss",
+        "ssdssissiiis",
         $room_name,
         $room_type,
-        $description,
         $price,
-        $total_rooms,
-        $max_guests,
+        $image,
+        $description,
+        $status,
         $room_size,
         $bed_type,
-        $image_path,
-        $status
+        $capacity,
+        $total_rooms,
+        $max_guests,
+        $dbUploadPath
     );
 
     if (!$stmt->execute()) {
         $err = $stmt->error;
         $stmt->close();
-        redirect_back("บันทึกข้อมูลไม่สำเร็จ: " . $err, 0);
+        redirect_back("บันทึกข้อมูลไม่สำเร็จ: " . $err);
     }
 
     $stmt->close();

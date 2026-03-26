@@ -645,15 +645,6 @@ textarea.form-control-local{
         </div>
     </div>
 
-    <div class="layout-local">
-        <div class="sticky-box-local">
-            <div class="panel-local sidebar-card-local">
-                <h2 class="section-title-local">
-                    <?php echo $edit_data ? 'แก้ไขข้อมูลการจอง' : 'แผงแก้ไขข้อมูล'; ?>
-                </h2>
-                <p class="section-desc-local">
-                    <?php echo $edit_data ? 'ปรับข้อมูลรายการที่เลือก แล้วกดบันทึกการแก้ไข' : 'กดปุ่ม “แก้ไข” จากตารางด้านขวาเพื่อโหลดข้อมูลเข้าฟอร์ม'; ?>
-                </p>
 
                 <?php if ($edit_data): ?>
                     <form method="POST">
@@ -719,12 +710,6 @@ textarea.form-control-local{
                             <a href="<?php echo h($currentPage); ?>?archived=<?php echo $archive_filter; ?>" class="btn-local btn-secondary-local">ยกเลิก</a>
                         </div>
                     </form>
-                <?php else: ?>
-                    <div class="empty-edit-local">
-                        ยังไม่ได้เลือกรายการที่ต้องการแก้ไข<br>
-                        ให้กดปุ่ม <strong>แก้ไข</strong> จากตารางรายการด้านขวา
-                    </div>
-                <?php endif; ?>
             </div>
         </div>
 

@@ -8,320 +8,387 @@ if (!isset($_SESSION['admin_logged_in'])) {
     exit;
 }
 
-if (!isset($pageTitle)) {
-    $pageTitle = "Admin Panel";
-}
-
-if (!isset($activeMenu)) {
-    $activeMenu = "";
-}
+if (!isset($pageTitle))  $pageTitle  = "Admin Panel";
+if (!isset($activeMenu)) $activeMenu = "";
 ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?php echo htmlspecialchars($pageTitle); ?></title>
-
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title><?= htmlspecialchars($pageTitle) ?> — Lumière</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,700&display=swap" rel="stylesheet"/>
 <style>
-*{
-    box-sizing:border-box;
-    margin:0;
-    padding:0;
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink:      #1a1a2e;
+  --ink2:     #121220;
+  --accent:   #c9a96e;
+  --accent2:  #e8d5b0;
+  --accent-dim: rgba(201,169,110,0.15);
+  --bg:       #f5f1eb;
+  --card:     #ffffff;
+  --muted:    #7a7a8c;
+  --border:   #e0ddd6;
+  --danger:   #c0392b;
+  --success:  #2e7d32;
+  --text:     #1a1a2e;
+  --sidebar-w: 248px;
 }
 
-:root{
-    --dark:#151617;
-    --bg:#f4f6f9;
-    --brand:#6f970f;
-    --brand2:#85b315;
-    --text:#222;
-    --muted:#666;
-    --card:#ffffff;
-    --line:#e8e8e8;
+html, body { height: 100%; }
+
+body {
+  font-family: 'Sarabun', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
 }
 
-html, body{
-    height:100%;
+/* ─── Decorative grid overlay ─── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: repeating-linear-gradient(
+    90deg, rgba(201,169,110,0.03) 0px, rgba(201,169,110,0.03) 1px,
+    transparent 1px, transparent 80px
+  );
 }
 
-body{
-    font-family:Tahoma, sans-serif;
-    background:var(--bg);
-    color:var(--text);
-    overflow-x:hidden;
+/* ══════════════ SIDEBAR ══════════════ */
+.sidebar {
+  width: var(--sidebar-w);
+  height: 100vh;
+  background: var(--ink);
+  position: fixed; left: 0; top: 0;
+  display: flex; flex-direction: column;
+  z-index: 100;
+  overflow: hidden;
 }
 
-.wrapper{
-    display:flex;
-    min-height:100vh;
+/* Glow orbs */
+.sidebar::before {
+  content: '';
+  position: absolute; width: 280px; height: 280px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(201,169,110,0.12) 0%, transparent 70%);
+  top: -80px; right: -80px; pointer-events: none;
+}
+.sidebar::after {
+  content: '';
+  position: absolute; width: 180px; height: 180px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(201,169,110,0.08) 0%, transparent 70%);
+  bottom: 60px; left: -60px; pointer-events: none;
 }
 
-.sidebar{
-    width:230px;
-    height:100vh;
-    background:var(--dark);
-    color:#fff;
-    padding:22px 16px 16px;
-    position:fixed;
-    left:0;
-    top:0;
-    display:flex;
-    flex-direction:column;
-    z-index:1000;
+.sidebar-brand {
+  padding: 28px 24px 20px;
+  position: relative; z-index: 1; flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.sidebar-brand-line { width: 28px; height: 2px; background: var(--accent); margin-bottom: 10px; }
+.sidebar-brand-name {
+  font-family: 'Playfair Display', serif;
+  font-style: italic; font-size: 1.5rem; color: #fff;
+  letter-spacing: 0.02em; line-height: 1.2;
+}
+.sidebar-brand-sub {
+  margin-top: 4px; font-size: 0.65rem;
+  color: rgba(255,255,255,0.3); letter-spacing: 0.2em; text-transform: uppercase;
 }
 
-.sidebar h2{
-    color:var(--brand);
-    font-size:18px;
-    font-weight:800;
-    text-align:center;
-    margin:8px 0 22px;
-    flex-shrink:0;
+.sidebar-scroll {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 16px 12px; position: relative; z-index: 1;
+}
+.sidebar-scroll::-webkit-scrollbar { width: 4px; }
+.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(201,169,110,0.4); border-radius: 4px; }
+
+.menu-section {
+  margin-bottom: 6px;
+}
+.menu-section-label {
+  font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.22); padding: 10px 10px 6px; display: block;
 }
 
-.sidebar-scroll{
-    flex:1;
-    overflow-y:auto;
-    overflow-x:hidden;
-    padding-right:6px;
+.menu-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 8px;
+  color: rgba(255,255,255,0.6); text-decoration: none;
+  font-size: 0.82rem; font-weight: 500;
+  transition: all 0.2s ease; margin-bottom: 2px;
+  position: relative;
+}
+.menu-item .icon { font-size: 1rem; flex-shrink: 0; width: 20px; text-align: center; opacity: 0.8; }
+.menu-item:hover  { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.9); }
+.menu-item.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-weight: 600;
+}
+.menu-item.active::before {
+  content: '';
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 60%; background: var(--accent); border-radius: 0 2px 2px 0;
+}
+.menu-item.active .icon { opacity: 1; }
+
+.sidebar-footer {
+  padding: 16px 12px; flex-shrink: 0; position: relative; z-index: 1;
+  border-top: 1px solid rgba(255,255,255,0.06);
 }
 
-/* แถบเลื่อน */
-.sidebar-scroll::-webkit-scrollbar{
-    width:8px;
+/* User info */
+.sidebar-user {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 10px 14px;
 }
-.sidebar-scroll::-webkit-scrollbar-track{
-    background:rgba(255,255,255,.06);
-    border-radius:10px;
+.sidebar-user-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--accent-dim); border: 1.5px solid var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; color: var(--accent); font-weight: 700; flex-shrink: 0;
 }
-.sidebar-scroll::-webkit-scrollbar-thumb{
-    background:rgba(133,179,21,.85);
-    border-radius:10px;
-}
-.sidebar-scroll::-webkit-scrollbar-thumb:hover{
-    background:rgba(133,179,21,1);
-}
+.sidebar-user-name { font-size: 0.78rem; color: rgba(255,255,255,0.75); font-weight: 500; line-height: 1.3; }
+.sidebar-user-role { font-size: 0.65rem; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; }
 
-.sidebar-menu{
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-    padding-bottom:14px;
+.back-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 14px; border-radius: 8px; text-decoration: none;
+  font-size: 0.8rem; font-weight: 600;
+  background: linear-gradient(135deg, var(--accent), #b8934a);
+  color: var(--ink); letter-spacing: 0.05em;
+  transition: all 0.2s ease; width: 100%;
 }
+.back-btn:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(201,169,110,0.3); }
 
-.menu-item{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    width:100%;
-    padding:12px 14px;
-    border-radius:10px;
-    color:#ffffff;
-    text-decoration:none;
-    font-size:14px;
-    font-weight:700;
-    line-height:1.25;
-    transition:0.2s ease;
+/* ══════════════ MAIN ══════════════ */
+.main {
+  margin-left: var(--sidebar-w);
+  width: calc(100% - var(--sidebar-w));
+  min-height: 100vh;
+  padding: 28px 28px 40px;
+  position: relative; z-index: 1;
 }
 
-.menu-item .icon{
-    width:18px;
-    text-align:center;
-    flex-shrink:0;
+/* Topbar */
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 28px;
+}
+.topbar-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.4rem; color: var(--ink); font-weight: 600;
+}
+.topbar-sub {
+  font-size: 0.78rem; color: var(--muted); margin-top: 3px;
+}
+.topbar-actions { display: flex; gap: 10px; align-items: center; }
+
+/* Breadcrumb */
+.breadcrumb {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.72rem; color: var(--muted); margin-bottom: 20px;
+}
+.breadcrumb span { color: var(--accent); }
+
+/* ══════════════ SHARED COMPONENTS ══════════════ */
+.lm-card {
+  background: var(--card); border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(26,26,46,0.06), 0 1px 3px rgba(26,26,46,0.04);
+  overflow: hidden;
+}
+.lm-card-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.lm-card-title { font-size: 0.88rem; font-weight: 700; color: var(--ink); }
+.lm-card-body { padding: 20px; }
+
+/* Stat cards */
+.stat-card {
+  background: var(--card); border-radius: 12px;
+  padding: 20px; position: relative; overflow: hidden;
+  box-shadow: 0 2px 12px rgba(26,26,46,0.06);
+  border-top: 3px solid var(--accent);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,26,46,0.1); }
+.stat-card::after {
+  content: ''; position: absolute; bottom: -20px; right: -20px;
+  width: 80px; height: 80px; border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-dim) 0%, transparent 70%);
+}
+.stat-label { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.stat-value { font-size: 2rem; font-weight: 700; color: var(--ink); line-height: 1; }
+.stat-unit  { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+
+/* Table */
+.lm-table { width: 100%; border-collapse: collapse; }
+.lm-table thead th {
+  padding: 11px 14px; font-size: 0.7rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted);
+  border-bottom: 2px solid var(--border); text-align: left;
+  font-weight: 600; background: #fdfcfa;
+}
+.lm-table tbody td {
+  padding: 12px 14px; font-size: 0.85rem; color: var(--text);
+  border-bottom: 1px solid var(--border); vertical-align: middle;
+}
+.lm-table tbody tr:last-child td { border-bottom: none; }
+.lm-table tbody tr:hover { background: #fdfcfa; }
+
+/* Badge */
+.badge {
+  display: inline-block; padding: 3px 9px; border-radius: 20px;
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em;
+}
+.badge-blue   { background: #e3f2fd; color: #1565c0; }
+.badge-orange { background: #fff3e0; color: #e65100; }
+.badge-green  { background: #e8f5e9; color: #2e7d32; }
+.badge-gold   { background: rgba(201,169,110,0.15); color: #a07c3a; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 6px; border: none;
+  font-family: 'Sarabun', sans-serif; font-size: 0.82rem;
+  font-weight: 600; cursor: pointer; text-decoration: none;
+  transition: all 0.2s ease; letter-spacing: 0.04em;
+}
+.btn-primary { background: var(--ink); color: #fff; }
+.btn-primary:hover { background: #2a2a4a; transform: translateY(-1px); }
+.btn-accent  { background: var(--accent); color: var(--ink); }
+.btn-accent:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.btn-danger  { background: #fff; color: var(--danger); border: 1.5px solid #fecaca; }
+.btn-danger:hover { background: #fef2f2; }
+.btn-ghost   { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm { padding: 6px 12px; font-size: 0.78rem; }
+
+/* Search input */
+.search-wrap { position: relative; }
+.search-wrap input {
+  padding: 8px 12px 8px 36px; border: 1.5px solid var(--border);
+  border-radius: 6px; font-family: 'Sarabun', sans-serif; font-size: 0.85rem;
+  color: var(--text); background: #fafaf8; outline: none; width: 240px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.search-wrap input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(201,169,110,0.12); }
+.search-wrap::before {
+  content: '🔍'; position: absolute; left: 10px; top: 50%;
+  transform: translateY(-50%); font-size: 0.75rem; pointer-events: none;
 }
 
-.menu-item .text{
-    display:block;
-    word-break:break-word;
+/* Alert */
+.alert { padding: 12px 16px; border-radius: 8px; font-size: 0.82rem; margin-bottom: 20px; }
+.alert-danger  { background: #fdf0ef; border: 1px solid #fecaca; color: var(--danger); }
+.alert-success { background: #edf7ed; border: 1px solid #c8e6c9; color: var(--success); }
+
+/* ══════════════ RESPONSIVE ══════════════ */
+@media (max-width: 900px) {
+  :root { --sidebar-w: 64px; }
+  .sidebar-brand-name, .sidebar-brand-sub, .menu-item .text,
+  .sidebar-brand-line, .menu-section-label, .sidebar-user-name,
+  .sidebar-user-role, .back-btn span { display: none; }
+  .menu-item { justify-content: center; padding: 12px; }
+  .menu-item.active::before { display: none; }
+  .back-btn { padding: 10px; }
+  .sidebar-user { justify-content: center; padding: 10px; }
 }
 
-.menu-item:hover{
-    background:#232425;
-}
-
-.menu-item.active{
-    background:var(--brand);
-    color:#fff;
-}
-
-.sidebar-footer{
-    padding-top:14px;
-    flex-shrink:0;
-    border-top:1px solid rgba(255,255,255,.08);
-    margin-top:10px;
-}
-
-.back-btn{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    width:100%;
-    padding:12px 14px;
-    border-radius:12px;
-    text-decoration:none;
-    font-weight:800;
-    font-size:14px;
-    background:linear-gradient(135deg,var(--brand),var(--brand2));
-    color:#fff;
-    box-shadow:0 8px 18px rgba(0,0,0,.25);
-    transition:.2s ease;
-}
-
-.back-btn:hover{
-    filter:brightness(1.05);
-    transform:translateY(-1px);
-}
-
-.main{
-    margin-left:230px;
-    width:calc(100% - 230px);
-    padding:26px;
-    min-height:100vh;
-}
-
-.content-card{
-    background:var(--card);
-    border-radius:18px;
-    padding:20px;
-    box-shadow:0 8px 24px rgba(0,0,0,0.06);
-    margin-bottom:24px;
-}
-
-.page-title{
-    font-size:18px;
-    font-weight:800;
-    margin-bottom:16px;
-}
-
-.btn{
-    border:none;
-    padding:10px 16px;
-    border-radius:10px;
-    cursor:pointer;
-    font-weight:700;
-}
-
-.btn-brand{
-    background:var(--brand);
-    color:#fff;
-}
-
-.btn-brand:hover{
-    background:var(--brand2);
-}
-
-input, select, textarea, button{
-    font-family:inherit;
-}
-
-@media (max-width: 900px){
-    .sidebar{
-        width:210px;
-    }
-
-    .main{
-        margin-left:210px;
-        width:calc(100% - 210px);
-    }
-}
-
-@media (max-width: 700px){
-    .wrapper{
-        flex-direction:column;
-    }
-
-    .sidebar{
-        width:100%;
-        height:auto;
-        min-height:auto;
-        position:relative;
-        border-radius:0 0 18px 18px;
-    }
-
-    .sidebar-scroll{
-        max-height:320px;
-    }
-
-    .main{
-        margin-left:0;
-        width:100%;
-        padding:18px;
-    }
+@media (max-width: 600px) {
+  :root { --sidebar-w: 0px; }
+  .sidebar { display: none; }
+  .main { margin-left: 0; width: 100%; padding: 16px; }
 }
 </style>
 </head>
 <body>
 
-<div class="wrapper">
-    <div class="sidebar">
-        <h2>Admin Panel</h2>
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-line"></div>
+    <div class="sidebar-brand-name">Lumière</div>
+    <div class="sidebar-brand-sub">Admin Panel</div>
+  </div>
 
-        <div class="sidebar-scroll">
-            <div class="sidebar-menu">
+  <div class="sidebar-scroll">
 
-                <a href="admin_dashboard.php" class="menu-item <?php echo ($activeMenu === 'dashboard') ? 'active' : ''; ?>">
-                    <span class="icon">📄</span>
-                    <span class="text">Dashboard</span>
-                </a>
-
-                <a href="daily_report.php" class="menu-item <?php echo ($activeMenu === 'report') ? 'active' : ''; ?>">
-                    <span class="icon">📊</span>
-                    <span class="text">รายงาน</span>
-                </a>
-
-                <a href="change_banner.php" class="menu-item <?php echo ($activeMenu === 'banner') ? 'active' : ''; ?>">
-                    <span class="icon">🖼️</span>
-                    <span class="text">เปลี่ยนรูปหน้าเว็บ</span>
-                </a>
-
-                <a href="admin_booking_list.php" class="menu-item <?php echo ($activeMenu === 'booking') ? 'active' : ''; ?>">
-                    <span class="icon">🏨</span>
-                    <span class="text">ข้อมูลการเข้าพัก</span>
-                </a>
-
-                <a href="admin_booking_approved.php" class="menu-item <?php echo ($activeMenu === 'booking_approved') ? 'active' : ''; ?>">
-                    <span class="icon">✅</span>
-                    <span class="text">รายการอนุมัติแล้ว</span>
-                </a>
-
-                <a href="admin_booking_archive.php" class="menu-item <?php echo ($activeMenu === 'booking_archive') ? 'active' : ''; ?>">
-                    <span class="icon">🗂️</span>
-                    <span class="text">รายการอนุมัติย้อนหลัง</span>
-                </a>
-
-                <a href="manage_rooms.php" class="menu-item <?php echo ($activeMenu === 'rooms') ? 'active' : ''; ?>">
-                    <span class="icon">🛏️</span>
-                    <span class="text">จัดการห้องพัก</span>
-                </a>
-
-                <a href="admin_add_news.php" class="menu-item <?php echo ($activeMenu === 'news_add') ? 'active' : ''; ?>">
-                    <span class="icon">📰</span>
-                    <span class="text">เพิ่มข่าวสาร</span>
-                </a>
-
-                <a href="manage_news.php" class="menu-item <?php echo ($activeMenu === 'news_manage') ? 'active' : ''; ?>">
-                    <span class="icon">✏️</span>
-                    <span class="text">จัดการข่าว</span>
-                </a>
-
-                <a href="edit_about.php" class="menu-item <?php echo ($activeMenu === 'about') ? 'active' : ''; ?>">
-                    <span class="icon">📝</span>
-                    <span class="text">จัดการเกี่ยวกับ</span>
-                </a>
-
-                <a href="change_password.php" class="menu-item <?php echo ($activeMenu === 'password') ? 'active' : ''; ?>">
-                    <span class="icon">🔐</span>
-                    <span class="text">เปลี่ยนรหัสผ่าน</span>
-                </a>
-
-            </div>
-        </div>
-
-        <div class="sidebar-footer">
-            <a href="index.php" class="back-btn">← กลับหน้าเว็บไซต์</a>
-        </div>
+    <div class="menu-section">
+      <span class="menu-section-label">ภาพรวม</span>
+      <a href="admin_dashboard.php" class="menu-item <?= $activeMenu==='dashboard'?'active':'' ?>">
+        <span class="icon">📊</span><span class="text">Dashboard</span>
+      </a>
+      <a href="daily_report.php" class="menu-item <?= $activeMenu==='report'?'active':'' ?>">
+        <span class="icon">📈</span><span class="text">รายงาน</span>
+      </a>
     </div>
 
-    <div class="main">
+    <div class="menu-section">
+      <span class="menu-section-label">จัดการการจอง</span>
+      <a href="admin_booking_list.php" class="menu-item <?= $activeMenu==='booking'?'active':'' ?>">
+        <span class="icon">🏨</span><span class="text">ข้อมูลการเข้าพัก</span>
+      </a>
+      <a href="admin_booking_approved.php" class="menu-item <?= $activeMenu==='booking_approved'?'active':'' ?>">
+        <span class="icon">✅</span><span class="text">รายการอนุมัติแล้ว</span>
+      </a>
+      <a href="admin_booking_archive.php" class="menu-item <?= $activeMenu==='booking_archive'?'active':'' ?>">
+        <span class="icon">🗂️</span><span class="text">รายการย้อนหลัง</span>
+      </a>
+      <a href="manage_rooms.php" class="menu-item <?= $activeMenu==='rooms'?'active':'' ?>">
+        <span class="icon">🛏️</span><span class="text">จัดการห้องพัก</span>
+      </a>
+    </div>
+
+    <div class="menu-section">
+      <span class="menu-section-label">คอนเทนต์</span>
+      <a href="admin_add_news.php" class="menu-item <?= $activeMenu==='news_add'?'active':'' ?>">
+        <span class="icon">📰</span><span class="text">เพิ่มข่าวสาร</span>
+      </a>
+      <a href="manage_news.php" class="menu-item <?= $activeMenu==='news_manage'?'active':'' ?>">
+        <span class="icon">✏️</span><span class="text">จัดการข่าว</span>
+      </a>
+      <a href="change_banner.php" class="menu-item <?= $activeMenu==='banner'?'active':'' ?>">
+        <span class="icon">🖼️</span><span class="text">เปลี่ยนรูปหน้าเว็บ</span>
+      </a>
+      <a href="edit_about.php" class="menu-item <?= $activeMenu==='about'?'active':'' ?>">
+        <span class="icon">📝</span><span class="text">จัดการเกี่ยวกับ</span>
+      </a>
+    </div>
+
+    <div class="menu-section">
+      <span class="menu-section-label">ตั้งค่า</span>
+      <a href="change_password.php" class="menu-item <?= $activeMenu==='password'?'active':'' ?>">
+        <span class="icon">🔐</span><span class="text">เปลี่ยนรหัสผ่าน</span>
+      </a>
+    </div>
+
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar"><?= strtoupper(substr($_SESSION['user_name'] ?? 'A', 0, 1)) ?></div>
+      <div>
+        <div class="sidebar-user-name"><?= htmlspecialchars($_SESSION['user_name'] ?? 'Admin') ?></div>
+        <div class="sidebar-user-role">Administrator</div>
+      </div>
+    </div>
+    <a href="index.php" class="back-btn">
+      <span>←</span> <span>กลับหน้าเว็บไซต์</span>
+    </a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title"><?= htmlspecialchars($pageTitle) ?></div>
+      <div class="topbar-sub"><?= date('l, d F Y') ?></div>
+    </div>
+    <div class="topbar-actions">
+      <a href="login.php" class="btn btn-ghost btn-sm">ออกจากระบบ</a>
+    </div>
+  </div>

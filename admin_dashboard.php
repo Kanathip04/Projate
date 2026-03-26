@@ -4,69 +4,39 @@ session_start();
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
 
-/* =============================
-   ตั้งค่า layout กลาง
-============================= */
-$pageTitle  = "Admin Dashboard";
+$pageTitle  = "Dashboard";
 $activeMenu = "dashboard";
 
-/* =============================
-   ค้นหา + เงื่อนไขวันนี้
-============================= */
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-
-$where = "WHERE visit_date = CURDATE()";
+$where  = "WHERE visit_date = CURDATE()";
 
 if ($search !== '') {
-    $safe = $conn->real_escape_string($search);
+    $safe   = $conn->real_escape_string($search);
     $where .= " AND (nickname LIKE '%$safe%' OR user_type LIKE '%$safe%')";
 }
 
-/* =============================
-   ตารางวันนี้
-============================= */
-$sql = "SELECT id, nickname, user_type, visit_date, visit_time, created_at
-        FROM tourists
-        $where
-        ORDER BY id DESC";
+$sql    = "SELECT id, nickname, user_type, visit_date, visit_time, created_at FROM tourists $where ORDER BY id DESC";
 $result = $conn->query($sql);
+if (!$result) die("SQL Error: " . $conn->error);
 
-if (!$result) {
-    die("SQL Error: " . $conn->error);
-}
-
-/* =============================
-   สถิติวันนี้
-============================= */
-$count_sql = "
-    SELECT user_type, COUNT(*) as total
-    FROM tourists
-    WHERE visit_date = CURDATE()
-    GROUP BY user_type
-";
+$count_sql    = "SELECT user_type, COUNT(*) as total FROM tourists WHERE visit_date = CURDATE() GROUP BY user_type";
 $count_result = $conn->query($count_sql);
 
-$type_counts = [];
+$type_counts  = [];
 $chart_labels = [];
 $chart_data   = [];
 $total_today  = 0;
 
 if ($count_result && $count_result->num_rows > 0) {
     while ($row = $count_result->fetch_assoc()) {
-        $type = $row['user_type'];
-        $cnt  = (int)$row['total'];
-
+        $type = $row['user_type']; $cnt = (int)$row['total'];
         $type_counts[$type] = $cnt;
-        $chart_labels[] = $type;
-        $chart_data[]   = $cnt;
-        $total_today   += $cnt;
+        $chart_labels[]     = $type;
+        $chart_data[]       = $cnt;
+        $total_today       += $cnt;
     }
-} else {
-    $total_today = 0;
 }
 
 include "admin_layout_top.php";
@@ -75,330 +45,259 @@ include "admin_layout_top.php";
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-.top-section{
-    display:grid;
-    grid-template-columns:420px 1fr;
-    gap:16px;
-    align-items:stretch;
-    margin-bottom:25px;
+/* ── Dashboard grid ── */
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+  animation: fadeUp 0.5s both;
+}
+.dash-grid .stat-card:nth-child(1) { animation-delay: 0.05s; }
+.dash-grid .stat-card:nth-child(2) { animation-delay: 0.10s; }
+.dash-grid .stat-card:nth-child(3) { animation-delay: 0.15s; }
+.dash-grid .stat-card:nth-child(4) { animation-delay: 0.20s; }
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(14px); }
+  to   { opacity:1; transform:translateY(0); }
 }
 
-.chart-box{
-    background:#fff;
-    border-radius:10px;
-    box-shadow:0 3px 8px rgba(0,0,0,.05);
-    padding:18px;
-    height:260px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+/* ── Two-column layout ── */
+.mid-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+  animation: fadeUp 0.5s 0.1s both;
 }
 
-.stats-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(180px, 1fr));
-    gap:12px;
+/* ── Chart ── */
+.chart-container {
+  position: relative;
+  height: 260px;
+  display: flex; align-items: center; justify-content: center;
 }
 
-.card{
-    background:#fff;
-    padding:18px;
-    border-radius:10px;
-    box-shadow:0 3px 8px rgba(0,0,0,.05);
-    border-left:4px solid var(--brand);
+/* ── Type breakdown ── */
+.type-list { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
+.type-row  { display: flex; align-items: center; justify-content: space-between; }
+.type-bar-wrap { flex: 1; margin: 0 12px; height: 6px; background: #f0ece4; border-radius: 4px; overflow: hidden; }
+.type-bar { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(.23,1,.32,1); }
+.type-label { font-size: 0.78rem; color: var(--muted); min-width: 60px; }
+.type-count { font-size: 0.82rem; font-weight: 700; color: var(--ink); min-width: 36px; text-align: right; }
+
+/* ── Table section ── */
+.table-section { animation: fadeUp 0.5s 0.2s both; }
+
+.table-toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
 }
 
-.card h3{
-    margin:0;
-    font-size:13px;
-    color:#777;
+.live-dot {
+  display: inline-block; width: 7px; height: 7px;
+  background: #22c55e; border-radius: 50%; margin-right: 6px;
+  box-shadow: 0 0 0 3px rgba(34,197,94,0.2);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
+  50%      { box-shadow: 0 0 0 6px rgba(34,197,94,0.08); }
 }
 
-.card p{
-    margin:5px 0 0;
-    font-size:22px;
-    font-weight:bold;
-}
+.lm-table thead th:nth-child(1),
+.lm-table tbody td:nth-child(1) { width: 50px; text-align: center; color: var(--muted); }
+.lm-table thead th:nth-child(4),
+.lm-table tbody td:nth-child(4) { width: 100px; text-align: center; }
+.lm-table thead th:nth-child(5),
+.lm-table tbody td:nth-child(5) { width: 100px; text-align: center; }
 
-.table-box{
-    background:#fff;
-    padding:20px;
-    border-radius:10px;
-    box-shadow:0 3px 8px rgba(0,0,0,.05);
-}
+.empty-row { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 32px !important; }
 
-.search{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:15px;
-    gap:12px;
-    flex-wrap:wrap;
-}
-
-.search form{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    flex-wrap:wrap;
-}
-
-.search input{
-    padding:7px 12px;
-    border-radius:6px;
-    border:1px solid #ccc;
-    width:240px;
-}
-
-.search button{
-    padding:7px 14px;
-    border:none;
-    border-radius:6px;
-    background:var(--brand);
-    color:#fff;
-    cursor:pointer;
-    font-weight:700;
-}
-
-.search button:hover{
-    background:var(--brand2);
-}
-
-.admin-table{
-    width:100%;
-    border-collapse:separate;
-    border-spacing:0;
-    background:#fff;
-    border:1px solid #eef1f5;
-    border-radius:12px;
-    overflow:hidden;
-}
-
-.admin-table thead th{
-    background:linear-gradient(180deg,#f8fafc,#f1f5f9);
-    color:#111827;
-    font-weight:700;
-    font-size:13px;
-    padding:12px 14px;
-    border-bottom:1px solid #e5e7eb;
-    text-align:left;
-    white-space:nowrap;
-}
-
-.admin-table tbody td{
-    padding:12px 14px;
-    border-bottom:1px solid #eef2f7;
-    color:#111827;
-    font-size:13px;
-    vertical-align:middle;
-}
-
-.admin-table tbody tr:hover{
-    background:#f9fafb;
-}
-
-.admin-table th:nth-child(1),
-.admin-table td:nth-child(1){
-    width:60px;
-    text-align:center;
-    color:#374151;
-}
-
-.admin-table th:nth-child(4),
-.admin-table td:nth-child(4){
-    width:110px;
-    text-align:center;
-    color:#374151;
-}
-
-.admin-table th:nth-child(5),
-.admin-table td:nth-child(5){
-    width:120px;
-    text-align:center;
-}
-
-.badge{
-    padding:3px 8px;
-    border-radius:5px;
-    font-size:12px;
-    font-weight:bold;
-}
-
-.bg-stu{ background:#e3f2fd; color:#1976d2; }
-.bg-staff{ background:#fff3e0; color:#f57c00; }
-.bg-tour{ background:#f1f8e9; color:#388e3c; }
-
-.admin-table .delete{
-    display:inline-block;
-    padding:6px 10px;
-    border-radius:8px;
-    border:1px solid #fecaca;
-    background:#fff;
-    color:#b91c1c;
-    font-weight:700;
-    text-decoration:none;
-    transition:all .15s ease;
-}
-
-.admin-table .delete:hover{
-    background:#fee2e2;
-    transform:translateY(-1px);
-}
-
-.close-day-btn{
-    display:inline-block;
-    padding:7px 14px;
-    border:none;
-    border-radius:6px;
-    background:var(--brand);
-    color:#fff;
-    font-size:13px;
-    font-weight:600;
-    text-decoration:none;
-    cursor:pointer;
-    transition:all .15s ease;
-    white-space:nowrap;
-}
-
-.close-day-btn:hover{
-    background:var(--brand2);
-}
-
-@media (max-width: 1050px){
-    .top-section{
-        grid-template-columns:1fr;
-    }
-
-    .chart-box{
-        height:320px;
-    }
-
-    .stats-grid{
-        grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
-    }
+@media (max-width: 1100px) {
+  .mid-grid { grid-template-columns: 1fr; }
+  .chart-container { height: 220px; }
 }
 </style>
 
-<div class="top-section">
-    <div class="chart-box">
-        <canvas id="donutChart"></canvas>
-    </div>
-
-    <div class="stats-grid">
-        <div class="card">
-            <h3>ผู้ลงทะเบียนวันนี้</h3>
-            <p><?php echo (int)$total_today; ?> คน</p>
-        </div>
-
-        <?php if (!empty($type_counts)): ?>
-            <?php foreach ($type_counts as $type => $cnt): ?>
-                <div class="card">
-                    <h3><?php echo htmlspecialchars($type); ?></h3>
-                    <p><?php echo (int)$cnt; ?> คน</p>
-                </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
+<!-- ── Stat cards ── -->
+<div class="dash-grid">
+  <div class="stat-card">
+    <div class="stat-label">ผู้ลงทะเบียนวันนี้</div>
+    <div class="stat-value"><?= (int)$total_today ?></div>
+    <div class="stat-unit">คน</div>
+  </div>
+  <?php
+  $colors = ['#1565c0','#e65100','#2e7d32','#6a1b9a'];
+  $i = 0;
+  foreach ($type_counts as $type => $cnt):
+    $c = $colors[$i % count($colors)]; $i++;
+  ?>
+  <div class="stat-card" style="border-top-color:<?= $c ?>">
+    <div class="stat-label"><?= htmlspecialchars($type) ?></div>
+    <div class="stat-value" style="color:<?= $c ?>"><?= (int)$cnt ?></div>
+    <div class="stat-unit">คน</div>
+  </div>
+  <?php endforeach; ?>
 </div>
 
-<div class="table-box">
-    <div class="search">
-        <form method="GET">
-            <input type="text" name="search" placeholder="ค้นหา..." value="<?php echo htmlspecialchars($search); ?>">
-            <button type="submit">ค้นหา</button>
-        </form>
+<!-- ── Chart + breakdown ── -->
+<div class="mid-grid">
+  <div class="lm-card">
+    <div class="lm-card-header">
+      <span class="lm-card-title">สัดส่วนประเภทผู้เยี่ยมชม</span>
+      <span class="badge badge-gold">วันนี้</span>
+    </div>
+    <div class="lm-card-body">
+      <div class="chart-container">
+        <?php if ($total_today > 0): ?>
+          <canvas id="donutChart"></canvas>
+        <?php else: ?>
+          <div style="text-align:center;color:var(--muted);font-size:.85rem;">ยังไม่มีข้อมูลวันนี้</div>
+        <?php endif; ?>
+      </div>
+    </div>
+  </div>
 
-        <a href="archive_today.php"
-           class="close-day-btn"
+  <div class="lm-card">
+    <div class="lm-card-header">
+      <span class="lm-card-title">รายละเอียดตามประเภท</span>
+    </div>
+    <div class="lm-card-body">
+      <?php if (!empty($type_counts)): ?>
+        <div class="type-list">
+          <?php
+          $barColors = ['#1565c0','#e65100','#2e7d32','#6a1b9a'];
+          $j = 0;
+          foreach ($type_counts as $type => $cnt):
+            $pct = $total_today > 0 ? round($cnt / $total_today * 100) : 0;
+            $bc  = $barColors[$j % count($barColors)]; $j++;
+          ?>
+          <div>
+            <div class="type-row" style="margin-bottom:4px;">
+              <span class="type-label"><?= htmlspecialchars($type) ?></span>
+              <span style="font-size:.7rem;color:var(--muted)"><?= $pct ?>%</span>
+              <span class="type-count"><?= $cnt ?> คน</span>
+            </div>
+            <div class="type-bar-wrap">
+              <div class="type-bar" style="width:<?= $pct ?>%;background:<?= $bc ?>"></div>
+            </div>
+          </div>
+          <?php endforeach; ?>
+        </div>
+      <?php else: ?>
+        <div style="text-align:center;color:var(--muted);font-size:.85rem;padding:40px 0">ยังไม่มีข้อมูล</div>
+      <?php endif; ?>
+    </div>
+  </div>
+</div>
+
+<!-- ── Table ── -->
+<div class="table-section">
+  <div class="lm-card">
+    <div class="lm-card-header">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="live-dot"></span>
+        <span class="lm-card-title">รายการเข้าชมวันนี้</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <form method="GET" style="display:flex;gap:8px;align-items:center;">
+          <div class="search-wrap">
+            <input type="text" name="search" placeholder="ค้นหา..."
+                   value="<?= htmlspecialchars($search) ?>"/>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">ค้นหา</button>
+          <?php if ($search): ?>
+            <a href="admin_dashboard.php" class="btn btn-ghost btn-sm">ล้าง</a>
+          <?php endif; ?>
+        </form>
+        <a href="archive_today.php" class="btn btn-accent btn-sm"
            onclick="return confirm('ต้องการปิดวันหรือไม่?')">ปิดวัน</a>
+      </div>
     </div>
 
-    <table class="admin-table">
+    <div style="overflow-x:auto;">
+      <table class="lm-table">
         <thead>
-            <tr>
-                <th>#</th>
-                <th>ชื่อเล่น</th>
-                <th>ประเภท</th>
-                <th>เวลา</th>
-                <th>จัดการ</th>
-            </tr>
+          <tr>
+            <th>#</th>
+            <th>ชื่อเล่น</th>
+            <th>ประเภท</th>
+            <th>เวลา</th>
+            <th>จัดการ</th>
+          </tr>
         </thead>
-
         <tbody id="liveTable">
-            <?php if ($result && $result->num_rows > 0): ?>
-                <?php $i = 1; ?>
-                <?php while ($row = $result->fetch_assoc()): ?>
-                    <?php
-                    $badge = ($row['user_type'] == 'นักศึกษา') ? 'bg-stu'
-                           : (($row['user_type'] == 'บุคลากร') ? 'bg-staff' : 'bg-tour');
-
-                    $timeText = '-';
-                    if (!empty($row['created_at'])) {
-                        $ts = strtotime($row['created_at']);
-                        if ($ts !== false) $timeText = date('H:i', $ts);
-                    } elseif (!empty($row['visit_time'])) {
-                        $ts2 = strtotime($row['visit_time']);
-                        if ($ts2 !== false) $timeText = date('H:i', $ts2);
-                    }
-                    ?>
-                    <tr>
-                        <td><?php echo $i++; ?></td>
-                        <td><strong><?php echo htmlspecialchars($row['nickname']); ?></strong></td>
-                        <td>
-                            <span class="badge <?php echo $badge; ?>">
-                                <?php echo htmlspecialchars($row['user_type']); ?>
-                            </span>
-                        </td>
-                        <td><?php echo $timeText; ?></td>
-                        <td>
-                            <a class="delete"
-                               href="delete_tourist.php?id=<?php echo (int)$row['id']; ?>"
-                               onclick="return confirm('ยืนยันการลบ?')">ลบ</a>
-                        </td>
-                    </tr>
-                <?php endwhile; ?>
-            <?php else: ?>
-                <tr>
-                    <td colspan="5" style="text-align:center;color:#999;">ไม่มีข้อมูลวันนี้</td>
-                </tr>
-            <?php endif; ?>
+          <?php if ($result && $result->num_rows > 0): ?>
+            <?php $n = 1; while ($row = $result->fetch_assoc()): ?>
+              <?php
+              $badgeClass = match($row['user_type']) {
+                'นักศึกษา' => 'badge-blue',
+                'บุคลากร'  => 'badge-orange',
+                default    => 'badge-green',
+              };
+              $t = '-';
+              if (!empty($row['created_at'])) {
+                $ts = strtotime($row['created_at']);
+                if ($ts) $t = date('H:i', $ts);
+              } elseif (!empty($row['visit_time'])) {
+                $ts2 = strtotime($row['visit_time']);
+                if ($ts2) $t = date('H:i', $ts2);
+              }
+              ?>
+              <tr>
+                <td><?= $n++ ?></td>
+                <td><strong><?= htmlspecialchars($row['nickname']) ?></strong></td>
+                <td><span class="badge <?= $badgeClass ?>"><?= htmlspecialchars($row['user_type']) ?></span></td>
+                <td><?= $t ?></td>
+                <td>
+                  <a class="btn btn-danger btn-sm"
+                     href="delete_tourist.php?id=<?= (int)$row['id'] ?>"
+                     onclick="return confirm('ยืนยันการลบ?')">ลบ</a>
+                </td>
+              </tr>
+            <?php endwhile; ?>
+          <?php else: ?>
+            <tr><td colspan="5" class="empty-row">ยังไม่มีข้อมูลสำหรับวันนี้</td></tr>
+          <?php endif; ?>
         </tbody>
-    </table>
+      </table>
+    </div>
+  </div>
 </div>
 
 <script>
+<?php if ($total_today > 0): ?>
 new Chart(document.getElementById('donutChart'), {
-    type: 'doughnut',
-    data: {
-        labels: <?php echo json_encode($chart_labels); ?>,
-        datasets: [{
-            data: <?php echo json_encode($chart_data); ?>,
-            backgroundColor: ['#1976d2', '#f57c00', '#388e3c'],
-            borderWidth: 0
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '70%',
-        plugins: {
-            legend: {
-                position: 'bottom'
-            }
-        }
+  type: 'doughnut',
+  data: {
+    labels: <?= json_encode($chart_labels) ?>,
+    datasets: [{
+      data: <?= json_encode($chart_data) ?>,
+      backgroundColor: ['#1565c0','#e65100','#2e7d32','#6a1b9a'],
+      borderWidth: 3,
+      borderColor: '#ffffff',
+      hoverOffset: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '72%',
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { family: 'Sarabun', size: 12 }, padding: 14, usePointStyle: true } }
     }
+  }
 });
+<?php endif; ?>
 
-setInterval(function () {
-    const params = new URLSearchParams(window.location.search);
-    const url = 'fetch_today.php' + (params.toString() ? ('?' + params.toString()) : '');
-
-    fetch(url)
-        .then(res => res.text())
-        .then(html => {
-            const el = document.getElementById('liveTable');
-            if (el) el.innerHTML = html;
-        });
+// Live refresh ทุก 5 วินาที
+setInterval(() => {
+  const params = new URLSearchParams(window.location.search);
+  const url = 'fetch_today.php' + (params.toString() ? '?' + params.toString() : '');
+  fetch(url).then(r => r.text()).then(html => {
+    const el = document.getElementById('liveTable');
+    if (el) el.innerHTML = html;
+  });
 }, 5000);
 </script>
 

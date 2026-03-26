@@ -1,5 +1,107 @@
 <?php
 date_default_timezone_set('Asia/Bangkok');
+
+/* =========================
+   เชื่อมต่อฐานข้อมูล
+========================= */
+$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
+$conn->set_charset("utf8mb4");
+
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+/* =========================
+   รับค่าค้นหา
+========================= */
+$checkin  = trim($_GET['checkin'] ?? '');
+$checkout = trim($_GET['checkout'] ?? '');
+$guests   = trim($_GET['guests'] ?? '');
+$type     = trim($_GET['type'] ?? '');
+
+$error_message = "";
+
+/* =========================
+   ตรวจสอบข้อมูลวันที่
+========================= */
+if ($checkin !== '' && $checkout !== '') {
+    if ($checkin >= $checkout) {
+        $error_message = "วันที่ออกต้องมากกว่าวันที่เข้าพัก";
+    }
+}
+
+/* =========================
+   ดึงประเภทห้องทั้งหมดไปใส่ select
+========================= */
+$roomTypes = [];
+$resType = $conn->query("SELECT DISTINCT room_type FROM rooms WHERE status = 1 ORDER BY room_type ASC");
+if ($resType && $resType->num_rows > 0) {
+    while ($rowType = $resType->fetch_assoc()) {
+        $roomTypes[] = $rowType['room_type'];
+    }
+}
+
+/* =========================
+   สร้าง SQL หลัก
+   status = 1 คือเปิดให้จอง
+========================= */
+$sql = "SELECT id, room_name, room_type, price, room_size, bed_type, capacity, image, description
+        FROM rooms
+        WHERE status = 1";
+
+$params = [];
+$types  = "";
+
+/* =========================
+   ค้นหาตามจำนวนผู้เข้าพัก
+========================= */
+if ($guests !== '') {
+    $sql .= " AND capacity >= ?";
+    $params[] = (int)$guests;
+    $types .= "i";
+}
+
+/* =========================
+   ค้นหาตามประเภทห้อง
+========================= */
+if ($type !== '') {
+    $sql .= " AND room_type = ?";
+    $params[] = $type;
+    $types .= "s";
+}
+
+/* =========================
+   กรองห้องที่ถูกจองแล้วในช่วงวันที่เลือก
+   ใช้ตาราง room_bookings
+   เฉพาะรายการที่ไม่ได้ยกเลิก
+========================= */
+if ($error_message === "" && !empty($checkin) && !empty($checkout)) {
+    $sql .= " AND id NOT IN (
+                SELECT room_id
+                FROM room_bookings
+                WHERE booking_status != 'cancelled'
+                AND (
+                    (? < checkout_date) AND (? > checkin_date)
+                )
+            )";
+    $params[] = $checkin;
+    $params[] = $checkout;
+    $types .= "ss";
+}
+
+$sql .= " ORDER BY id DESC";
+
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+    die("Prepare failed: " . $conn->error);
+}
+
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
+
+$stmt->execute();
+$result = $stmt->get_result();
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -7,765 +109,489 @@ date_default_timezone_set('Asia/Bangkok');
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>จองห้องพัก | สถาบันวิจัยวลัยรุกขเวช</title>
-
 <style>
-:root{
-    --brand:#7a8f3b;
-    --brand-dark:#5f7229;
-    --text:#222;
-    --muted:#666;
-    --bg:#f7f7f5;
-    --white:#ffffff;
-    --border:#e8e8e8;
-    --shadow:0 10px 30px rgba(0,0,0,0.08);
-    --radius:18px;
-}
-
 *{
     margin:0;
     padding:0;
     box-sizing:border-box;
 }
-
-body{
-    font-family: "Segoe UI", Tahoma, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    line-height:1.6;
+:root{
+    --brand:#6f8428;
+    --brand-dark:#58691f;
+    --brand-light:#f4f8ea;
+    --text:#1f2937;
+    --muted:#6b7280;
+    --line:#e5e7eb;
+    --white:#ffffff;
+    --bg:#f8fafc;
+    --danger:#dc2626;
+    --danger-bg:#fef2f2;
+    --card-shadow:0 12px 35px rgba(0,0,0,.08);
 }
-
+body{
+    font-family:'Segoe UI', Tahoma, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+}
 a{
     text-decoration:none;
-    color:inherit;
+}
+.page-wrap{
+    min-height:100vh;
 }
 
-/* =========================
-   HEADER
-========================= */
-.site-header{
-    width:100%;
-    background:#fff;
-    border-bottom:1px solid #eee;
-    position:sticky;
-    top:0;
-    z-index:1000;
-}
-
-.nav-wrap{
-    max-width:1280px;
-    margin:auto;
-    padding:18px 28px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:20px;
-}
-
-.brand{
-    display:flex;
-    align-items:center;
-    gap:18px;
-    min-width:0;
-}
-
-.brand img{
-    width:88px;
-    height:88px;
-    object-fit:contain;
-}
-
-.brand-text{
-    line-height:1.25;
-}
-
-.brand-text h1{
-    font-size:20px;
-    font-weight:800;
-    color:#1d1d1d;
-}
-
-.brand-text p{
-    font-size:14px;
-    color:#444;
-    font-weight:600;
-}
-
-.nav-menu{
-    display:flex;
-    align-items:center;
-    gap:36px;
-    flex-wrap:wrap;
-}
-
-.nav-menu a{
-    font-size:15px;
-    font-weight:700;
-    color:#333;
-    transition:0.2s ease;
-    position:relative;
-}
-
-.nav-menu a:hover,
-.nav-menu a.active{
-    color:var(--brand-dark);
-}
-
-.nav-menu a.active::after{
-    content:"";
-    position:absolute;
-    left:0;
-    bottom:-8px;
-    width:100%;
-    height:3px;
-    border-radius:20px;
-    background:var(--brand);
-}
-
-/* =========================
-   HERO
-========================= */
+/* HERO */
 .hero{
-    max-width:1280px;
-    margin:34px auto 24px;
-    padding:0 28px;
-}
-
-.hero-box{
     background:
-        linear-gradient(rgba(0,0,0,0.38), rgba(0,0,0,0.35)),
+        linear-gradient(135deg, rgba(62,79,14,.92), rgba(111,132,40,.88)),
         url('uploads/room-banner.jpg') center/cover no-repeat;
-    border-radius:28px;
-    min-height:360px;
-    display:flex;
-    align-items:center;
-    padding:46px;
-    box-shadow: var(--shadow);
+    color:#fff;
+    padding:70px 20px 120px;
+    position:relative;
     overflow:hidden;
 }
-
-.hero-content{
-    max-width:650px;
-    color:#fff;
+.hero::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(to bottom, rgba(255,255,255,0) 65%, rgba(248,250,252,1) 100%);
 }
-
+.hero-inner{
+    width:min(1180px, 92%);
+    margin:0 auto;
+    position:relative;
+    z-index:2;
+}
 .hero-badge{
     display:inline-block;
-    background:rgba(255,255,255,0.18);
-    backdrop-filter: blur(8px);
-    border:1px solid rgba(255,255,255,0.25);
-    color:#fff;
-    padding:8px 16px;
+    padding:10px 18px;
+    border:1px solid rgba(255,255,255,.35);
+    background:rgba(255,255,255,.12);
+    backdrop-filter:blur(8px);
     border-radius:999px;
     font-size:14px;
+    font-weight:600;
     margin-bottom:18px;
-    font-weight:700;
 }
-
-.hero-content h2{
-    font-size:40px;
+.hero h1{
+    font-size:48px;
     line-height:1.2;
     margin-bottom:14px;
-    font-weight:800;
+    max-width:760px;
+}
+.hero p{
+    font-size:18px;
+    line-height:1.8;
+    color:rgba(255,255,255,.92);
+    max-width:760px;
 }
 
-.hero-content p{
-    font-size:16px;
-    line-height:1.7;
-    color:rgba(255,255,255,0.94);
-}
-
-/* =========================
-   SEARCH BOX
-========================= */
-.booking-search{
-    max-width:1280px;
-    margin:0 auto 28px;
-    padding:0 28px;
-}
-
-.search-card{
-    background:#fff;
-    border:1px solid var(--border);
-    border-radius:24px;
-    padding:24px;
-    box-shadow: var(--shadow);
-    margin-top:-58px;
+/* SEARCH BOX */
+.search-box{
+    width:min(1180px, 92%);
+    margin:-55px auto 30px;
+    background:var(--white);
+    border-radius:26px;
+    box-shadow:var(--card-shadow);
+    border:1px solid #eef1f4;
     position:relative;
-    z-index:10;
+    z-index:5;
+    padding:26px;
 }
-
-.search-card h3{
-    font-size:24px;
-    margin-bottom:18px;
-    color:#222;
+.search-box h2{
+    font-size:30px;
+    margin-bottom:8px;
+    color:#111827;
 }
-
-.form-grid{
+.search-box p{
+    color:var(--muted);
+    margin-bottom:22px;
+}
+.search-grid{
     display:grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap:16px;
-    align-items:end;
+    grid-template-columns:repeat(4, 1fr) 180px;
+    gap:14px;
 }
-
-.form-group{
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-}
-
-.form-group label{
+.field label{
+    display:block;
     font-size:14px;
-    font-weight:700;
-    color:#444;
+    font-weight:600;
+    margin-bottom:8px;
+    color:#374151;
 }
-
-.form-group input,
-.form-group select{
+.field input,
+.field select{
     width:100%;
-    height:50px;
-    border:1px solid #ddd;
+    height:52px;
+    border:1px solid var(--line);
     border-radius:14px;
     padding:0 14px;
     font-size:15px;
-    outline:none;
-    transition:0.2s ease;
     background:#fff;
+    outline:none;
 }
-
-.form-group input:focus,
-.form-group select:focus{
+.field input:focus,
+.field select:focus{
     border-color:var(--brand);
-    box-shadow:0 0 0 4px rgba(122,143,59,0.12);
+    box-shadow:0 0 0 4px rgba(111,132,40,.12);
 }
-
 .search-btn{
-    width:100%;
-    height:50px;
     border:none;
+    height:52px;
     border-radius:14px;
-    background:linear-gradient(135deg, var(--brand), var(--brand-dark));
+    background:var(--brand);
     color:#fff;
-    font-size:15px;
-    font-weight:800;
+    font-size:16px;
+    font-weight:700;
     cursor:pointer;
-    transition:0.2s ease;
+    margin-top:30px;
+    transition:.2s ease;
 }
-
 .search-btn:hover{
-    transform:translateY(-2px);
-    box-shadow:0 12px 20px rgba(95,114,41,0.22);
+    background:var(--brand-dark);
+    transform:translateY(-1px);
 }
 
-/* =========================
-   SECTION
-========================= */
+.alert-error{
+    margin-top:18px;
+    background:var(--danger-bg);
+    color:var(--danger);
+    border:1px solid #fecaca;
+    border-radius:14px;
+    padding:14px 16px;
+    font-size:15px;
+    font-weight:600;
+}
+
+/* SECTION */
 .section{
-    max-width:1280px;
-    margin:0 auto;
-    padding:10px 28px 50px;
+    width:min(1180px, 92%);
+    margin:0 auto 60px;
 }
-
 .section-head{
     display:flex;
     justify-content:space-between;
     align-items:end;
     gap:20px;
     margin-bottom:24px;
-    flex-wrap:wrap;
 }
-
 .section-head h3{
-    font-size:30px;
-    color:#1f1f1f;
+    font-size:34px;
+    color:#111827;
 }
-
 .section-head p{
     color:var(--muted);
-    font-size:15px;
     max-width:700px;
+    line-height:1.7;
 }
 
-/* =========================
-   ROOM CARDS
-========================= */
-.rooms-grid{
+/* ROOM GRID */
+.room-grid{
     display:grid;
-    grid-template-columns:repeat(3, 1fr);
+    grid-template-columns:repeat(auto-fit, minmax(320px,1fr));
     gap:24px;
 }
-
 .room-card{
     background:#fff;
-    border:1px solid var(--border);
     border-radius:24px;
     overflow:hidden;
-    box-shadow: var(--shadow);
-    transition:0.25s ease;
-    display:flex;
-    flex-direction:column;
+    border:1px solid #edf0f5;
+    box-shadow:var(--card-shadow);
+    transition:.25s ease;
 }
-
 .room-card:hover{
-    transform:translateY(-4px);
+    transform:translateY(-6px);
 }
-
+.room-image-wrap{
+    position:relative;
+}
 .room-image{
     width:100%;
-    height:230px;
+    height:240px;
     object-fit:cover;
     display:block;
+    background:#ddd;
 }
-
+.room-price-tag{
+    position:absolute;
+    top:16px;
+    right:16px;
+    background:rgba(17,24,39,.82);
+    color:#fff;
+    padding:10px 14px;
+    border-radius:999px;
+    font-size:14px;
+    font-weight:700;
+    backdrop-filter:blur(8px);
+}
 .room-body{
     padding:22px;
-    display:flex;
-    flex-direction:column;
-    gap:14px;
-    flex:1;
 }
-
-.room-top{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    gap:14px;
-}
-
 .room-title{
-    font-size:22px;
+    font-size:24px;
     font-weight:800;
-    color:#222;
+    margin-bottom:10px;
+    color:#111827;
 }
-
-.room-price{
-    font-size:22px;
-    font-weight:800;
-    color:var(--brand-dark);
-    white-space:nowrap;
-}
-
-.room-price span{
-    font-size:13px;
-    color:#666;
-    font-weight:600;
-}
-
 .room-desc{
-    color:#666;
     font-size:15px;
-    min-height:48px;
+    line-height:1.7;
+    color:#4b5563;
+    margin-bottom:18px;
+    min-height:76px;
 }
-
-.room-features{
-    display:flex;
-    flex-wrap:wrap;
+.room-meta{
+    display:grid;
+    grid-template-columns:1fr;
     gap:10px;
+    margin-bottom:20px;
 }
-
-.feature{
-    padding:8px 12px;
-    border-radius:999px;
-    background:#f4f7ea;
-    color:var(--brand-dark);
-    font-size:13px;
-    font-weight:700;
+.meta-item{
+    background:#f8fafc;
+    border:1px solid #e9eef5;
+    padding:12px 14px;
+    border-radius:14px;
+    font-size:14px;
+    color:#374151;
 }
-
+.meta-item strong{
+    color:#111827;
+}
 .room-footer{
-    margin-top:auto;
     display:flex;
     justify-content:space-between;
     align-items:center;
     gap:12px;
     flex-wrap:wrap;
 }
-
-.room-capacity{
-    color:#444;
-    font-size:14px;
-    font-weight:600;
+.price{
+    font-size:28px;
+    font-weight:800;
+    color:var(--brand-dark);
 }
-
+.price span{
+    font-size:14px;
+    color:#6b7280;
+    font-weight:500;
+}
 .book-btn{
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    padding:12px 22px;
-    border:none;
-    border-radius:12px;
-    background:linear-gradient(135deg, var(--brand), var(--brand-dark));
+    min-width:150px;
+    padding:13px 18px;
+    border-radius:14px;
+    background:var(--brand);
     color:#fff;
-    font-size:14px;
-    font-weight:800;
-    cursor:pointer;
-    transition:0.2s ease;
+    font-weight:700;
+    transition:.2s ease;
 }
-
 .book-btn:hover{
-    transform:translateY(-2px);
+    background:var(--brand-dark);
 }
 
-/* =========================
-   INFO
-========================= */
-.info-box{
-    margin-top:36px;
+/* EMPTY */
+.empty-box{
     background:#fff;
-    border:1px solid var(--border);
-    border-radius:24px;
-    padding:24px;
-    box-shadow: var(--shadow);
-}
-
-.info-box h4{
-    font-size:22px;
-    margin-bottom:12px;
-}
-
-.info-box ul{
-    padding-left:18px;
-    color:#555;
-}
-
-.info-box li{
-    margin-bottom:8px;
-}
-
-/* =========================
-   FOOTER
-========================= */
-.footer{
-    margin-top:40px;
-    background:#fff;
-    border-top:1px solid #eee;
-}
-
-.footer-inner{
-    max-width:1280px;
-    margin:auto;
-    padding:20px 28px;
+    border:1px solid #e5e7eb;
+    border-radius:20px;
+    padding:40px 25px;
     text-align:center;
-    color:#666;
-    font-size:14px;
+    color:#6b7280;
+    box-shadow:var(--card-shadow);
 }
 
-/* =========================
-   MOBILE
-========================= */
-@media (max-width: 1100px){
-    .form-grid{
-        grid-template-columns: repeat(2, 1fr);
-    }
+/* FOOTER */
+.footer-note{
+    width:min(1180px, 92%);
+    margin:0 auto 50px;
+    background:var(--brand-light);
+    border:1px solid #e2ecd0;
+    border-radius:20px;
+    padding:20px;
+    color:#3f4b1d;
+    line-height:1.8;
+}
 
-    .rooms-grid{
+/* RESPONSIVE */
+@media (max-width: 1024px){
+    .search-grid{
         grid-template-columns:repeat(2, 1fr);
     }
+    .search-btn{
+        margin-top:0;
+    }
 }
-
-@media (max-width: 860px){
-    .nav-wrap{
+@media (max-width: 768px){
+    .hero{
+        padding:50px 16px 100px;
+    }
+    .hero h1{
+        font-size:34px;
+    }
+    .hero p{
+        font-size:15px;
+    }
+    .search-box{
+        margin-top:-45px;
+        padding:20px;
+        border-radius:20px;
+    }
+    .search-box h2{
+        font-size:24px;
+    }
+    .search-grid{
+        grid-template-columns:1fr;
+    }
+    .section-head{
         flex-direction:column;
         align-items:flex-start;
     }
-
-    .nav-menu{
-        gap:20px;
+    .section-head h3{
+        font-size:28px;
     }
-
-    .hero-box{
-        min-height:300px;
-        padding:28px;
+    .room-image{
+        height:220px;
     }
-
-    .hero-content h2{
-        font-size:30px;
+    .room-title{
+        font-size:21px;
     }
-
-    .search-card{
-        margin-top:20px;
-    }
-}
-
-@media (max-width: 640px){
-    .brand{
+    .room-footer{
+        flex-direction:column;
         align-items:flex-start;
     }
-
-    .brand img{
-        width:70px;
-        height:70px;
-    }
-
-    .brand-text h1{
-        font-size:18px;
-    }
-
-    .nav-menu{
-        gap:14px 18px;
-    }
-
-    .hero{
-        margin-top:20px;
-    }
-
-    .hero-box{
-        border-radius:22px;
-        min-height:250px;
-        padding:22px;
-    }
-
-    .hero-content h2{
-        font-size:25px;
-    }
-
-    .hero-content p{
-        font-size:14px;
-    }
-
-    .form-grid{
-        grid-template-columns:1fr;
-    }
-
-    .rooms-grid{
-        grid-template-columns:1fr;
-    }
-
-    .section-head h3{
-        font-size:24px;
-    }
-
-    .room-title,
-    .room-price{
-        font-size:20px;
+    .book-btn{
+        width:100%;
     }
 }
 </style>
 </head>
 <body>
 
-<header class="site-header">
-    <div class="nav-wrap">
-        <div class="brand">
-            <img src="uploads/logo.png" alt="โลโก้สถาบัน">
-            <div class="brand-text">
-                <h1>สถาบันวิจัยวลัยรุกขเวช</h1>
-                <p>มหาวิทยาลัยมหาสารคาม</p>
-            </div>
-        </div>
+<div class="page-wrap">
 
-        <nav class="nav-menu">
-            <a href="news.php">ข่าวสาร</a>
-            <a href="register.php">ลงทะเบียน</a>
-            <a href="evaluation.php">แบบประเมิน</a>
-            <a href="calendar.php">ปฏิทิน</a>
-            <a href="about.php">เกี่ยวกับ</a>
-            <a href="booking_room.php" class="active">จองห้องพัก</a>
-        </nav>
-    </div>
-</header>
-
-<section class="hero">
-    <div class="hero-box">
-        <div class="hero-content">
+    <section class="hero">
+        <div class="hero-inner">
             <div class="hero-badge">Room Reservation</div>
-            <h2>ระบบจองห้องพักและที่พักภายในสถาบัน</h2>
+            <h1>ระบบจองห้องพักและที่พักภายในสถาบัน</h1>
             <p>
                 เลือกประเภทห้องพัก วันที่เข้าพัก และจำนวนผู้เข้าพักได้จากหน้านี้
                 เพื่ออำนวยความสะดวกในการเข้าพักสำหรับผู้มาติดต่อราชการ นักวิจัย
                 ผู้เข้าร่วมกิจกรรม และผู้ใช้งานทั่วไป
             </p>
         </div>
-    </div>
-</section>
+    </section>
 
-<section class="booking-search">
-    <div class="search-card">
-        <h3>ค้นหาห้องพักที่ว่าง</h3>
+    <section class="search-box">
+        <h2>ค้นหาห้องพักว่าง</h2>
+        <p>กรอกข้อมูลเบื้องต้นเพื่อค้นหาห้องพักที่เหมาะสมกับการเข้าพักของคุณ</p>
 
-        <form action="" method="GET">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="checkin">วันที่เข้าพัก</label>
-                    <input type="date" id="checkin" name="checkin" required>
+        <form action="" method="get">
+            <div class="search-grid">
+                <div class="field">
+                    <label>วันที่เข้าพัก</label>
+                    <input type="date" name="checkin" value="<?php echo htmlspecialchars($checkin); ?>">
                 </div>
 
-                <div class="form-group">
-                    <label for="checkout">วันที่ออก</label>
-                    <input type="date" id="checkout" name="checkout" required>
+                <div class="field">
+                    <label>วันที่ออก</label>
+                    <input type="date" name="checkout" value="<?php echo htmlspecialchars($checkout); ?>">
                 </div>
 
-                <div class="form-group">
-                    <label for="guests">จำนวนผู้เข้าพัก</label>
-                    <select id="guests" name="guests" required>
+                <div class="field">
+                    <label>จำนวนผู้เข้าพัก</label>
+                    <select name="guests">
                         <option value="">เลือกจำนวน</option>
-                        <option value="1">1 คน</option>
-                        <option value="2">2 คน</option>
-                        <option value="3">3 คน</option>
-                        <option value="4">4 คน</option>
-                        <option value="5">5 คน</option>
-                        <option value="6">6 คน</option>
+                        <option value="1" <?php if($guests=="1") echo "selected"; ?>>1 คน</option>
+                        <option value="2" <?php if($guests=="2") echo "selected"; ?>>2 คน</option>
+                        <option value="3" <?php if($guests=="3") echo "selected"; ?>>3 คน</option>
+                        <option value="4" <?php if($guests=="4") echo "selected"; ?>>4 คน</option>
+                        <option value="5" <?php if($guests=="5") echo "selected"; ?>>5 คน</option>
+                        <option value="6" <?php if($guests=="6") echo "selected"; ?>>6 คน</option>
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <label for="roomtype">ประเภทห้องพัก</label>
-                    <select id="roomtype" name="roomtype">
+                <div class="field">
+                    <label>ประเภทห้องพัก</label>
+                    <select name="type">
                         <option value="">ทั้งหมด</option>
-                        <option value="standard">Standard Room</option>
-                        <option value="deluxe">Deluxe Room</option>
-                        <option value="family">Family Room</option>
+                        <?php foreach($roomTypes as $roomType): ?>
+                            <option value="<?php echo htmlspecialchars($roomType); ?>" <?php if($type === $roomType) echo "selected"; ?>>
+                                <?php echo htmlspecialchars($roomType); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <button type="submit" class="search-btn">ค้นหาห้องพัก</button>
-                </div>
+                <button type="submit" class="search-btn">ค้นหาห้องพัก</button>
             </div>
+
+            <?php if ($error_message !== ""): ?>
+                <div class="alert-error"><?php echo htmlspecialchars($error_message); ?></div>
+            <?php endif; ?>
         </form>
-    </div>
-</section>
+    </section>
 
-<section class="section">
-    <div class="section-head">
-        <div>
-            <h3>ห้องพักแนะนำ</h3>
-            <p>
-                ตัวอย่างห้องพักที่เปิดให้จองในระบบ สามารถปรับเปลี่ยนรูป ราคา
-                และรายละเอียดแต่ละห้องได้ภายหลัง
-            </p>
-        </div>
-    </div>
-
-    <div class="rooms-grid">
-        <div class="room-card">
-            <img src="uploads/room1.jpg" alt="Standard Room" class="room-image">
-            <div class="room-body">
-                <div class="room-top">
-                    <div class="room-title">Standard Room</div>
-                    <div class="room-price">฿800 <span>/ คืน</span></div>
-                </div>
-
-                <div class="room-desc">
-                    ห้องพักมาตรฐาน เหมาะสำหรับผู้เข้าพัก 1-2 คน
-                    บรรยากาศเรียบง่าย สะอาด และเงียบสงบ
-                </div>
-
-                <div class="room-features">
-                    <span class="feature">เตียง 1 เตียง</span>
-                    <span class="feature">Wi-Fi</span>
-                    <span class="feature">เครื่องปรับอากาศ</span>
-                    <span class="feature">ห้องน้ำในตัว</span>
-                </div>
-
-                <div class="room-footer">
-                    <div class="room-capacity">รองรับ 2 คน</div>
-                    <a class="book-btn"
-                    href="booking_form.php?room_id=<?php echo urlencode($room['id']); ?>&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
-                    จองห้องนี้
-                    </a>
-                </div>
+    <section class="section">
+        <div class="section-head">
+            <div>
+                <h3>ห้องพักแนะนำ</h3>
+                <p>ข้อมูลห้องพักทั้งหมดถูกดึงจากฐานข้อมูลโดยตรง และเมื่อกดจองจะส่งข้อมูลไปหน้าแบบฟอร์มจอง</p>
             </div>
         </div>
 
-        <div class="room-card">
-            <img src="uploads/room2.jpg" alt="Deluxe Room" class="room-image">
-            <div class="room-body">
-                <div class="room-top">
-                    <div class="room-title">Deluxe Room</div>
-                    <div class="room-price">฿1,200 <span>/ คืน</span></div>
-                </div>
+        <?php if ($result && $result->num_rows > 0): ?>
+            <div class="room-grid">
+                <?php while($room = $result->fetch_assoc()): ?>
+                    <?php
+                        $roomImage = !empty($room['image']) ? $room['image'] : 'uploads/no-image.png';
+                    ?>
+                    <div class="room-card">
+                        <div class="room-image-wrap">
+                            <img src="<?php echo htmlspecialchars($roomImage); ?>"
+                                 alt="<?php echo htmlspecialchars($room['room_name']); ?>"
+                                 class="room-image"
+                                 onerror="this.src='uploads/no-image.png'">
+                            <div class="room-price-tag">฿<?php echo number_format($room['price']); ?> / คืน</div>
+                        </div>
 
-                <div class="room-desc">
-                    ห้องพักขนาดใหญ่ขึ้น พร้อมสิ่งอำนวยความสะดวกครบครัน
-                    เหมาะสำหรับผู้เข้าพักที่ต้องการความสะดวกสบายมากขึ้น
-                </div>
+                        <div class="room-body">
+                            <div class="room-title"><?php echo htmlspecialchars($room['room_name']); ?></div>
+                            <div class="room-desc"><?php echo htmlspecialchars($room['description']); ?></div>
 
-                <div class="room-features">
-                    <span class="feature">เตียงใหญ่</span>
-                    <span class="feature">Wi-Fi</span>
-                    <span class="feature">ทีวี</span>
-                    <span class="feature">ตู้เย็น</span>
-                </div>
+                            <div class="room-meta">
+                                <div class="meta-item"><strong>ประเภทห้อง:</strong> <?php echo htmlspecialchars($room['room_type']); ?></div>
+                                <div class="meta-item"><strong>ขนาดห้อง:</strong> <?php echo htmlspecialchars($room['room_size']); ?></div>
+                                <div class="meta-item"><strong>ประเภทเตียง:</strong> <?php echo htmlspecialchars($room['bed_type']); ?></div>
+                                <div class="meta-item"><strong>รองรับ:</strong> <?php echo htmlspecialchars($room['capacity']); ?> คน</div>
+                            </div>
 
-                <div class="room-footer">
-                    <div class="room-capacity">รองรับ 2-3 คน</div>
-                    <a class="book-btn" href="booking_form.php?room_type=Standard Room&price=800&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
-                        จองห้องนี้
-                    </a>
-                </div>
+                            <div class="room-footer">
+                                <div class="price">
+                                    ฿<?php echo number_format($room['price']); ?>
+                                    <span>/ คืน</span>
+                                </div>
+                                    <a class="book-btn"
+                                    href="booking_form.php?room_id=<?php echo urlencode($room['id']); ?>&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
+                                    จองห้องนี้
+                                    </a>
+                            </div>
+                        </div>
+                    </div>
+                <?php endwhile; ?>
             </div>
-        </div>
-
-        <div class="room-card">
-            <img src="uploads/room3.jpg" alt="Family Room" class="room-image">
-            <div class="room-body">
-                <div class="room-top">
-                    <div class="room-title">Family Room</div>
-                    <div class="room-price">฿1,800 <span>/ คืน</span></div>
-                </div>
-
-                <div class="room-desc">
-                    ห้องพักสำหรับครอบครัวหรือผู้เข้าพักหลายคน
-                    พื้นที่กว้าง เหมาะกับการเข้าพักเป็นกลุ่ม
-                </div>
-
-                <div class="room-features">
-                    <span class="feature">2 เตียง</span>
-                    <span class="feature">Wi-Fi</span>
-                    <span class="feature">ทีวี</span>
-                    <span class="feature">พื้นที่กว้าง</span>
-                </div>
-
-                <div class="room-footer">
-                    <div class="room-capacity">รองรับ 4-5 คน</div>
-                    <a class="book-btn" href="booking_form.php?room_type=Standard Room&price=800&checkin=<?php echo urlencode($checkin); ?>&checkout=<?php echo urlencode($checkout); ?>&guests=<?php echo urlencode($guests); ?>">
-                        จองห้องนี้
-                    </a>
-                </div>
+        <?php else: ?>
+            <div class="empty-box">
+                ไม่พบห้องพักที่ตรงกับเงื่อนไขที่เลือก
             </div>
-        </div>
+        <?php endif; ?>
+    </section>
+
+    <div class="footer-note">
+        หมายเหตุ: หน้านี้ดึงข้อมูลจากตาราง <strong>rooms</strong> และตรวจสอบการชนกันของวันจองจากตาราง <strong>room_bookings</strong>
     </div>
 
-    <div class="info-box">
-        <h4>ข้อมูลการเข้าพัก</h4>
-        <ul>
-            <li>เวลาเช็คอินหลัง 14:00 น. และเช็คเอาต์ก่อน 12:00 น.</li>
-            <li>กรุณานำบัตรประชาชนหรือเอกสารยืนยันตัวตนมาแสดงในวันเข้าพัก</li>
-            <li>การจองจะสมบูรณ์เมื่อเจ้าหน้าที่ตรวจสอบและยืนยันการจองแล้ว</li>
-            <li>สามารถปรับส่วนนี้เป็นเงื่อนไขจริงของที่พักในระบบของคุณได้</li>
-        </ul>
-    </div>
-</section>
-
-<footer class="footer">
-    <div class="footer-inner">
-        © <?php echo date('Y'); ?> สถาบันวิจัยวลัยรุกขเวช มหาวิทยาลัยมหาสารคาม
-    </div>
-</footer>
-
-<script>
-const today = new Date().toISOString().split('T')[0];
-document.getElementById('checkin').setAttribute('min', today);
-document.getElementById('checkout').setAttribute('min', today);
-
-document.getElementById('checkin').addEventListener('change', function() {
-    document.getElementById('checkout').value = '';
-    document.getElementById('checkout').setAttribute('min', this.value);
-});
-
-function scrollToBooking(roomName){
-    const roomType = document.getElementById('roomtype');
-    if(roomType){
-        if(roomName === 'Standard Room') roomType.value = 'standard';
-        if(roomName === 'Deluxe Room') roomType.value = 'deluxe';
-        if(roomName === 'Family Room') roomType.value = 'family';
-    }
-    window.scrollTo({
-        top: document.querySelector('.booking-search').offsetTop - 90,
-        behavior: 'smooth'
-    });
-}
-</script>
+</div>
 
 </body>
 </html>

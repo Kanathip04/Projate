@@ -32,9 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             elseif ($password === $user['password'])            $match = true;
 
             if ($match) {
-                $_SESSION['user_id']    = $user['id'];
-                $_SESSION['user_name']  = $user['fullname'];
-                $_SESSION['user_email'] = $user['email'];
+                $_SESSION['user_id']       = $user['id'];
+                $_SESSION['user_name']     = $user['fullname'];
+                $_SESSION['user_email']    = $user['email'];
+                $_SESSION['admin_logged_in'] = true; // ✅ ตรงกับที่ admin_layout_top.php ตรวจสอบ
 
                 if (!empty($_POST['remember'])) {
                     setcookie('remember_token', bin2hex(random_bytes(32)), time() + 60*60*24*30, '/', '', false, true);

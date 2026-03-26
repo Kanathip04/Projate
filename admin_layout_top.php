@@ -249,7 +249,17 @@ input, select, textarea, button{
 
                 <a href="admin_booking_archive.php" class="menu-item <?php echo ($activeMenu === 'booking_archive') ? 'active' : ''; ?>">
                     <span class="icon">🗂️</span>
-                    <span class="text">รายการอนุมัติแล้ว</span>
+                    <span class="text">รายการอนุมัติย้อนหลัง</span>
+                </a>
+
+                <a href="manage_rooms.php" class="menu-item <?php echo ($activeMenu === 'rooms') ? 'active' : ''; ?>">
+                    <span class="icon">🛏️</span>
+                    <span class="text">จัดการห้องพัก</span>
+                </a>
+
+                <a href="room_bookings_admin.php" class="menu-item <?php echo ($activeMenu === 'room_bookings') ? 'active' : ''; ?>">
+                    <span class="icon">📋</span>
+                    <span class="text">รายการจองห้องพัก</span>
                 </a>
 
                 <a href="admin_add_news.php" class="menu-item <?php echo ($activeMenu === 'news_add') ? 'active' : ''; ?>">

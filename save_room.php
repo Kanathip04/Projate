@@ -11,9 +11,7 @@ if (empty($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
 
 function redirect_back($message, $editId = 0, $type = 'error') {
     $_SESSION['room_msg']      = $message;
@@ -25,9 +23,7 @@ function redirect_back($message, $editId = 0, $type = 'error') {
 }
 
 $checkTable = $conn->query("SHOW TABLES LIKE 'rooms'");
-if (!$checkTable || $checkTable->num_rows === 0) {
-    die("ไม่พบตาราง rooms");
-}
+if (!$checkTable || $checkTable->num_rows === 0) die("ไม่พบตาราง rooms");
 
 $id          = isset($_POST['id'])          ? (int)$_POST['id']          : 0;
 $room_name   = trim($_POST['room_name']     ?? '');
@@ -40,12 +36,10 @@ $room_size   = trim($_POST['room_size']     ?? '');
 $bed_type    = trim($_POST['bed_type']      ?? '');
 $capacity    = $max_guests;
 
-// ✅ รับค่า status เป็น int 0 หรือ 1 เท่านั้น
-$status = (isset($_POST['status']) && (int)$_POST['status'] === 0) ? 0 : 1;
+// ✅ แก้: status เป็น ENUM('show','hide') ไม่ใช่ 0/1
+$status = (isset($_POST['status']) && $_POST['status'] === 'hide') ? 'hide' : 'show';
 
-if ($room_name === '' || $room_type === '') {
-    redirect_back("กรุณากรอกชื่อห้องพักและประเภทห้อง", $id);
-}
+if ($room_name === '' || $room_type === '') redirect_back("กรุณากรอกชื่อห้องพักและประเภทห้อง", $id);
 
 if ($price       < 0)  $price       = 0;
 if ($total_rooms <= 0) $total_rooms = 5;
@@ -57,39 +51,30 @@ $dbUploadPath = '';
 
 if (!is_dir($uploadRoot)) mkdir($uploadRoot, 0777, true);
 if (!is_dir($uploadDir))  mkdir($uploadDir,  0777, true);
-
-if (!is_writable($uploadDir)) {
-    redirect_back("โฟลเดอร์ uploads/rooms เขียนไฟล์ไม่ได้");
-}
+if (!is_writable($uploadDir)) redirect_back("โฟลเดอร์ uploads/rooms เขียนไฟล์ไม่ได้");
 
 if (isset($_FILES['room_image']) && $_FILES['room_image']['error'] !== UPLOAD_ERR_NO_FILE) {
-    if ($_FILES['room_image']['error'] !== UPLOAD_ERR_OK)      redirect_back("อัปโหลดรูปไม่สำเร็จ", $id);
+    if ($_FILES['room_image']['error'] !== UPLOAD_ERR_OK) redirect_back("อัปโหลดรูปไม่สำเร็จ", $id);
 
     $tmpName      = $_FILES['room_image']['tmp_name'];
     $originalName = $_FILES['room_image']['name'];
     $fileSize     = (int)$_FILES['room_image']['size'];
 
-    if (!is_uploaded_file($tmpName))     redirect_back("ไม่พบไฟล์อัปโหลดที่ถูกต้อง", $id);
-    if ($fileSize <= 0)                  redirect_back("ไฟล์รูปไม่ถูกต้อง", $id);
-    if ($fileSize > 5 * 1024 * 1024)    redirect_back("ไฟล์รูปต้องมีขนาดไม่เกิน 5MB", $id);
+    if (!is_uploaded_file($tmpName))      redirect_back("ไม่พบไฟล์อัปโหลดที่ถูกต้อง", $id);
+    if ($fileSize <= 0)                   redirect_back("ไฟล์รูปไม่ถูกต้อง", $id);
+    if ($fileSize > 5 * 1024 * 1024)     redirect_back("ไฟล์รูปต้องมีขนาดไม่เกิน 5MB", $id);
 
     $ext     = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
     $allowed = ['jpg','jpeg','png','webp','gif'];
-    if (!in_array($ext, $allowed, true)) redirect_back("รองรับเฉพาะ jpg, jpeg, png, webp, gif", $id);
+    if (!in_array($ext, $allowed, true))  redirect_back("รองรับเฉพาะ jpg, jpeg, png, webp, gif", $id);
     if (@getimagesize($tmpName) === false) redirect_back("ไฟล์ที่อัปโหลดไม่ใช่รูปภาพ", $id);
 
-    $newName        = 'room_' . date('Ymd_His') . '_' . mt_rand(1000,9999) . '.' . $ext;
-    $dbUploadPath   = 'uploads/rooms/' . $newName;
+    $newName      = 'room_' . date('Ymd_His') . '_' . mt_rand(1000,9999) . '.' . $ext;
+    $dbUploadPath = 'uploads/rooms/' . $newName;
     if (!move_uploaded_file($tmpName, $uploadDir . $newName)) redirect_back("ย้ายไฟล์รูปไม่สำเร็จ", $id);
 }
 
-/* ════════════════════════════════════
-   UPDATE
-   bind types (12): s s d s i s s i i i s i
-   room_name, room_type, price, description, status,
-   room_size, bed_type, capacity, total_rooms, max_guests,
-   image_path, id
-════════════════════════════════════ */
+/* ══ UPDATE ══ */
 if ($id > 0) {
 
     $oldImagePath = '';
@@ -127,10 +112,8 @@ if ($id > 0) {
     $stmt = $conn->prepare($sql);
     if (!$stmt) redirect_back("Prepare UPDATE failed: " . $conn->error, $id);
 
-    // s=room_name, s=room_type, d=price, s=description, i=status,
-    // s=room_size, s=bed_type, i=capacity, i=total_rooms, i=max_guests,
-    // s=image_path, i=id
-    $stmt->bind_param("ssdsissiiisi",
+    // s s d s s s s i i i s i
+    $stmt->bind_param("ssdssssiissi",
         $room_name, $room_type, $price, $description, $status,
         $room_size, $bed_type, $capacity, $total_rooms, $max_guests,
         $dbUploadPath, $id
@@ -143,13 +126,7 @@ if ($id > 0) {
     $stmt->close();
     redirect_back("อัปเดตข้อมูลห้องพักเรียบร้อยแล้ว", 0, 'success');
 
-/* ════════════════════════════════════
-   INSERT
-   bind types (11): s s d s i s s i i i s
-   room_name, room_type, price, description, status,
-   room_size, bed_type, capacity, total_rooms, max_guests,
-   image_path
-════════════════════════════════════ */
+/* ══ INSERT ══ */
 } else {
 
     $sql = "INSERT INTO rooms
@@ -160,9 +137,8 @@ if ($id > 0) {
     $stmt = $conn->prepare($sql);
     if (!$stmt) redirect_back("Prepare INSERT failed: " . $conn->error);
 
-    // s=room_name, s=room_type, d=price, s=description, i=status,
-    // s=room_size, s=bed_type, i=capacity, i=total_rooms, i=max_guests, s=image_path
-    $stmt->bind_param("ssdsissiiis",
+    // s s d s s s s i i i s
+    $stmt->bind_param("ssdssssiiis",
         $room_name, $room_type, $price, $description, $status,
         $room_size, $bed_type, $capacity, $total_rooms, $max_guests,
         $dbUploadPath

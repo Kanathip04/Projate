@@ -1,25 +1,91 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 session_start();
 date_default_timezone_set('Asia/Bangkok');
+require_once 'config.php';
 
 if (empty($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
     header("Location: login.php");
     exit;
 }
 
-$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
-$conn->set_charset("utf8mb4");
-if ($conn->connect_error) {
-    die("DB Error: " . $conn->connect_error);
+$user_id  = (int)$_SESSION['user_id'];
+$message  = '';
+$msg_type = '';
+
+function h($s) {
+    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 }
 
-$user_id = (int)$_SESSION['user_id'];
-$message = '';
-$msg_type = '';
+function getAdminById(mysqli $conn, int $user_id): ?array {
+    $stmt = $conn->prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $user = $result ? $result->fetch_assoc() : null;
+    $stmt->close();
+    return $user ?: null;
+}
+
+function safeAvatarDelete(string $relativePath): void {
+    if ($relativePath === '') {
+        return;
+    }
+
+    $relativePath = str_replace('\\', '/', $relativePath);
+    if (strpos($relativePath, 'uploads/avatars/') !== 0) {
+        return;
+    }
+
+    $full = __DIR__ . '/' . $relativePath;
+    if (is_file($full)) {
+        @unlink($full);
+    }
+}
+
+function uploadAvatarIfAny(array $file, int $user_id, string &$errorMessage): string {
+    if (!isset($file['error']) || $file['error'] === UPLOAD_ERR_NO_FILE) {
+        return '';
+    }
+
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $errorMessage = 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ';
+        return '';
+    }
+
+    $upload_dir = __DIR__ . '/uploads/avatars/';
+    if (!is_dir($upload_dir)) {
+        mkdir($upload_dir, 0777, true);
+    }
+
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
+    if (!in_array($ext, $allowed, true)) {
+        $errorMessage = 'รูปภาพต้องเป็น jpg, jpeg, png, webp หรือ gif';
+        return '';
+    }
+
+    if (($file['size'] ?? 0) > 2 * 1024 * 1024) {
+        $errorMessage = 'ขนาดไฟล์ต้องไม่เกิน 2MB';
+        return '';
+    }
+
+    $new_name = 'avatar_' . $user_id . '_' . time() . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
+    $target = $upload_dir . $new_name;
+
+    if (!move_uploaded_file($file['tmp_name'], $target)) {
+        $errorMessage = 'อัปโหลดรูปภาพไม่สำเร็จ';
+        return '';
+    }
+
+    return 'uploads/avatars/' . $new_name;
+}
+
+$user = getAdminById($conn, $user_id);
+if (!$user) {
+    header("Location: logout.php");
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -31,46 +97,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($fullname === '') {
             $message = 'กรุณากรอกชื่อ-นามสกุล';
             $msg_type = 'error';
+        } elseif ($phone !== '' && !preg_match('/^[0-9+\-\s]{8,20}$/', $phone)) {
+            $message = 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง';
+            $msg_type = 'error';
         } else {
-            $avatar_path = '';
+            $upload_error = '';
+            $avatar_path = uploadAvatarIfAny($_FILES['avatar'] ?? [], $user_id, $upload_error);
 
-            if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
-                $upload_dir = __DIR__ . '/uploads/avatars/';
-                if (!is_dir($upload_dir)) {
-                    mkdir($upload_dir, 0777, true);
-                }
-
-                $ext = strtolower(pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION));
-
-                if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) {
-                    $message = 'รูปภาพต้องเป็น jpg, jpeg, png, webp หรือ gif';
-                    $msg_type = 'error';
-                } elseif ($_FILES['avatar']['size'] > 2 * 1024 * 1024) {
-                    $message = 'ขนาดไฟล์ต้องไม่เกิน 2MB';
-                    $msg_type = 'error';
-                } else {
-                    $oldResult = $conn->query("SELECT avatar FROM users WHERE id = $user_id LIMIT 1");
-                    $old = $oldResult ? $oldResult->fetch_assoc() : null;
-
-                    if (!empty($old['avatar'])) {
-                        $old_file = __DIR__ . '/' . $old['avatar'];
-                        if (file_exists($old_file)) {
-                            @unlink($old_file);
-                        }
-                    }
-
-                    $new_name = 'avatar_' . $user_id . '_' . time() . '.' . $ext;
-
-                    if (move_uploaded_file($_FILES['avatar']['tmp_name'], $upload_dir . $new_name)) {
-                        $avatar_path = 'uploads/avatars/' . $new_name;
-                    } else {
-                        $message = 'อัปโหลดรูปภาพไม่สำเร็จ';
-                        $msg_type = 'error';
-                    }
-                }
-            }
-
-            if ($message === '') {
+            if ($upload_error !== '') {
+                $message = $upload_error;
+                $msg_type = 'error';
+            } else {
                 if ($avatar_path !== '') {
                     $stmt = $conn->prepare("UPDATE users SET fullname = ?, phone = ?, avatar = ? WHERE id = ?");
                     $stmt->bind_param("sssi", $fullname, $phone, $avatar_path, $user_id);
@@ -80,10 +117,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 if ($stmt->execute()) {
+                    if ($avatar_path !== '' && !empty($user['avatar'])) {
+                        safeAvatarDelete((string)$user['avatar']);
+                    }
+
                     $_SESSION['user_name'] = $fullname;
                     $message = 'อัปเดตข้อมูลเรียบร้อยแล้ว';
                     $msg_type = 'success';
+                    $user = getAdminById($conn, $user_id);
                 } else {
+                    if ($avatar_path !== '') {
+                        safeAvatarDelete($avatar_path);
+                    }
                     $message = 'เกิดข้อผิดพลาด: ' . $stmt->error;
                     $msg_type = 'error';
                 }
@@ -93,10 +138,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'change_password') {
+        $current  = $_POST['current_password'] ?? '';
         $new_pass = $_POST['new_password'] ?? '';
         $confirm  = $_POST['confirm_password'] ?? '';
 
-        if (strlen($new_pass) < 6) {
+        $stmt = $conn->prepare("SELECT password FROM users WHERE id = ? LIMIT 1");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result ? $result->fetch_assoc() : null;
+        $stmt->close();
+
+        if (!$row || !password_verify($current, $row['password'])) {
+            $message = 'รหัสผ่านปัจจุบันไม่ถูกต้อง';
+            $msg_type = 'error';
+        } elseif (strlen($new_pass) < 6) {
             $message = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
             $msg_type = 'error';
         } elseif ($new_pass !== $confirm) {
@@ -119,12 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$userResult = $conn->query("SELECT * FROM users WHERE id = $user_id LIMIT 1");
-if (!$userResult) {
-    die("Query user failed: " . $conn->error);
-}
-
-$user = $userResult->fetch_assoc();
+$user = getAdminById($conn, $user_id);
 if (!$user) {
     header("Location: logout.php");
     exit;
@@ -135,15 +186,11 @@ if (!empty($user['created_at'])) {
     $join_days = (int)((time() - strtotime($user['created_at'])) / 86400);
 }
 
-$fullnameSafe = trim($user['fullname'] ?? 'A');
+$fullnameSafe = trim((string)($user['fullname'] ?? 'A'));
 if (function_exists('mb_substr')) {
     $avatarInitial = mb_strtoupper(mb_substr($fullnameSafe, 0, 1), 'UTF-8');
 } else {
     $avatarInitial = strtoupper(substr($fullnameSafe, 0, 1));
-}
-
-function h($s) {
-    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 }
 
 $pageTitle  = "โปรไฟล์แอดมิน";
@@ -553,9 +600,9 @@ include 'admin_layout_top.php';
     <div class="ap-av-wrap">
       <div class="ap-av" id="apAvDisplay">
         <?php if (!empty($user['avatar'])): ?>
-          <img src="<?= h($user['avatar']) ?>" alt="avatar">
+          <img src="<?= h($user['avatar']) ?>?v=<?= time() ?>" alt="avatar">
         <?php else: ?>
-          <?= $avatarInitial ?>
+          <?= h($avatarInitial) ?>
         <?php endif; ?>
       </div>
       <label for="ap-avatar-file" class="ap-av-btn" title="เปลี่ยนรูปโปรไฟล์">📷</label>
@@ -573,15 +620,13 @@ include 'admin_layout_top.php';
     </div>
 
     <div class="ap-hero-stat">
-      <div class="ap-stat-val"><?= $join_days ?></div>
+      <div class="ap-stat-val"><?= (int)$join_days ?></div>
       <div class="ap-stat-lbl">วันที่ใช้งาน</div>
     </div>
   </div>
 
   <div class="ap-grid">
-
     <div>
-
       <div class="ap-card">
         <div class="ap-card-header">
           <div class="ap-card-icon">✏️</div>
@@ -612,17 +657,12 @@ include 'admin_layout_top.php';
               <label>เบอร์โทรศัพท์</label>
               <div class="ap-iw">
                 <span class="ap-ii">📱</span>
-                <input class="ap-input" type="text" name="phone" value="<?= h($user['phone'] ?? '') ?>" placeholder="08x-xxx-xxxx">
+                <input class="ap-input" type="text" name="phone" value="<?= h($user['phone'] ?? '') ?>" placeholder="เบอร์โทรศัพท์">
               </div>
             </div>
 
             <div class="ap-btn-row">
-              <span style="font-size:0.76rem;color:var(--muted);">
-                กด บันทึกข้อมูล เพื่อยืนยันการเปลี่ยนแปลง
-              </span>
-              <button type="submit" class="ap-btn ap-btn-primary" id="saveProfileBtn">
-                💾 บันทึกข้อมูล
-              </button>
+              <button type="submit" class="ap-btn ap-btn-primary" id="saveProfileBtn">💾 บันทึกข้อมูล</button>
             </div>
           </form>
         </div>
@@ -631,45 +671,49 @@ include 'admin_layout_top.php';
       <div class="ap-card">
         <div class="ap-card-header">
           <div class="ap-card-icon">🔐</div>
-          <div class="ap-card-title">ตั้งรหัสผ่านใหม่</div>
+          <div class="ap-card-title">เปลี่ยนรหัสผ่าน</div>
         </div>
         <div class="ap-card-body">
-          <form method="POST" id="passForm">
+          <form method="POST">
             <input type="hidden" name="action" value="change_password">
+
+            <div class="ap-fg">
+              <label>รหัสผ่านปัจจุบัน</label>
+              <div class="ap-iw">
+                <span class="ap-ii">🔒</span>
+                <input class="ap-input" type="password" name="current_password" required>
+              </div>
+            </div>
 
             <div class="ap-fg">
               <label>รหัสผ่านใหม่</label>
               <div class="ap-iw">
                 <span class="ap-ii">🔑</span>
-                <input class="ap-input" type="password" name="new_password" id="apNewPass" placeholder="อย่างน้อย 6 ตัวอักษร" required oninput="apCheckStr(this.value)">
+                <input class="ap-input" type="password" name="new_password" oninput="apCheckStr(this.value)" placeholder="อย่างน้อย 6 ตัวอักษร" required>
               </div>
               <div class="ap-sbar"><div class="ap-sfill" id="apSfill"></div></div>
             </div>
 
-            <div class="ap-fg" style="margin-bottom:0;">
+            <div class="ap-fg">
               <label>ยืนยันรหัสผ่านใหม่</label>
               <div class="ap-iw">
-                <span class="ap-ii">🔑</span>
-                <input class="ap-input" type="password" name="confirm_password" placeholder="••••••••" required>
+                <span class="ap-ii">🔁</span>
+                <input class="ap-input" type="password" name="confirm_password" required>
               </div>
             </div>
 
             <div class="ap-btn-row">
-              <button type="submit" class="ap-btn ap-btn-primary">
-                🔄 เปลี่ยนรหัสผ่าน
-              </button>
+              <button type="submit" class="ap-btn ap-btn-primary">🔄 เปลี่ยนรหัสผ่าน</button>
             </div>
           </form>
         </div>
       </div>
-
     </div>
 
     <div>
-
       <div class="ap-card">
         <div class="ap-card-header">
-          <div class="ap-card-icon">🔖</div>
+          <div class="ap-card-icon">📌</div>
           <div class="ap-card-title">ข้อมูลบัญชี</div>
         </div>
         <div class="ap-card-body">
@@ -678,7 +722,7 @@ include 'admin_layout_top.php';
               <div class="ap-info-dot"></div>
               <div>
                 <div class="ap-info-lbl">สถานะ</div>
-                <div class="ap-info-val">⚡ Administrator</div>
+                <div class="ap-info-val">Administrator</div>
               </div>
             </div>
 
@@ -686,7 +730,15 @@ include 'admin_layout_top.php';
               <div class="ap-info-dot"></div>
               <div>
                 <div class="ap-info-lbl">อีเมล</div>
-                <div class="ap-info-val" style="word-break:break-all;"><?= h($user['email'] ?? '') ?></div>
+                <div class="ap-info-val"><?= h($user['email'] ?? '') ?></div>
+              </div>
+            </div>
+
+            <div class="ap-info-item">
+              <div class="ap-info-dot"></div>
+              <div>
+                <div class="ap-info-lbl">เบอร์โทรศัพท์</div>
+                <div class="ap-info-val"><?= h($user['phone'] ?? '-') ?></div>
               </div>
             </div>
 
@@ -694,9 +746,7 @@ include 'admin_layout_top.php';
               <div class="ap-info-dot"></div>
               <div>
                 <div class="ap-info-lbl">วันที่สมัคร</div>
-                <div class="ap-info-val">
-                  <?= !empty($user['created_at']) ? h(date('d M Y', strtotime($user['created_at']))) : '-' ?>
-                </div>
+                <div class="ap-info-val"><?= !empty($user['created_at']) ? h(date('d/m/Y H:i', strtotime($user['created_at']))) : '-' ?></div>
               </div>
             </div>
 
@@ -712,7 +762,7 @@ include 'admin_layout_top.php';
               <div class="ap-info-dot"></div>
               <div>
                 <div class="ap-info-lbl">ใช้งานมาแล้ว</div>
-                <div class="ap-info-val"><?= $join_days ?> วัน</div>
+                <div class="ap-info-val"><?= (int)$join_days ?> วัน</div>
               </div>
             </div>
           </div>
@@ -727,9 +777,9 @@ include 'admin_layout_top.php';
         <div class="ap-card-body" style="text-align:center;">
           <div class="ap-av" style="width:80px;height:80px;font-size:2rem;margin:0 auto 14px;" id="apAvPreview">
             <?php if (!empty($user['avatar'])): ?>
-              <img src="<?= h($user['avatar']) ?>" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+              <img src="<?= h($user['avatar']) ?>?v=<?= time() ?>" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
             <?php else: ?>
-              <?= $avatarInitial ?>
+              <?= h($avatarInitial) ?>
             <?php endif; ?>
           </div>
           <p style="font-size:0.76rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">
@@ -741,9 +791,7 @@ include 'admin_layout_top.php';
           <p style="font-size:0.7rem;color:var(--muted);margin-top:8px;">jpg, jpeg, png, webp, gif</p>
         </div>
       </div>
-
     </div>
-
   </div>
 </div>
 

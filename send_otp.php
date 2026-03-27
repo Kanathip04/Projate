@@ -88,13 +88,13 @@ try {
     $mail->isSMTP();
     $mail->Host       = 'smtp.gmail.com';
     $mail->SMTPAuth   = true;
-    $mail->Username   = '67010974003@msu.ac.th';
-    $mail->Password   = 'uzotcwasteiaaroz';
+    $mail->Username   = 'kanathip4123@gmail.com'; // ← เปลี่ยนเป็น Gmail
+    $mail->Password   = 'uzotcwasteiaaroz';        // ← App Password
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
     $mail->Port       = 587;
 
     $mail->CharSet = 'UTF-8';
-    $mail->setFrom('67010974003@msu.ac.th', 'OTP Verification');
+    $mail->setFrom('kanathip4123@gmail.com', 'OTP Verification'); // ← เปลี่ยน
     $mail->addAddress($email, $user['fullname'] ?? '');
 
     $mail->isHTML(true);

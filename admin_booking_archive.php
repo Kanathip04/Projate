@@ -1,571 +1,439 @@
 <?php
 date_default_timezone_set('Asia/Bangkok');
 session_start();
+ini_set('display_errors', 1); error_reporting(E_ALL);
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-if (!isset($_SESSION['admin_logged_in'])) {
-    header("Location: login.php");
-    exit;
+if (empty($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
+    header("Location: login.php"); exit;
 }
 
 $currentPage = basename($_SERVER['PHP_SELF']);
-
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
+if ($conn->connect_error) die("DB Error: " . $conn->connect_error);
 
-if ($conn->connect_error) {
-    die("เชื่อมต่อฐานข้อมูลไม่สำเร็จ: " . $conn->connect_error);
-}
-
-function h($str) {
-    return htmlspecialchars((string)$str, ENT_QUOTES, 'UTF-8');
-}
-
-function bookingStatusMap() {
+function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+function statusMap() {
     return [
-        'pending' => ['label' => 'รออนุมัติ', 'class' => 'status-pending'],
-        'approved' => ['label' => 'อนุมัติแล้ว', 'class' => 'status-approved'],
-        'cancelled' => ['label' => 'ยกเลิก', 'class' => 'status-cancelled'],
+        'pending'   => ['label'=>'รออนุมัติ',  'badge'=>'bk-badge-pending'],
+        'approved'  => ['label'=>'อนุมัติแล้ว','badge'=>'bk-badge-approved'],
+        'cancelled' => ['label'=>'ยกเลิก',     'badge'=>'bk-badge-cancelled'],
     ];
 }
+function statusLabel($s) { $m=statusMap(); return $m[$s]['label'] ?? $s; }
+function statusBadge($s) { $m=statusMap(); return $m[$s]['badge'] ?? ''; }
 
-function bookingStatusLabel($status) {
-    $map = bookingStatusMap();
-    return $map[$status]['label'] ?? $status;
-}
-
-function bookingStatusClass($status) {
-    $map = bookingStatusMap();
-    return $map[$status]['class'] ?? 'status-default';
-}
-
-$message = "";
-$message_type = "success";
+$message = ''; $message_type = 'success';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    $allowed_status = ['pending', 'approved', 'cancelled'];
 
     if ($action === 'restore_booking') {
         $id = (int)($_POST['id'] ?? 0);
-
         if ($id > 0) {
-            $stmt = $conn->prepare("UPDATE room_bookings SET archived = 0 WHERE id = ?");
-            if ($stmt) {
-                $stmt->bind_param("i", $id);
-                if ($stmt->execute()) {
-                    header("Location: admin_booking_archive.php?msg=" . urlencode("กู้คืนข้อมูลเรียบร้อยแล้ว") . "&type=success");
-                    exit;
-                } else {
-                    $message = "กู้คืนข้อมูลไม่สำเร็จ";
-                    $message_type = "error";
-                }
-                $stmt->close();
-            }
+            $st = $conn->prepare("UPDATE room_bookings SET archived=0 WHERE id=?");
+            $st->bind_param("i",$id); $st->execute(); $st->close();
+            header("Location: {$currentPage}?msg=".urlencode("กู้คืนข้อมูลเรียบร้อยแล้ว")."&type=success"); exit;
         }
     }
-
-    if ($action === 'update_booking') {
-        $id             = (int)($_POST['id'] ?? 0);
-        $full_name      = trim($_POST['full_name'] ?? '');
-        $phone          = trim($_POST['phone'] ?? '');
-        $email          = trim($_POST['email'] ?? '');
-        $room_type      = trim($_POST['room_type'] ?? '');
-        $guests         = (int)($_POST['guests'] ?? 1);
-        $checkin_date   = trim($_POST['checkin_date'] ?? '');
-        $checkout_date  = trim($_POST['checkout_date'] ?? '');
-        $note           = trim($_POST['note'] ?? '');
-        $booking_status = trim($_POST['booking_status'] ?? 'pending');
-
-        if (!in_array($booking_status, $allowed_status, true)) {
-            $booking_status = 'pending';
-        }
-
-        if (
-            $id <= 0 ||
-            $full_name === '' ||
-            $phone === '' ||
-            $room_type === '' ||
-            $checkin_date === '' ||
-            $checkout_date === ''
-        ) {
-            $message = "กรอกข้อมูลไม่ครบ";
-            $message_type = "error";
-        } elseif (strtotime($checkout_date) <= strtotime($checkin_date)) {
-            $message = "วันเช็คเอาท์ต้องมากกว่าวันเช็คอิน";
-            $message_type = "error";
-        } else {
-            $stmt = $conn->prepare("
-                UPDATE room_bookings
-                SET full_name = ?, phone = ?, email = ?, room_type = ?, guests = ?, checkin_date = ?, checkout_date = ?, note = ?, booking_status = ?
-                WHERE id = ?
-            ");
-
-            if ($stmt) {
-                $stmt->bind_param(
-                    "ssssissssi",
-                    $full_name,
-                    $phone,
-                    $email,
-                    $room_type,
-                    $guests,
-                    $checkin_date,
-                    $checkout_date,
-                    $note,
-                    $booking_status,
-                    $id
-                );
-
-                if ($stmt->execute()) {
-                    $message = "อัปเดตข้อมูลเรียบร้อยแล้ว";
-                    $message_type = "success";
-                } else {
-                    $message = "อัปเดตไม่สำเร็จ: " . $stmt->error;
-                    $message_type = "error";
-                }
-                $stmt->close();
-            } else {
-                $message = "Prepare UPDATE ไม่สำเร็จ: " . $conn->error;
-                $message_type = "error";
-            }
-        }
-    }
-
     if ($action === 'delete_booking') {
         $id = (int)($_POST['id'] ?? 0);
-
         if ($id > 0) {
-            $stmt = $conn->prepare("DELETE FROM room_bookings WHERE id = ?");
-            if ($stmt) {
-                $stmt->bind_param("i", $id);
-                if ($stmt->execute()) {
-                    $message = "ลบข้อมูลเรียบร้อยแล้ว";
-                    $message_type = "success";
-                } else {
-                    $message = "ลบข้อมูลไม่สำเร็จ: " . $stmt->error;
-                    $message_type = "error";
-                }
-                $stmt->close();
-            }
+            $st = $conn->prepare("DELETE FROM room_bookings WHERE id=?");
+            $st->bind_param("i",$id); $st->execute(); $st->close();
+            $message = "ลบข้อมูลถาวรเรียบร้อยแล้ว"; $message_type = "success";
         }
     }
-
-    header("Location: {$currentPage}?msg=" . urlencode($message) . "&type=" . urlencode($message_type));
-    exit;
+    header("Location: {$currentPage}?msg=".urlencode($message)."&type=".urlencode($message_type)); exit;
 }
 
-if (isset($_GET['msg'])) {
-    $message = $_GET['msg'];
-    $message_type = $_GET['type'] ?? 'success';
-}
+if (isset($_GET['msg'])) { $message = $_GET['msg']; $message_type = $_GET['type'] ?? 'success'; }
 
 $search = trim($_GET['search'] ?? '');
-$edit_id = isset($_GET['edit']) ? (int)$_GET['edit'] : 0;
 
-$edit_data = null;
-if ($edit_id > 0) {
-    $stmtEdit = $conn->prepare("SELECT * FROM room_bookings WHERE id = ? AND archived = 1 LIMIT 1");
-    if ($stmtEdit) {
-        $stmtEdit->bind_param("i", $edit_id);
-        $stmtEdit->execute();
-        $resEdit = $stmtEdit->get_result();
-        $edit_data = $resEdit->fetch_assoc();
-        $stmtEdit->close();
-    }
-}
+$rs = $conn->query("SELECT COUNT(*) t FROM room_bookings WHERE archived=1");
+$stat_archive = (int)$rs->fetch_assoc()['t'];
 
-$stat_archive = 0;
-$sqlStat = "SELECT COUNT(*) AS total FROM room_bookings WHERE archived = 1";
-$resStat = $conn->query($sqlStat);
-if ($resStat && $rowStat = $resStat->fetch_assoc()) {
-    $stat_archive = (int)$rowStat['total'];
-}
-
-$where = "WHERE archived = 1";
-$params = [];
-$types = "";
-
+$where = "WHERE archived=1";
+$params = []; $types = "";
 if ($search !== '') {
-    $where .= " AND (
-        full_name LIKE ?
-        OR phone LIKE ?
-        OR email LIKE ?
-        OR room_type LIKE ?
-        OR note LIKE ?
-    )";
-    $like = "%{$search}%";
-    $params[] = $like;
-    $params[] = $like;
-    $params[] = $like;
-    $params[] = $like;
-    $params[] = $like;
-    $types .= "sssss";
+    $where .= " AND (full_name LIKE ? OR phone LIKE ? OR email LIKE ? OR room_type LIKE ?)";
+    $like = "%{$search}%"; $params = [$like,$like,$like,$like]; $types = "ssss";
 }
+$stmt = $conn->prepare("SELECT * FROM room_bookings {$where} ORDER BY id DESC");
+if (!empty($params)) $stmt->bind_param($types, ...$params);
+$stmt->execute(); $result = $stmt->get_result();
+$total_rows = $result->num_rows;
 
-$sql = "SELECT * FROM room_bookings {$where} ORDER BY id DESC";
-$stmt = $conn->prepare($sql);
-
-if (!$stmt) {
-    die("Prepare SELECT ไม่สำเร็จ: " . $conn->error);
-}
-
-if (!empty($params)) {
-    $stmt->bind_param($types, ...$params);
-}
-$stmt->execute();
-$result = $stmt->get_result();
-
-$pageTitle = "ข้อมูลที่จัดเก็บแล้ว";
-$activeMenu = "booking_archive";
+$pageTitle = "รายการย้อนหลัง"; $activeMenu = "booking_archive";
 include 'admin_layout_top.php';
 ?>
-
 <style>
-.archive-page{
-    max-width:1500px;
-    margin:0 auto;
+/* ── Shared Lumière Booking Style ── */
+:root {
+  --gold:      #c9a96e;
+  --gold-dim:  rgba(201,169,110,0.12);
+  --ink:       #1a1a2e;
+  --bg:        #f5f1eb;
+  --card:      #ffffff;
+  --muted:     #7a7a8c;
+  --border:    #e8e4de;
+  --danger:    #dc2626;
+  --success:   #16a34a;
+  --warning:   #d97706;
+  --info:      #1d4ed8;
+  --radius:    14px;
 }
-.hero-archive{
-    background:linear-gradient(135deg,#475569 0%,#334155 100%);
-    color:#fff;
-    border-radius:28px;
-    padding:28px;
-    margin-bottom:24px;
-    box-shadow:0 18px 40px rgba(51,65,85,.18);
-}
-.hero-archive h1{
-    margin:0 0 8px;
-    font-size:34px;
-    font-weight:800;
-}
-.hero-archive p{
-    margin:0;
-    opacity:.95;
-    font-size:15px;
-}
-.hero-actions{
-    margin-top:18px;
-    display:flex;
-    gap:12px;
-    flex-wrap:wrap;
-}
-.quick-link{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    padding:12px 16px;
-    border-radius:14px;
-    text-decoration:none;
-    font-weight:700;
-    border:1px solid rgba(255,255,255,.25);
-    background:rgba(255,255,255,.14);
-    color:#fff;
-}
-.alert-box{
-    margin-bottom:20px;
-    padding:14px 18px;
-    border-radius:16px;
-    font-weight:700;
-}
-.alert-box.success{
-    background:#edf9f0;
-    color:#1d7d3f;
-    border:1px solid #c8ebd2;
-}
-.alert-box.error{
-    background:#fff1f2;
-    color:#be123c;
-    border:1px solid #fecdd3;
-}
-.stat-card,.panel{
-    background:#fff;
-    border-radius:24px;
-    padding:22px;
-    box-shadow:0 12px 30px rgba(15,23,42,.06);
-    border:1px solid #edf1f6;
-}
-.stat-card{
-    margin-bottom:22px;
-}
-.stat-card .label{
-    font-size:14px;
-    color:#6b7280;
-    font-weight:700;
-    margin-bottom:10px;
-}
-.stat-card .value{
-    font-size:34px;
-    font-weight:800;
-    line-height:1;
-    margin-bottom:8px;
-}
-.stat-card .sub{
-    font-size:13px;
-    color:#6b7280;
-}
-.main-grid{
-    display:block;
-}
-.section-title{
-    margin:0 0 6px;
-    font-size:24px;
-    font-weight:800;
-    color:#101828;
-}
-.section-desc{
-    margin:0 0 18px;
-    color:#6b7280;
-    font-size:14px;
-}
-.empty-box{
-    background:#f8fafc;
-    border:1px dashed #d7dee8;
-    border-radius:18px;
-    padding:18px;
-    color:#6b7280;
-    line-height:1.6;
-}
-.form-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:14px;
-}
-.form-group{
-    margin-bottom:14px;
-}
-.form-group label{
-    display:block;
-    margin-bottom:7px;
-    font-size:14px;
-    font-weight:700;
-    color:#18212f;
-}
-.form-control{
-    width:100%;
-    background:#fff;
-    border:1px solid #e5eaf1;
-    border-radius:14px;
-    padding:12px 14px;
-    font-size:15px;
-    color:#18212f;
-    outline:none;
-}
-textarea.form-control{
-    min-height:120px;
-    resize:vertical;
-}
-.filter-box{
-    background:#f8fafc;
-    border:1px solid #edf1f6;
-    border-radius:18px;
-    padding:18px;
-    margin-bottom:18px;
-}
-.filter-actions,.action-group{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    align-items:center;
-}
-.btn{
-    border:none;
-    border-radius:14px;
-    padding:11px 16px;
-    font-size:14px;
-    font-weight:700;
-    cursor:pointer;
-    text-decoration:none;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    color:#fff;
-}
-.btn-primary{ background:#334155; }
-.btn-secondary{ background:#6b7280; }
-.btn-info{ background:#1d4ed8; }
-.btn-success{ background:#15803d; }
-.btn-danger{ background:#dc2626; }
-.btn-sm{
-    padding:9px 12px;
-    border-radius:12px;
-    font-size:13px;
-}
-.table-wrap{
-    overflow:auto;
-    border:1px solid #edf1f6;
-    border-radius:18px;
-}
-.table{
-    width:100%;
-    min-width:1200px;
-    border-collapse:separate;
-    border-spacing:0;
-}
-.table thead th{
-    background:#f8fafc;
-    color:#334155;
-    font-size:14px;
-    font-weight:800;
-    padding:14px 12px;
-    text-align:left;
-    border-bottom:1px solid #e8edf4;
-}
-.table tbody td{
-    padding:14px 12px;
-    font-size:14px;
-    vertical-align:top;
-    border-bottom:1px solid #eef2f7;
-}
-.name-cell strong{
-    display:block;
-    margin-bottom:4px;
-}
-.muted{
-    color:#6b7280;
-    font-size:13px;
-}
-.status-badge{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-width:95px;
-    padding:7px 12px;
-    border-radius:999px;
-    font-size:12px;
-    font-weight:800;
-}
-.status-pending{ background:#fff4cc; color:#9a6700; }
-.status-approved{ background:#dcfce7; color:#166534; }
-.status-cancelled{ background:#fee2e2; color:#991b1b; }
-.status-default{ background:#e5e7eb; color:#374151; }
 
-@media (max-width:1180px){
-    .main-grid{ grid-template-columns:1fr; }
-    .sticky-box{ position:static; }
+.bk-wrap { padding: 0 0 48px; animation: fadeUp 0.4s ease both; }
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(16px); }
+  to   { opacity:1; transform:translateY(0); }
 }
-@media (max-width:860px){
-    .form-grid{ grid-template-columns:1fr; }
+
+/* ── Page banner ── */
+.bk-banner {
+  border-radius: 18px;
+  padding: 28px 32px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
 }
+.bk-banner::before {
+  content: '';
+  position: absolute;
+  width: 320px; height: 320px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+  top: -120px; right: -80px; pointer-events: none;
+}
+.bk-banner-text h1 {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 1.6rem;
+  color: #fff;
+  margin: 0 0 6px;
+}
+.bk-banner-text p {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.75);
+  margin: 0;
+  line-height: 1.6;
+}
+.bk-banner-links {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  position: relative; z-index: 1;
+}
+.bk-banner-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  letter-spacing: 0.04em;
+  transition: all 0.2s;
+}
+.bk-banner-link:hover { background: rgba(255,255,255,0.22); transform: translateY(-1px); }
+
+/* ── Alert ── */
+.bk-alert {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 18px;
+  border-radius: var(--radius);
+  font-size: 0.85rem; font-weight: 600;
+  margin-bottom: 24px;
+  animation: slideDown 0.3s ease;
+}
+@keyframes slideDown {
+  from { opacity:0; transform:translateY(-8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.bk-alert-success { background: #f0fdf4; border: 1.5px solid #86efac; color: var(--success); }
+.bk-alert-error   { background: #fef2f2; border: 1.5px solid #fca5a5; color: var(--danger); }
+
+/* ── Stat grid ── */
+.bk-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.bk-stat {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(26,26,46,0.06);
+  border-top: 3px solid var(--border);
+  position: relative; overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.bk-stat:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,26,46,0.1); }
+.bk-stat::after {
+  content: ''; position: absolute; bottom: -20px; right: -20px;
+  width: 70px; height: 70px; border-radius: 50%;
+  background: radial-gradient(circle, var(--gold-dim) 0%, transparent 70%);
+}
+.bk-stat-label { font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; font-weight: 700; }
+.bk-stat-value { font-size: 1.9rem; font-weight: 800; color: var(--ink); line-height: 1; }
+.bk-stat-sub   { font-size: 0.72rem; color: var(--muted); margin-top: 5px; }
+
+/* ── Card ── */
+.bk-card {
+  background: var(--card);
+  border-radius: 18px;
+  box-shadow: 0 2px 12px rgba(26,26,46,0.06);
+  overflow: hidden;
+}
+.bk-card-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 12px;
+}
+.bk-card-title {
+  font-size: 0.92rem; font-weight: 700; color: var(--ink);
+  display: flex; align-items: center; gap: 8px;
+}
+.bk-card-title::before {
+  content: ''; display: inline-block;
+  width: 3px; height: 14px; background: var(--gold); border-radius: 2px;
+}
+.bk-card-sub { font-size: 0.75rem; color: var(--muted); }
+
+/* ── Search bar ── */
+.bk-search {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+  background: #fdfcfa;
+}
+.bk-search-input {
+  flex: 1; min-width: 200px;
+  padding: 10px 14px 10px 36px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Sarabun', sans-serif;
+  font-size: 0.85rem; color: var(--ink); background: #fff; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+.bk-search-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,169,110,0.12); }
+.bk-search-wrap { position: relative; flex: 1; }
+.bk-search-wrap::before {
+  content: '🔍'; position: absolute; left: 11px; top: 50%;
+  transform: translateY(-50%); font-size: 0.75rem; pointer-events: none; z-index: 1;
+}
+
+/* ── Buttons ── */
+.bk-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border: none; border-radius: 8px;
+  font-family: 'Sarabun', sans-serif; font-size: 0.8rem; font-weight: 700;
+  cursor: pointer; text-decoration: none;
+  transition: all 0.2s ease; letter-spacing: 0.04em; white-space: nowrap;
+}
+.bk-btn:hover { transform: translateY(-1px); }
+.bk-btn-primary   { background: var(--ink); color: #fff; }
+.bk-btn-primary:hover { background: #2a2a4a; }
+.bk-btn-gold      { background: var(--gold); color: var(--ink); }
+.bk-btn-gold:hover { filter: brightness(1.06); }
+.bk-btn-ghost     { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
+.bk-btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+.bk-btn-success   { background: #dcfce7; color: var(--success); border: 1.5px solid #86efac; }
+.bk-btn-success:hover { background: #bbf7d0; }
+.bk-btn-danger    { background: #fef2f2; color: var(--danger); border: 1.5px solid #fca5a5; }
+.bk-btn-danger:hover { background: #fee2e2; }
+.bk-btn-warning   { background: #fffbeb; color: var(--warning); border: 1.5px solid #fde68a; }
+.bk-btn-warning:hover { background: #fef3c7; }
+.bk-btn-info      { background: #eff6ff; color: var(--info); border: 1.5px solid #bfdbfe; }
+.bk-btn-info:hover { background: #dbeafe; }
+.bk-btn-approve   { background: var(--success); color: #fff; }
+.bk-btn-approve:hover { background: #15803d; box-shadow: 0 4px 12px rgba(22,163,74,0.3); }
+
+/* ── Table ── */
+.bk-table-wrap { overflow-x: auto; }
+.bk-table { width: 100%; border-collapse: collapse; min-width: 900px; }
+.bk-table thead th {
+  padding: 12px 16px; font-size: 0.68rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted);
+  border-bottom: 2px solid var(--border); text-align: left;
+  font-weight: 700; background: #fdfcfa;
+}
+.bk-table tbody td {
+  padding: 14px 16px; font-size: 0.84rem; color: var(--ink);
+  border-bottom: 1px solid var(--border); vertical-align: middle;
+}
+.bk-table tbody tr:last-child td { border-bottom: none; }
+.bk-table tbody tr { transition: background 0.15s; }
+.bk-table tbody tr:hover { background: #fdfcfa; }
+
+/* ── Cell styles ── */
+.bk-name { font-weight: 700; color: var(--ink); }
+.bk-meta { font-size: 0.74rem; color: var(--muted); margin-top: 2px; }
+.bk-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.bk-inline { display: inline; margin: 0; }
+
+/* ── Status badges ── */
+.bk-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 11px; border-radius: 20px;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.bk-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+.bk-badge-pending  { background: #fffbeb; color: #92400e; }
+.bk-badge-pending::before  { background: #f59e0b; }
+.bk-badge-approved { background: #f0fdf4; color: #166534; }
+.bk-badge-approved::before { background: var(--success); }
+.bk-badge-cancelled { background: #fef2f2; color: #991b1b; }
+.bk-badge-cancelled::before { background: var(--danger); }
+
+/* ── Empty state ── */
+.bk-empty { padding: 52px 24px; text-align: center; }
+.bk-empty-icon { font-size: 2.4rem; margin-bottom: 12px; opacity: 0.35; }
+.bk-empty-text { font-size: 0.85rem; color: var(--muted); line-height: 1.7; }
+
+/* ── Count badge ── */
+.bk-count {
+  background: var(--gold-dim); color: #a07c3a;
+  font-size: 0.7rem; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px;
+}
+
+@media (max-width: 900px) { .bk-stats { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 580px) { .bk-stats { grid-template-columns: 1fr; } }
+.bk-banner-archive { background: linear-gradient(135deg, #374151 0%, #4b5563 100%); }
+.bk-stat { border-top-color: var(--muted); }
 </style>
 
-<div class="archive-page">
-    <div class="hero-archive">
-        <h1>ข้อมูลที่จัดเก็บแล้ว</h1>
-        <p>หน้านี้ใช้สำหรับดูรายการที่ถูกจัดเก็บ และสามารถกู้คืนหรือแก้ไขข้อมูลได้</p>
-        <div class="hero-actions">
-            <a href="admin_booking_list.php" class="quick-link">กลับหน้ารออนุมัติ</a>
-            <a href="admin_booking_approved.php" class="quick-link">ไปหน้ารายการอนุมัติแล้ว</a>
-        </div>
+<div class="bk-wrap">
+
+  <div class="bk-banner bk-banner-archive">
+    <div class="bk-banner-text">
+      <h1>รายการย้อนหลัง</h1>
+      <p>ข้อมูลที่ถูกจัดเก็บแล้ว — สามารถกู้คืนหรือลบถาวรได้</p>
+    </div>
+    <div class="bk-banner-links">
+      <a href="admin_booking_list.php"     class="bk-banner-link">← รายการรออนุมัติ</a>
+      <a href="admin_booking_approved.php" class="bk-banner-link">✅ รายการอนุมัติ</a>
+    </div>
+  </div>
+
+  <?php if ( !== ''): ?>
+    <div class="bk-alert <?= ==='error'?'bk-alert-error':'bk-alert-success' ?>">
+      <?= ==='error'?'⚠':'✓' ?> <?= h() ?>
+    </div>
+  <?php endif; ?>
+
+  <div class="bk-stats" style="grid-template-columns:1fr;">
+    <div class="bk-stat">
+      <div class="bk-stat-label">รายการที่จัดเก็บทั้งหมด</div>
+      <div class="bk-stat-value"><?=  ?></div>
+      <div class="bk-stat-sub">ข้อมูลที่ archived = 1</div>
+    </div>
+  </div>
+
+  <div class="bk-card">
+    <div class="bk-card-header">
+      <div>
+        <div class="bk-card-title">รายการข้อมูลที่จัดเก็บแล้ว</div>
+        <div class="bk-card-sub">กู้คืนหรือลบถาวรได้จากที่นี่</div>
+      </div>
+      <span class="bk-count"><?=  ?> รายการ</span>
     </div>
 
-    <?php if ($message !== ''): ?>
-        <div class="alert-box <?php echo $message_type === 'error' ? 'error' : 'success'; ?>">
-            <?php echo h($message); ?>
+    <form method="GET" style="display:contents;">
+      <div class="bk-search">
+        <div class="bk-search-wrap">
+          <input type="text" name="search" class="bk-search-input"
+                 placeholder="ค้นหาชื่อ, เบอร์โทร, อีเมล, ห้องพัก..."
+                 value="<?= h() ?>">
         </div>
-    <?php endif; ?>
+        <button type="submit" class="bk-btn bk-btn-primary">ค้นหา</button>
+        <?php if (): ?><a href="<?= h() ?>" class="bk-btn bk-btn-ghost">ล้าง</a><?php endif; ?>
+      </div>
+    </form>
 
-    <div class="stat-card">
-        <div class="label">รายการที่จัดเก็บทั้งหมด</div>
-        <div class="value"><?php echo $stat_archive; ?></div>
-        <div class="sub">ข้อมูลที่ archived = 1</div>
+    <div class="bk-table-wrap">
+      <table class="bk-table">
+        <thead>
+          <tr>
+            <th style="width:50px;">#</th>
+            <th>ผู้จอง</th>
+            <th>ติดต่อ</th>
+            <th>ห้องพัก</th>
+            <th>วันเข้า–ออก</th>
+            <th>ผู้เข้าพัก</th>
+            <th>สถานะ</th>
+            <th>วันที่จอง</th>
+            <th style="width:200px;">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php if ( && ->num_rows > 0): ?>
+            <?php while ( = ->fetch_assoc()): ?>
+              <tr>
+                <td style="color:var(--muted);font-size:0.78rem;"><?= (int)['id'] ?></td>
+                <td>
+                  <div class="bk-name"><?= h(['full_name']) ?></div>
+                  <div class="bk-meta">ห้อง id: <?= (int)['room_id'] ?></div>
+                </td>
+                <td>
+                  <div><?= h(['phone']) ?></div>
+                  <div class="bk-meta"><?= h(['email']) ?></div>
+                </td>
+                <td><?= h(['room_type']) ?></td>
+                <td>
+                  <div style="font-size:0.8rem;">เข้า <?= h(['checkin_date']) ?></div>
+                  <div style="font-size:0.8rem;color:var(--muted);">ออก <?= h(['checkout_date']) ?></div>
+                </td>
+                <td><?= (int)['guests'] ?> คน</td>
+                <td>
+                  <span class="bk-badge <?= statusBadge(['booking_status']) ?>">
+                    <?= statusLabel(['booking_status']) ?>
+                  </span>
+                </td>
+                <td style="font-size:0.78rem;color:var(--muted);"><?= h(substr(['created_at'],0,16)) ?></td>
+                <td>
+                  <div class="bk-actions">
+                    <form method="POST" class="bk-inline" onsubmit="return confirm('กู้คืนรายการนี้?')">
+                      <input type="hidden" name="action" value="restore_booking">
+                      <input type="hidden" name="id" value="<?= (int)['id'] ?>">
+                      <button class="bk-btn bk-btn-success" style="font-size:0.75rem;padding:7px 12px;">↺ กู้คืน</button>
+                    </form>
+                    <form method="POST" class="bk-inline" onsubmit="return confirm('ลบถาวร — ไม่สามารถกู้คืนได้!')">
+                      <input type="hidden" name="action" value="delete_booking">
+                      <input type="hidden" name="id" value="<?= (int)['id'] ?>">
+                      <button class="bk-btn bk-btn-danger" style="font-size:0.75rem;padding:7px 12px;">🗑 ลบถาวร</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <?php endwhile; ?>
+          <?php else: ?>
+            <tr><td colspan="9">
+              <div class="bk-empty">
+                <div class="bk-empty-icon">🗂</div>
+                <div class="bk-empty-text">ยังไม่มีข้อมูลที่จัดเก็บ<br><?=  ? 'ลองเปลี่ยนคำค้นหา' : 'รายการที่จัดเก็บจะปรากฏที่นี่' ?></div>
+              </div>
+            </td></tr>
+          <?php endif; ?>
+        </tbody>
+      </table>
     </div>
-
-        <div class="panel">
-            <h2 class="section-title">รายการข้อมูลที่จัดเก็บแล้ว</h2>
-            <p class="section-desc">ค้นหา ดูรายละเอียด กู้คืน หรือแก้ไขข้อมูลได้จากหน้านี้</p>
-
-            <form method="GET" class="filter-box">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>ค้นหา</label>
-                        <input type="text" name="search" class="form-control" placeholder="ชื่อ, เบอร์โทร, อีเมล, ห้อง, หมายเหตุ" value="<?php echo h($search); ?>">
-                    </div>
-                    <div class="form-group">
-                        <label>การทำงาน</label>
-                        <div class="filter-actions">
-                            <button type="submit" class="btn btn-primary">ค้นหา</button>
-                            <a href="admin_booking_archive.php" class="btn btn-secondary">รีเซ็ต</a>
-                        </div>
-                    </div>
-                </div>
-            </form>
-
-            <div class="table-wrap">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>ผู้จอง</th>
-                            <th>ติดต่อ</th>
-                            <th>ห้อง</th>
-                            <th>ผู้เข้าพัก</th>
-                            <th>วันเข้าพัก</th>
-                            <th>หมายเหตุ</th>
-                            <th>สถานะ</th>
-                            <th>สร้างเมื่อ</th>
-                            <th>จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <?php if ($result && $result->num_rows > 0): ?>
-                        <?php while ($row = $result->fetch_assoc()): ?>
-                            <tr>
-                                <td><?php echo (int)$row['id']; ?></td>
-                                <td class="name-cell">
-                                    <strong><?php echo h($row['full_name']); ?></strong>
-                                    <div class="muted">room_id: <?php echo (int)$row['room_id']; ?></div>
-                                </td>
-                                <td>
-                                    <?php echo h($row['phone']); ?><br>
-                                    <span class="muted"><?php echo h($row['email']); ?></span>
-                                </td>
-                                <td><?php echo h($row['room_type']); ?></td>
-                                <td><?php echo (int)$row['guests']; ?> คน</td>
-                                <td>
-                                    <div>เข้า: <?php echo h($row['checkin_date']); ?></div>
-                                    <div>ออก: <?php echo h($row['checkout_date']); ?></div>
-                                </td>
-                                <td><?php echo $row['note'] !== '' ? nl2br(h($row['note'])) : '<span class="muted">-</span>'; ?></td>
-                                <td>
-                                    <span class="status-badge <?php echo h(bookingStatusClass($row['booking_status'])); ?>">
-                                        <?php echo h(bookingStatusLabel($row['booking_status'])); ?>
-                                    </span>
-                                </td>
-                                <td><?php echo h($row['created_at']); ?></td>
-                                <td>
-                                    <div class="action-group">
-                                        <form method="POST" style="display:inline;" onsubmit="return confirm('ต้องการกู้คืนข้อมูลนี้ใช่หรือไม่?');">
-                                            <input type="hidden" name="action" value="restore_booking">
-                                            <input type="hidden" name="id" value="<?php echo (int)$row['id']; ?>">
-                                            <button type="submit" class="btn btn-success btn-sm">กู้คืน</button>
-                                        </form>
-
-                                        <form method="POST" style="display:inline;" onsubmit="return confirm('ต้องการลบข้อมูลนี้ถาวรใช่หรือไม่?');">
-                                            <input type="hidden" name="action" value="delete_booking">
-                                            <input type="hidden" name="id" value="<?php echo (int)$row['id']; ?>">
-                                            <button type="submit" class="btn btn-danger btn-sm">ลบถาวร</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endwhile; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="10" style="text-align:center; padding:30px;">ยังไม่มีข้อมูลที่จัดเก็บ</td>
-                        </tr>
-                    <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+  </div>
 </div>
 
-<?php
-$stmt->close();
-$conn->close();
-include 'admin_layout_bottom.php';
-?>
+<?php ->close(); ->close(); include 'admin_layout_bottom.php'; ?>

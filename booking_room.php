@@ -479,6 +479,37 @@ a{
         width:100%;
     }
 }
+.top-action-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:12px 22px;
+    border-radius:999px;
+    text-decoration:none;
+    font-weight:700;
+    font-size:15px;
+    color:#fff;
+    background:rgba(255,255,255,0.18);
+    border:1px solid rgba(255,255,255,0.35);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    transition:all .25s ease;
+    box-shadow:0 8px 20px rgba(0,0,0,.12);
+}
+
+.top-action-btn:hover{
+    transform:translateY(-2px);
+    background:rgba(255,255,255,0.25);
+}
+
+.top-action-btn.secondary{
+    background:#1f2937;
+    border:1px solid rgba(255,255,255,0.12);
+}
+
+.top-action-btn.secondary:hover{
+    background:#111827;
+}
 </style>
 </head>
 <body>
@@ -488,6 +519,7 @@ a{
     <section class="hero">
         <div class="hero-inner">
             <a href="index.php" class="back-home-btn">← กลับหน้าหลัก</a>
+            <a href="booking_status.php" class="top-action-btn secondary">ติดตามสถานะการจอง</a>
             <h1>ระบบจองห้องพักและที่พักภายในสถาบัน</h1>
             <p>
                 เลือกห้องพักที่ต้องการจากรายการด้านล่างได้เลย

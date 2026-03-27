@@ -15,8 +15,6 @@ if (empty($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
 |--------------------------------------------------------------------------
 | DB Connection
 |--------------------------------------------------------------------------
-| ถ้ามี config.php และในนั้นมี $conn อยู่แล้ว จะใช้ของเดิม
-| ถ้าไม่มี จะ fallback ไปเชื่อมต่อแบบตรง
 */
 if (file_exists(__DIR__ . '/config.php')) {
     require_once __DIR__ . '/config.php';
@@ -412,7 +410,7 @@ include 'admin_layout_top.php';
   display:inline-flex;
   align-items:center;
   gap:6px;
-  padding:7px 11px;
+  padding:8px 12px;
   border-radius:8px;
   font-size:.78rem;
   font-weight:700;
@@ -420,6 +418,7 @@ include 'admin_layout_top.php';
   border:1px solid var(--border);
   color:var(--ink);
   background:#fff;
+  cursor:pointer;
 }
 .action-link:hover{
   border-color:var(--accent);
@@ -504,7 +503,7 @@ include 'admin_layout_top.php';
               <th>สิทธิ์</th>
               <th>ยืนยันอีเมล</th>
               <th>วันที่สมัคร</th>
-              <th style="width: 130px;">การจัดการ</th>
+              <th style="width: 150px;">การจัดการ</th>
             </tr>
           </thead>
           <tbody>
@@ -568,7 +567,7 @@ include 'admin_layout_top.php';
                   <?php if ((int)$user['id'] === (int)$_SESSION['user_id']): ?>
                     <a href="admin_profile.php" class="action-link">👁 โปรไฟล์ฉัน</a>
                   <?php else: ?>
-                    <span style="color:var(--muted);font-size:.8rem;">ดูข้อมูล</span>
+                    <a href="user_view.php?id=<?= (int)$user['id'] ?>" class="action-link">👁 ดูข้อมูล</a>
                   <?php endif; ?>
                 </td>
               </tr>
@@ -586,7 +585,7 @@ include 'admin_layout_top.php';
 
 <?php
 if (isset($stmt) && $stmt instanceof mysqli_stmt) {
-    $stmt->close();
+    $stmt->close();ฟ
 }
 include 'admin_layout_bottom.php';
 $conn->close();

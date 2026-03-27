@@ -302,57 +302,64 @@ body::before {
 
   <div class="sidebar-scroll">
 
-    <div class="menu-section">
-      <span class="menu-section-label">ภาพรวม</span>
-      <a href="admin_dashboard.php" class="menu-item <?= $activeMenu==='dashboard'?'active':'' ?>">
-        <span class="icon">📊</span><span class="text">Dashboard</span>
-      </a>
-      <a href="daily_report.php" class="menu-item <?= $activeMenu==='report'?'active':'' ?>">
-        <span class="icon">📈</span><span class="text">รายงาน</span>
-      </a>
-    </div>
+<div class="menu-section">
+  <span class="menu-section-label">ภาพรวม</span>
+  <a href="admin_dashboard.php" class="menu-item <?= $activeMenu==='dashboard'?'active':'' ?>">
+    <span class="icon">📊</span><span class="text">Dashboard</span>
+  </a>
+  <a href="daily_report.php" class="menu-item <?= $activeMenu==='report'?'active':'' ?>">
+    <span class="icon">📈</span><span class="text">รายงาน</span>
+  </a>
+</div>
 
-    <div class="menu-section">
-      <span class="menu-section-label">จัดการการจอง</span>
-      <a href="admin_booking_list.php" class="menu-item <?= $activeMenu==='booking'?'active':'' ?>">
-        <span class="icon">🏨</span><span class="text">ข้อมูลการเข้าพัก</span>
-      </a>
-      <a href="admin_booking_approved.php" class="menu-item <?= $activeMenu==='booking_approved'?'active':'' ?>">
-        <span class="icon">✅</span><span class="text">รายการอนุมัติแล้ว</span>
-      </a>
-      <a href="admin_booking_archive.php" class="menu-item <?= $activeMenu==='booking_archive'?'active':'' ?>">
-        <span class="icon">🗂️</span><span class="text">รายการย้อนหลัง</span>
-      </a>
-      <a href="manage_rooms.php" class="menu-item <?= $activeMenu==='rooms'?'active':'' ?>">
-        <span class="icon">🛏️</span><span class="text">จัดการห้องพัก</span>
-      </a>
-    </div>
+<div class="menu-section">
+  <span class="menu-section-label">จัดการการจอง</span>
+  <a href="admin_booking_list.php" class="menu-item <?= $activeMenu==='booking'?'active':'' ?>">
+    <span class="icon">🏨</span><span class="text">ข้อมูลการเข้าพัก</span>
+  </a>
+  <a href="admin_booking_approved.php" class="menu-item <?= $activeMenu==='booking_approved'?'active':'' ?>">
+    <span class="icon">✅</span><span class="text">รายการอนุมัติแล้ว</span>
+  </a>
+  <a href="admin_booking_archive.php" class="menu-item <?= $activeMenu==='booking_archive'?'active':'' ?>">
+    <span class="icon">🗂️</span><span class="text">รายการย้อนหลัง</span>
+  </a>
+  <a href="manage_rooms.php" class="menu-item <?= $activeMenu==='rooms'?'active':'' ?>">
+    <span class="icon">🛏️</span><span class="text">จัดการห้องพัก</span>
+  </a>
+</div>
 
-    <div class="menu-section">
-      <span class="menu-section-label">คอนเทนต์</span>
-      <a href="admin_add_news.php" class="menu-item <?= $activeMenu==='news_add'?'active':'' ?>">
-        <span class="icon">📰</span><span class="text">เพิ่มข่าวสาร</span>
-      </a>
-      <a href="manage_news.php" class="menu-item <?= $activeMenu==='news_manage'?'active':'' ?>">
-        <span class="icon">✏️</span><span class="text">จัดการข่าว</span>
-      </a>
-      <a href="change_banner.php" class="menu-item <?= $activeMenu==='banner'?'active':'' ?>">
-        <span class="icon">🖼️</span><span class="text">เปลี่ยนรูปหน้าเว็บ</span>
-      </a>
-      <a href="edit_about.php" class="menu-item <?= $activeMenu==='about'?'active':'' ?>">
-        <span class="icon">📝</span><span class="text">จัดการเกี่ยวกับ</span>
-      </a>
-    </div>
+<div class="menu-section">
+  <span class="menu-section-label">ผู้ใช้งาน</span>
+  <a href="manage_users.php" class="menu-item <?= $activeMenu==='users'?'active':'' ?>">
+    <span class="icon">👥</span><span class="text">จัดการผู้ใช้งาน</span>
+  </a>
+</div>
 
-    <div class="menu-section">
-      <span class="menu-section-label">ตั้งค่า</span>
-      <a href="change_password.php" class="menu-item <?= $activeMenu==='password'?'active':'' ?>">
-        <span class="icon">🔐</span><span class="text">เปลี่ยนรหัสผ่าน</span>
-        <a href="admin_profile.php" class="menu-item <?= $activeMenu==='profile'?'active':'' ?>">
-            <span class="icon">👤</span><span class="text">โปรไฟล์แอดมิน</span>
-        </a>
-      </a>
-    </div>
+<div class="menu-section">
+  <span class="menu-section-label">คอนเทนต์</span>
+  <a href="admin_add_news.php" class="menu-item <?= $activeMenu==='news_add'?'active':'' ?>">
+    <span class="icon">📰</span><span class="text">เพิ่มข่าวสาร</span>
+  </a>
+  <a href="manage_news.php" class="menu-item <?= $activeMenu==='news_manage'?'active':'' ?>">
+    <span class="icon">✏️</span><span class="text">จัดการข่าว</span>
+  </a>
+  <a href="change_banner.php" class="menu-item <?= $activeMenu==='banner'?'active':'' ?>">
+    <span class="icon">🖼️</span><span class="text">เปลี่ยนรูปหน้าเว็บ</span>
+  </a>
+  <a href="edit_about.php" class="menu-item <?= $activeMenu==='about'?'active':'' ?>">
+    <span class="icon">📝</span><span class="text">จัดการเกี่ยวกับ</span>
+  </a>
+</div>
+
+<div class="menu-section">
+  <span class="menu-section-label">ตั้งค่า</span>
+  <a href="change_password.php" class="menu-item <?= $activeMenu==='password'?'active':'' ?>">
+    <span class="icon">🔐</span><span class="text">เปลี่ยนรหัสผ่าน</span>
+  </a>
+  <a href="admin_profile.php" class="menu-item <?= $activeMenu==='profile'?'active':'' ?>">
+    <span class="icon">👤</span><span class="text">โปรไฟล์แอดมิน</span>
+  </a>
+</div>
 
   </div>
 

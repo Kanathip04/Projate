@@ -89,7 +89,7 @@ try {
     $mail->Host       = 'smtp.gmail.com';
     $mail->SMTPAuth   = true;
     $mail->Username   = 'kanathip4123@gmail.com'; // ← เปลี่ยนเป็น Gmail
-    $mail->Password   = 'uzotcwasteiaaroz';        // ← App Password
+    $mail->Password   = 'puevhxejwcyxqpdx';        // ← App Password
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
     $mail->Port       = 587;
 

@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 // check_files.php
 $files = ['profile.php', 'admin_profile.php'];
 foreach ($files as $f) {

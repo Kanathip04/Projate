@@ -1,8 +1,13 @@
 <?php
 session_start();
 
-// ล้าง session login เดิมเมื่อเข้าหน้า login
-unset($_SESSION['user_id'], $_SESSION['user_name'], $_SESSION['user_email'], $_SESSION['admin_logged_in']);
+// ถ้า login อยู่แล้ว → ไป dashboard เลย ไม่ต้องล้างอะไร
+if (!empty($_SESSION['admin_logged_in'])) {
+    header("Location: admin_dashboard.php");
+    exit;
+}
+
+// ล้างเฉพาะ OTP ที่ค้างอยู่ (ไม่แตะ session login)
 unset($_SESSION['otp_verified'], $_SESSION['otp_email']);
 
 $message = $_SESSION['otp_message'] ?? '';

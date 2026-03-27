@@ -20,7 +20,6 @@ if (!isset($activeMenu)) $activeMenu = "";
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,700&display=swap" rel="stylesheet"/>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-scm-history-item:c%3A%5Cxampp%5Chtdocs%5CProjate?%7B%22repositoryId%22%3A%22scm0%22%2C%22historyItemId%22%3A%22d51eb8f5e9b086e16dea1ef79811e748a5d0b046%22%2C%22historyItemParentId%22%3A%22f80562f551a4c14246d9405e67e6ea1c91e2c65b%22%2C%22historyItemDisplayId%22%3A%22d51eb8f%22%7D
 :root {
   --ink:      #1a1a2e;
   --ink2:     #121220;
@@ -389,6 +388,7 @@ body::before {
       <div class="topbar-sub"><?= date('l, d F Y') ?></div>
     </div>
     <div class="topbar-actions">
-      <a href="login.php" class="btn btn-ghost btn-sm">ออกจากระบบ</a>
+      <!-- ✅ เปลี่ยนจาก login.php → logout.php เพื่อทำลาย session จริงๆ -->
+      <a href="logout.php" class="btn btn-ghost btn-sm">ออกจากระบบ</a>
     </div>
   </div>

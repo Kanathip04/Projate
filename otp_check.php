@@ -2,7 +2,7 @@
 session_start();
 require_once 'config.php';
 
-$otp = trim($_POST['otp'] ?? '');
+$otp   = trim($_POST['otp'] ?? '');
 $email = $_SESSION['otp_email'] ?? '';
 
 if (empty($email)) {
@@ -56,7 +56,7 @@ $stmt = $conn->prepare("SELECT id, fullname, email FROM users WHERE email = ? LI
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $result = $stmt->get_result();
-$user = $result->fetch_assoc();
+$user   = $result->fetch_assoc();
 $stmt->close();
 
 if (!$user) {
@@ -65,14 +65,15 @@ if (!$user) {
     exit;
 }
 
-// login ทันที
-$_SESSION['user_id'] = $user['id'];
-$_SESSION['user_name'] = $user['fullname'];
-$_SESSION['user_email'] = $user['email'];
+// ✅ Set session login ให้ครบ
+$_SESSION['user_id']         = $user['id'];
+$_SESSION['user_name']       = $user['fullname'];
+$_SESSION['user_email']      = $user['email'];
+$_SESSION['admin_logged_in'] = true; // ← จุดที่หายไป ทำให้ dashboard เตะออกตลอด
 
 // ล้าง session OTP
 unset($_SESSION['otp_email'], $_SESSION['otp_message'], $_SESSION['otp_error']);
 
-// ไปหน้าหลักหลัง login
-header('Location: index.php');
+// ✅ ไปหน้า dashboard ไม่ใช่ index
+header('Location: admin_dashboard.php');
 exit;

@@ -226,7 +226,7 @@ include 'admin_layout_top.php';
             <th>สถานะ</th>
             <th>วันที่จอง</th>
             <th style="width:210px;">จัดการ</th>
-          </tr>
+          </tr>0
         </thead>
         <tbody>
           <?php if ($result && $result->num_rows > 0): ?>

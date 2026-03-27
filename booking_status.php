@@ -415,10 +415,9 @@ function statusClass($status) {
                                     <span class="label">รหัสห้อง</span>
                                     <span class="value"><?php echo htmlspecialchars($row['room_id'] ?? '-'); ?></span>
                                 </div>
-
                                 <div class="item">
-                                    <span class="label">สถานะเก็บถาวร</span>
-                                    <span class="value"><?php echo ((int)$row['archived'] === 1) ? 'เก็บถาวรแล้ว' : 'ใช้งานอยู่'; ?></span>
+                                    <span class="label">สถานะการอนุมัติ</span>
+                                    <span class="value"><?php echo statusText($currentStatus); ?></span>
                                 </div>
                             </div>
 

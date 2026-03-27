@@ -1,14 +1,11 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-if (isset($_SESSION['user_id'])) {
-    header("Location: dashboard.php");
-    exit;
-}
 session_start();
 require_once 'config.php';
+
+// ถ้า login อยู่แล้ว → ไปหน้าหลัก
+if (!empty($_SESSION['user_id'])) {
+    header("Location: index.php"); exit;
+}
 
 $error_message = '';
 
@@ -20,15 +17,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirm  = trim($_POST['confirm']  ?? '');
 
     if (empty($fullname) || empty($email) || empty($password) || empty($confirm)) {
-        $error_message = 'กรุณากรอกข้อมูลให้ครบ (ชื่อ, อีเมล, รหัสผ่าน)';
+        $error_message = 'กรุณากรอกข้อมูลให้ครบ';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error_message = 'รูปแบบอีเมลไม่ถูกต้อง';
     } elseif (strlen($password) < 6) {
         $error_message = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
     } elseif ($password !== $confirm) {
-        $error_message = 'รหัสผ่านไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง';
+        $error_message = 'รหัสผ่านไม่ตรงกัน';
     } else {
-        // ตรวจ email ซ้ำ
+        // เช็คอีเมลซ้ำ
         $stmt = $conn->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
         $stmt->bind_param("s", $email);
         $stmt->execute();
@@ -37,20 +34,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->close();
 
         if ($exists) {
-            $error_message = 'อีเมลนี้ถูกใช้งานแล้ว กรุณาใช้อีเมลอื่น';
+            $error_message = 'อีเมลนี้ถูกใช้งานแล้ว';
         } else {
-            // ✅ ใช้ชื่อคอลัมน์จริงจาก DB: fullname, email, phone, password, is_verified
+            // บันทึก user (is_verified = 0 รอยืนยัน)
             $hashed = password_hash($password, PASSWORD_DEFAULT);
-            $stmt2  = $conn->prepare("INSERT INTO users (fullname, email, phone, password, is_verified, created_at) VALUES (?, ?, ?, ?, 0, NOW())");
-            $stmt2->bind_param("ssss", $fullname, $email, $phone, $hashed);
+            $stmt   = $conn->prepare("INSERT INTO users (fullname, email, phone, password, is_verified, role, created_at) VALUES (?, ?, ?, ?, 0, 'user', NOW())");
+            $stmt->bind_param("ssss", $fullname, $email, $phone, $hashed);
 
-            if ($stmt2->execute()) {
-                $stmt2->close();
-                header("Location: login.php?registered=1");
+            if ($stmt->execute()) {
+                $stmt->close();
+                // เก็บ session สำหรับส่ง OTP
+                $_SESSION['otp_email']       = $email;
+                $_SESSION['otp_register']    = true; // บอกว่าเป็น OTP จากการสมัคร
+                header("Location: send_otp_register.php");
                 exit;
             } else {
-                $error_message = 'เกิดข้อผิดพลาดในการบันทึก: ' . $conn->error;
-                $stmt2->close();
+                $error_message = 'เกิดข้อผิดพลาด: ' . $conn->error;
+                $stmt->close();
             }
         }
     }
@@ -91,7 +91,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .optional { font-size:.65rem; color:var(--muted); text-transform:none; letter-spacing:0; margin-left:4px; }
     .input-wrap { position:relative; }
     .input-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:.9rem; pointer-events:none; }
-    input[type="text"], input[type="email"], input[type="tel"], input[type="password"] { width:100%; padding:13px 14px 13px 40px; border:1.5px solid var(--border); border-radius:var(--radius); font-family:'Sarabun',sans-serif; font-size:.95rem; color:var(--ink); background:#fafaf8; outline:none; transition:border-color .2s,box-shadow .2s; }
+    .toggle-pwd { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:.85rem; cursor:pointer; border:none; background:none; padding:2px; }
+    input[type="text"], input[type="email"], input[type="tel"], input[type="password"] { width:100%; padding:13px 40px 13px 40px; border:1.5px solid var(--border); border-radius:var(--radius); font-family:'Sarabun',sans-serif; font-size:.95rem; color:var(--ink); background:#fafaf8; outline:none; transition:border-color .2s,box-shadow .2s; }
     input:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 3px rgba(201,169,110,.13); }
     .error-msg { font-size:.74rem; color:var(--danger); margin-top:5px; display:none; }
     input.invalid { border-color:var(--danger); }
@@ -131,57 +132,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="alert-error">⚠ <?= htmlspecialchars($error_message) ?></div>
     <?php endif; ?>
 
-    <form method="POST" action="register.php" onsubmit="return validateRegister()">
+    <form method="POST" onsubmit="return validateRegister()">
 
-      <!-- ✅ fullname ตรงกับ DB -->
       <div class="form-group">
-        <label for="fullname">ชื่อ-นามสกุล</label>
+        <label>ชื่อ-นามสกุล</label>
         <div class="input-wrap">
-          <input type="text" id="fullname" name="fullname" placeholder="ชื่อ นามสกุล"
-                 value="<?= htmlspecialchars($_POST['fullname'] ?? '') ?>"/>
           <span class="input-icon">👤</span>
+          <input type="text" name="fullname" placeholder="ชื่อ นามสกุล"
+                 value="<?= htmlspecialchars($_POST['fullname'] ?? '') ?>"/>
         </div>
         <div class="error-msg" id="fullname-err">กรุณากรอกชื่อ-นามสกุล</div>
       </div>
 
       <div class="form-group">
-        <label for="email">อีเมล</label>
+        <label>อีเมล</label>
         <div class="input-wrap">
-          <input type="email" id="email" name="email" placeholder="example@company.com"
-                 value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"/>
           <span class="input-icon">✉</span>
+          <input type="email" name="email" placeholder="example@company.com"
+                 value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"/>
         </div>
         <div class="error-msg" id="email-err">กรุณากรอกอีเมลให้ถูกต้อง</div>
       </div>
 
-      <!-- ✅ phone — optional -->
       <div class="form-group">
-        <label for="phone">เบอร์โทรศัพท์ <span class="optional">(ไม่บังคับ)</span></label>
+        <label>เบอร์โทรศัพท์ <span class="optional">(ไม่บังคับ)</span></label>
         <div class="input-wrap">
-          <input type="tel" id="phone" name="phone" placeholder="08x-xxx-xxxx"
-                 value="<?= htmlspecialchars($_POST['phone'] ?? '') ?>"/>
           <span class="input-icon">📱</span>
+          <input type="tel" name="phone" placeholder="08x-xxx-xxxx"
+                 value="<?= htmlspecialchars($_POST['phone'] ?? '') ?>"/>
         </div>
       </div>
 
       <div class="form-group">
-        <label for="password">รหัสผ่าน</label>
+        <label>รหัสผ่าน</label>
         <div class="input-wrap">
-          <input type="password" id="password" name="password" placeholder="อย่างน้อย 6 ตัวอักษร"
-                 oninput="checkStrength(this.value)"/>
-          <span class="input-icon" style="left:auto;right:14px;cursor:pointer;pointer-events:all;" onclick="togglePwd('password',this)">👁</span>
           <span class="input-icon">🔒</span>
+          <input type="password" id="password" name="password"
+                 placeholder="อย่างน้อย 6 ตัวอักษร"
+                 oninput="checkStrength(this.value)"/>
+          <button type="button" class="toggle-pwd" onclick="togglePwd('password',this)">👁</button>
         </div>
         <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
         <div class="error-msg" id="pass-err">รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร</div>
       </div>
 
       <div class="form-group">
-        <label for="confirm">ยืนยันรหัสผ่าน</label>
+        <label>ยืนยันรหัสผ่าน</label>
         <div class="input-wrap">
-          <input type="password" id="confirm" name="confirm" placeholder="••••••••"/>
-          <span class="input-icon" style="left:auto;right:14px;cursor:pointer;pointer-events:all;" onclick="togglePwd('confirm',this)">👁</span>
           <span class="input-icon">🔒</span>
+          <input type="password" id="confirm" name="confirm" placeholder="••••••••"/>
+          <button type="button" class="toggle-pwd" onclick="togglePwd('confirm',this)">👁</button>
         </div>
         <div class="error-msg" id="confirm-err">รหัสผ่านไม่ตรงกัน</div>
       </div>
@@ -193,52 +193,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 </div>
 <script>
-  function togglePwd(id, icon) {
-    const inp = document.getElementById(id);
-    inp.type = inp.type === 'password' ? 'text' : 'password';
-    icon.textContent = inp.type === 'password' ? '👁' : '🙈';
+function togglePwd(id, btn) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+function checkStrength(val) {
+  const fill = document.getElementById('strength-fill');
+  let s = 0;
+  if (val.length >= 6)  s++;
+  if (val.length >= 10) s++;
+  if (/[A-Z]/.test(val)) s++;
+  if (/[0-9]/.test(val)) s++;
+  if (/[^A-Za-z0-9]/.test(val)) s++;
+  const colors = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#27ae60'];
+  fill.style.width = (s * 20) + '%';
+  fill.style.background = colors[s-1] || '#e0ddd6';
+}
+function validateRegister() {
+  ['fullname','email','password','confirm'].forEach(f => {
+    document.getElementById(f)?.classList.remove('invalid');
+    const e = document.getElementById(f+'-err');
+    if (e) e.style.display='none';
+  });
+  let valid = true;
+  const fullname = document.querySelector('[name="fullname"]').value.trim();
+  const email    = document.querySelector('[name="email"]').value.trim();
+  const pass     = document.getElementById('password').value;
+  const confirm  = document.getElementById('confirm').value;
+
+  if (!fullname) {
+    document.querySelector('[name="fullname"]').classList.add('invalid');
+    document.getElementById('fullname-err').style.display='block'; valid=false;
   }
-  function checkStrength(val) {
-    const fill = document.getElementById('strength-fill');
-    let score = 0;
-    if (val.length >= 6)  score++;
-    if (val.length >= 10) score++;
-    if (/[A-Z]/.test(val)) score++;
-    if (/[0-9]/.test(val)) score++;
-    if (/[^A-Za-z0-9]/.test(val)) score++;
-    const colors = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#27ae60'];
-    fill.style.width = (score * 20) + '%';
-    fill.style.background = colors[score - 1] || '#e0ddd6';
+  if (!email || !/\S+@\S+\.\S+/.test(email)) {
+    document.querySelector('[name="email"]').classList.add('invalid');
+    document.getElementById('email-err').style.display='block'; valid=false;
   }
-  function validateRegister() {
-    ['fullname','email','password','confirm'].forEach(f => {
-      document.getElementById(f).classList.remove('invalid');
-      document.getElementById(f + '-err').style.display = 'none';
-    });
-    let valid = true;
-    const fullname = document.getElementById('fullname').value.trim();
-    const email    = document.getElementById('email').value.trim();
-    const pass     = document.getElementById('password').value;
-    const confirm  = document.getElementById('confirm').value;
-    if (!fullname) {
-      document.getElementById('fullname').classList.add('invalid');
-      document.getElementById('fullname-err').style.display = 'block'; valid = false;
-    }
-    if (!email || !/\S+@\S+\.\S+/.test(email)) {
-      document.getElementById('email').classList.add('invalid');
-      document.getElementById('email-err').style.display = 'block'; valid = false;
-    }
-    if (!pass || pass.length < 6) {
-      document.getElementById('password').classList.add('invalid');
-      document.getElementById('pass-err').style.display = 'block'; valid = false;
-    }
-    if (pass !== confirm) {
-      document.getElementById('confirm').classList.add('invalid');
-      document.getElementById('confirm-err').style.display = 'block'; valid = false;
-    }
-    if (valid) { const b = document.getElementById('regBtn'); b.textContent = 'กำลังสมัคร...'; b.disabled = true; }
-    return valid;
+  if (!pass || pass.length < 6) {
+    document.getElementById('password').classList.add('invalid');
+    document.getElementById('pass-err').style.display='block'; valid=false;
   }
+  if (pass !== confirm) {
+    document.getElementById('confirm').classList.add('invalid');
+    document.getElementById('confirm-err').style.display='block'; valid=false;
+  }
+  if (valid) {
+    const b = document.getElementById('regBtn');
+    b.textContent='กำลังสมัคร...'; b.disabled=true;
+  }
+  return valid;
+}
 </script>
 </body>
 </html>

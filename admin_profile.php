@@ -1,6 +1,14 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
 date_default_timezone_set('Asia/Bangkok');
+echo '<pre>';
+print_r($_SESSION);
+echo '</pre>';
+exit;
 
 if (empty($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
     header("Location: login.php"); exit;
@@ -80,17 +88,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ── Load user ──
-$user = $conn->query("SELECT * FROM users WHERE id=$user_id LIMIT 1")->fetch_assoc();
+$userResult = $conn->query("SELECT * FROM users WHERE id=$user_id LIMIT 1");
+
+if (!$userResult) {
+    die("Query user failed: " . $conn->error);
+}
+
+$user = $userResult->fetch_assoc();
+
+if (!$user) {
+    header("Location: logout.php");
+    exit;
+}
 if (!$user) { header("Location: logout.php"); exit; }
 
-$join_days     = (int)((time() - strtotime($user['created_at'])) / 86400);
-$avatarInitial = strtoupper(mb_substr($user['fullname'] ?? 'A', 0, 1));
+$join_days = 0;
+if (!empty($user['created_at'])) {
+    $join_days = (int)((time() - strtotime($user['created_at'])) / 86400);
+}
+$fullnameSafe = trim($user['fullname'] ?? 'A');
+
+if (function_exists('mb_substr')) {
+    $avatarInitial = mb_strtoupper(mb_substr($fullnameSafe, 0, 1), 'UTF-8');
+} else {
+    $avatarInitial = strtoupper(substr($fullnameSafe, 0, 1));
+}
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
 $pageTitle  = "โปรไฟล์แอดมิน";
 $activeMenu = "";
-include 'admin_layout_top.php';
+// include 'admin_layout_top.php';
 ?>
 
 <style>
@@ -485,4 +513,4 @@ document.getElementById('profileForm').addEventListener('submit', () => {
 });
 </script>
 
-<?php include 'admin_layout_bottom.php'; $conn->close(); ?>
+<?php // include 'admin_layout_bottom.php'; $conn->close(); ?>

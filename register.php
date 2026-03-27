@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="panel-left">
     <div class="brand">
       <div class="brand-line"></div>
-      <div class="brand-name">Lumière</div>
+      <div class="brand-name">MSU</div>
       <div class="brand-sub">Management Platform</div>
     </div>
     <div class="panel-quote">

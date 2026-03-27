@@ -15,7 +15,7 @@ $currentTime = date('H:i');
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ลงทะเบียนกิจกรรม — Lumière</title>
+<title>ลงทะเบียนกิจกรรม — MSU</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,700&display=swap" rel="stylesheet"/>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -404,7 +404,7 @@ input:focus, select:focus {
     <div class="panel-left">
       <div class="pl-brand">
         <div class="pl-line"></div>
-        <div class="pl-name">Lumière</div>
+        <div class="pl-name">MSU</div>
         <div class="pl-sub">Activity Center</div>
       </div>
 

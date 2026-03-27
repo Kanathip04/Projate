@@ -404,7 +404,7 @@ function statusClass($status) {
 
                                 <div class="item">
                                     <span class="label">สถานะเก็บถาวร</span>
-                                    <span class="value"><?php echo ((int)$row['archived'] === 1) ? 'เก็บถาวรแล้ว' : 'รออนุมัติ'; ?></span>
+                                    <span class="value"><?php echo ((int)$row['archived'] === 1) ? 'เก็บถาวรแล้ว' : 'อนุมัติแล้ว'; ?></span>
                                 </div>
                             </div>
 

@@ -585,7 +585,7 @@ include 'admin_layout_top.php';
 
 <?php
 if (isset($stmt) && $stmt instanceof mysqli_stmt) {
-    $stmt->close();ฟ
+    $stmt->close();
 }
 include 'admin_layout_bottom.php';
 $conn->close();

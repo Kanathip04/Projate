@@ -60,8 +60,8 @@ $masked = substr($parts[0], 0, 2) . str_repeat('*', max(1, strlen($parts[0]) - 2
 <body>
 <div class="card">
   <div class="card-top">
-    <div class="brand">Lumière</div>
-    <div class="otp-icon">📧</div>
+    <div class="brand">WRBRI</div>
+    <div class="otp-icon"></div>
     <h2>ยืนยันอีเมลของคุณ</h2>
     <p>ระบบส่งรหัส OTP ไปที่<br><strong><?= htmlspecialchars($masked) ?></strong><br>กรอกรหัส 6 หลักเพื่อยืนยัน</p>
   </div>

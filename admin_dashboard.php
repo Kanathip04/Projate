@@ -1,4 +1,11 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/error_log.txt');
+
+session_start();
+// ... โค้ดที่เหลือ
 // session_start();  <--- ลบบรรทัดนี้ออก เพราะ admin_layout_top.php มี session_start() แล้ว
 
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");

@@ -3,7 +3,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isset($_SESSION['admin_logged_in'])) {
+// ✅ เช็คทั้ง login และเป็น admin เท่านั้น
+if (empty($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
     header("Location: login.php");
     exit;
 }
@@ -45,7 +46,6 @@ body {
   overflow-x: hidden;
 }
 
-/* ─── Decorative grid overlay ─── */
 body::before {
   content: '';
   position: fixed; inset: 0; pointer-events: none; z-index: 0;
@@ -66,7 +66,6 @@ body::before {
   overflow: hidden;
 }
 
-/* Glow orbs */
 .sidebar::before {
   content: '';
   position: absolute; width: 280px; height: 280px; border-radius: 50%;
@@ -104,9 +103,7 @@ body::before {
 .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
 .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(201,169,110,0.4); border-radius: 4px; }
 
-.menu-section {
-  margin-bottom: 6px;
-}
+.menu-section { margin-bottom: 6px; }
 .menu-section-label {
   font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
   color: rgba(255,255,255,0.22); padding: 10px 10px 6px; display: block;
@@ -139,7 +136,6 @@ body::before {
   border-top: 1px solid rgba(255,255,255,0.06);
 }
 
-/* User info */
 .sidebar-user {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 10px 14px;
@@ -172,7 +168,6 @@ body::before {
   position: relative; z-index: 1;
 }
 
-/* Topbar */
 .topbar {
   display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 28px;
@@ -181,12 +176,9 @@ body::before {
   font-family: 'Playfair Display', serif;
   font-size: 1.4rem; color: var(--ink); font-weight: 600;
 }
-.topbar-sub {
-  font-size: 0.78rem; color: var(--muted); margin-top: 3px;
-}
+.topbar-sub { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
 .topbar-actions { display: flex; gap: 10px; align-items: center; }
 
-/* Breadcrumb */
 .breadcrumb {
   display: flex; align-items: center; gap: 6px;
   font-size: 0.72rem; color: var(--muted); margin-bottom: 20px;
@@ -206,7 +198,6 @@ body::before {
 .lm-card-title { font-size: 0.88rem; font-weight: 700; color: var(--ink); }
 .lm-card-body { padding: 20px; }
 
-/* Stat cards */
 .stat-card {
   background: var(--card); border-radius: 12px;
   padding: 20px; position: relative; overflow: hidden;
@@ -224,7 +215,6 @@ body::before {
 .stat-value { font-size: 2rem; font-weight: 700; color: var(--ink); line-height: 1; }
 .stat-unit  { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
 
-/* Table */
 .lm-table { width: 100%; border-collapse: collapse; }
 .lm-table thead th {
   padding: 11px 14px; font-size: 0.7rem; letter-spacing: 0.1em;
@@ -239,7 +229,6 @@ body::before {
 .lm-table tbody tr:last-child td { border-bottom: none; }
 .lm-table tbody tr:hover { background: #fdfcfa; }
 
-/* Badge */
 .badge {
   display: inline-block; padding: 3px 9px; border-radius: 20px;
   font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em;
@@ -249,7 +238,6 @@ body::before {
 .badge-green  { background: #e8f5e9; color: #2e7d32; }
 .badge-gold   { background: rgba(201,169,110,0.15); color: #a07c3a; }
 
-/* Buttons */
 .btn {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 16px; border-radius: 6px; border: none;
@@ -267,7 +255,6 @@ body::before {
 .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
 .btn-sm { padding: 6px 12px; font-size: 0.78rem; }
 
-/* Search input */
 .search-wrap { position: relative; }
 .search-wrap input {
   padding: 8px 12px 8px 36px; border: 1.5px solid var(--border);
@@ -281,7 +268,6 @@ body::before {
   transform: translateY(-50%); font-size: 0.75rem; pointer-events: none;
 }
 
-/* Alert */
 .alert { padding: 12px 16px; border-radius: 8px; font-size: 0.82rem; margin-bottom: 20px; }
 .alert-danger  { background: #fdf0ef; border: 1px solid #fecaca; color: var(--danger); }
 .alert-success { background: #edf7ed; border: 1px solid #c8e6c9; color: var(--success); }
@@ -388,7 +374,7 @@ body::before {
       <div class="topbar-sub"><?= date('l, d F Y') ?></div>
     </div>
     <div class="topbar-actions">
-      <!-- ✅ เปลี่ยนจาก login.php → logout.php เพื่อทำลาย session จริงๆ -->
+      <!-- ✅ logout.php ทำลาย session จริงๆ -->
       <a href="logout.php" class="btn btn-ghost btn-sm">ออกจากระบบ</a>
     </div>
   </div>

@@ -1,17 +1,21 @@
 <?php
 session_start();
 
-// ถ้า login อยู่แล้ว → ไป dashboard เลย ไม่ต้องล้างอะไร
-if (!empty($_SESSION['admin_logged_in'])) {
-    header("Location: admin_dashboard.php");
+// ✅ ถ้า login อยู่แล้ว → redirect ตาม role ที่มีใน session
+if (!empty($_SESSION['user_id'])) {
+    if (($_SESSION['user_role'] ?? '') === 'admin') {
+        header("Location: admin_dashboard.php");
+    } else {
+        header("Location: index.php");
+    }
     exit;
 }
 
-// ล้างเฉพาะ OTP ที่ค้างอยู่ (ไม่แตะ session login)
+// ล้างเฉพาะ OTP ที่ค้างอยู่
 unset($_SESSION['otp_verified'], $_SESSION['otp_email']);
 
-$message = $_SESSION['otp_message'] ?? '';
-$error_message = $_SESSION['otp_error'] ?? '';
+$message       = $_SESSION['otp_message'] ?? '';
+$error_message = $_SESSION['otp_error']   ?? '';
 
 unset($_SESSION['otp_message'], $_SESSION['otp_error']);
 ?>
@@ -117,9 +121,9 @@ unset($_SESSION['otp_message'], $_SESSION['otp_error']);
 <script>
   function validateForm() {
     const email = document.getElementById('email');
-    const err = document.getElementById('email-err');
-    const btn = document.getElementById('loginBtn');
-    let valid = true;
+    const err   = document.getElementById('email-err');
+    const btn   = document.getElementById('loginBtn');
+    let valid   = true;
 
     email.classList.remove('invalid');
     err.style.display = 'none';

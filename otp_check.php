@@ -17,6 +17,7 @@ if (empty($otp)) {
     exit;
 }
 
+// ตรวจสอบ OTP
 $stmt = $conn->prepare("
     SELECT * 
     FROM email_otps 
@@ -51,8 +52,8 @@ $stmt->bind_param("s", $email);
 $stmt->execute();
 $stmt->close();
 
-// ดึงข้อมูล user
-$stmt = $conn->prepare("SELECT id, fullname, email FROM users WHERE email = ? LIMIT 1");
+// ✅ ดึงข้อมูล user รวมถึง role ด้วย
+$stmt = $conn->prepare("SELECT id, fullname, email, role FROM users WHERE email = ? LIMIT 1");
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -65,15 +66,24 @@ if (!$user) {
     exit;
 }
 
-// ✅ Set session login ให้ครบ
-$_SESSION['user_id']         = $user['id'];
-$_SESSION['user_name']       = $user['fullname'];
-$_SESSION['user_email']      = $user['email'];
-$_SESSION['admin_logged_in'] = true; // ← จุดที่หายไป ทำให้ dashboard เตะออกตลอด
+// ✅ Set session ให้ครบ รวม role
+$_SESSION['user_id']    = $user['id'];
+$_SESSION['user_name']  = $user['fullname'];
+$_SESSION['user_email'] = $user['email'];
+$_SESSION['user_role']  = $user['role']; // 'admin' หรือ 'user'
+
+// admin ได้ admin_logged_in ด้วย เพื่อให้ admin_layout_top.php เช็คได้
+if ($user['role'] === 'admin') {
+    $_SESSION['admin_logged_in'] = true;
+}
 
 // ล้าง session OTP
 unset($_SESSION['otp_email'], $_SESSION['otp_message'], $_SESSION['otp_error']);
 
-// ✅ ไปหน้า dashboard ไม่ใช่ index
-header('Location: admin_dashboard.php');
+// ✅ Redirect ตาม role
+if ($user['role'] === 'admin') {
+    header('Location: admin_dashboard.php');
+} else {
+    header('Location: index.php');
+}
 exit;

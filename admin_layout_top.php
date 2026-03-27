@@ -296,8 +296,8 @@ body::before {
 <div class="sidebar">
   <div class="sidebar-brand">
     <div class="sidebar-brand-line"></div>
-    <div class="sidebar-brand-name">MSU</div>
-    <div class="sidebar-brand-sub">BOOKING ADMIN</div>
+    <div class="sidebar-brand-name">สถาบันวิจัยวลัยรุกขเวช</div>
+    <div class="sidebar-brand-sub">มหาวิทยาลัยมหาสารคาม</div>
   </div>
 
   <div class="sidebar-scroll">

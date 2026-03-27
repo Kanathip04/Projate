@@ -116,9 +116,9 @@ if (function_exists('mb_substr')) {
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
-$pageTitle = "โปรไฟล์แอดมิน";
-$activeMenu = "profile";   // ← สำคัญ: ให้ตรงกับค่าใน layout
-require_once "admin_layout.php";
+$pageTitle  = "โปรไฟล์แอดมิน";
+$activeMenu = "";
+// include 'admin_layout_top.php';
 ?>
 
 <style>

@@ -64,27 +64,35 @@ if (!$stmt->execute()) {
 $result = $stmt->get_result();
 
 function getBookingStatus($row) {
+    if (isset($row['archived']) && (int)$row['archived'] === 1) {
+        return 'unavailable';
+    }
+
     if (!empty($row['booking_status'])) {
         return $row['booking_status'];
     }
+
     if (!empty($row['status'])) {
         return $row['status'];
     }
+
     return 'pending';
 }
 
 function statusText($status) {
     switch ($status) {
-        case 'pending':
-            return 'รออนุมัติ';
         case 'approved':
             return 'อนุมัติแล้ว';
+        case 'pending':
+            return 'รออนุมัติ';
         case 'rejected':
             return 'ไม่อนุมัติ';
         case 'cancelled':
             return 'ยกเลิกแล้ว';
         case 'completed':
             return 'เสร็จสิ้น';
+        case 'unavailable':
+            return 'ไม่พร้อมใช้งาน';
         default:
             return 'ไม่ทราบสถานะ';
     }
@@ -92,16 +100,18 @@ function statusText($status) {
 
 function statusClass($status) {
     switch ($status) {
-        case 'pending':
-            return 'pending';
         case 'approved':
             return 'approved';
+        case 'pending':
+            return 'pending';
         case 'rejected':
             return 'rejected';
         case 'cancelled':
             return 'cancelled';
         case 'completed':
             return 'completed';
+        case 'unavailable':
+            return 'unavailable';
         default:
             return 'unknown';
     }
@@ -315,6 +325,10 @@ function statusClass($status) {
                 font-size:24px;
             }
         }
+        .unavailable{
+    background:#e5e7eb;
+    color:#374151;
+}
     </style>
 </head>
 <body>

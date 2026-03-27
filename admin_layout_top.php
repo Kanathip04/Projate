@@ -348,6 +348,9 @@ body::before {
       <span class="menu-section-label">ตั้งค่า</span>
       <a href="change_password.php" class="menu-item <?= $activeMenu==='password'?'active':'' ?>">
         <span class="icon">🔐</span><span class="text">เปลี่ยนรหัสผ่าน</span>
+          <a href="profile.php" class="menu-item <?= $activeMenu==='about'?'active':'' ?>">
+            <span class="icon">📝</span><span class="text">จัดการเกี่ยวกับ</span>
+          </a>
       </a>
     </div>
 

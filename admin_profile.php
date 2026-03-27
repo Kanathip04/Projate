@@ -1,37 +1,38 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
 date_default_timezone_set('Asia/Bangkok');
+echo '<pre>';
+print_r($_SESSION);
+echo '</pre>';
+exit;
 
-// ต้อง login ก่อน
-if (empty($_SESSION['user_id'])) {
+if (empty($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
     header("Location: login.php"); exit;
 }
 
-// Admin → ไปหน้า admin_profile แทน
-if (($_SESSION['user_role'] ?? '') === 'admin') {
-    header("Location: admin_profile.php"); exit;
-}
-
-// ── เฉพาะ user ทั่วไปเท่านั้นที่เข้าถึงหน้านี้ได้ ──
-require_once 'config.php';
+$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
+$conn->set_charset("utf8mb4");
+if ($conn->connect_error) die("DB Error: " . $conn->connect_error);
 
 $user_id = (int)$_SESSION['user_id'];
 $message = ''; $msg_type = '';
 
+// ── Handle POST ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'update_profile') {
-        $fullname   = trim($_POST['fullname']   ?? '');
-        $phone      = trim($_POST['phone']      ?? '');
-        $gender     = trim($_POST['gender']     ?? '');
-        $birth_date = trim($_POST['birth_date'] ?? '');
-        $address    = trim($_POST['address']    ?? '');
-        $bio        = trim($_POST['bio']        ?? '');
+        $fullname = trim($_POST['fullname'] ?? '');
+        $phone    = trim($_POST['phone']    ?? '');
 
         if (empty($fullname)) {
             $message = 'กรุณากรอกชื่อ-นามสกุล'; $msg_type = 'error';
         } else {
+            // Avatar upload
             $avatar_path = '';
             if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
                 $upload_dir = __DIR__ . '/uploads/avatars/';
@@ -52,17 +53,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (empty($message)) {
                 if ($avatar_path) {
-                    $st = $conn->prepare("UPDATE users SET fullname=?,phone=?,gender=?,birth_date=?,address=?,bio=?,avatar=? WHERE id=?");
-                    $st->bind_param("sssssssi",$fullname,$phone,$gender,$birth_date,$address,$bio,$avatar_path,$user_id);
+                    $st = $conn->prepare("UPDATE users SET fullname=?, phone=?, avatar=? WHERE id=?");
+                    $st->bind_param("sssi", $fullname, $phone, $avatar_path, $user_id);
                 } else {
-                    $st = $conn->prepare("UPDATE users SET fullname=?,phone=?,gender=?,birth_date=?,address=?,bio=? WHERE id=?");
-                    $st->bind_param("ssssssi",$fullname,$phone,$gender,$birth_date,$address,$bio,$user_id);
+                    $st = $conn->prepare("UPDATE users SET fullname=?, phone=? WHERE id=?");
+                    $st->bind_param("ssi", $fullname, $phone, $user_id);
                 }
                 if ($st->execute()) {
                     $_SESSION['user_name'] = $fullname;
                     $message = 'อัปเดตข้อมูลเรียบร้อยแล้ว'; $msg_type = 'success';
                 } else {
-                    $message = 'เกิดข้อผิดพลาด: '.$st->error; $msg_type = 'error';
+                    $message = 'เกิดข้อผิดพลาด: ' . $st->error; $msg_type = 'error';
                 }
                 $st->close();
             }
@@ -79,270 +80,437 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $h  = password_hash($new_pass, PASSWORD_DEFAULT);
             $st = $conn->prepare("UPDATE users SET password=? WHERE id=?");
-            $st->bind_param("si",$h,$user_id); $st->execute(); $st->close();
+            $st->bind_param("si", $h, $user_id);
+            $st->execute(); $st->close();
             $message = 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว'; $msg_type = 'success';
         }
     }
 }
 
-$user = $conn->query("SELECT * FROM users WHERE id=$user_id LIMIT 1")->fetch_assoc();
+// ── Load user ──
+$userResult = $conn->query("SELECT * FROM users WHERE id=$user_id LIMIT 1");
+
+if (!$userResult) {
+    die("Query user failed: " . $conn->error);
+}
+
+$user = $userResult->fetch_assoc();
+
+if (!$user) {
+    header("Location: logout.php");
+    exit;
+}
 if (!$user) { header("Location: logout.php"); exit; }
 
-// Stats
-$bk_res        = $conn->query("SELECT COUNT(*) c FROM room_bookings WHERE email='".$conn->real_escape_string($user['email'])."'");
-$booking_count = $bk_res ? (int)$bk_res->fetch_assoc()['c'] : 0;
-$join_days     = (int)((time() - strtotime($user['created_at'])) / 86400);
+$join_days = 0;
+if (!empty($user['created_at'])) {
+    $join_days = (int)((time() - strtotime($user['created_at'])) / 86400);
+}
+$fullnameSafe = trim($user['fullname'] ?? 'A');
 
-function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES,'UTF-8'); }
-$avatarInitial = strtoupper(mb_substr($user['fullname']??'U',0,1));
+if (function_exists('mb_substr')) {
+    $avatarInitial = mb_strtoupper(mb_substr($fullnameSafe, 0, 1), 'UTF-8');
+} else {
+    $avatarInitial = strtoupper(substr($fullnameSafe, 0, 1));
+}
+
+function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+
+$pageTitle = "โปรไฟล์แอดมิน";
+$activeMenu = "profile";   // ← สำคัญ: ให้ตรงกับค่าใน layout
+require_once "admin_layout.php";
 ?>
-<!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>โปรไฟล์ — สถาบันวิจัยวลัยรุกขเวช</title>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,700&display=swap" rel="stylesheet"/>
+
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-:root{--ink:#1a1a2e;--gold:#c9a96e;--gold-dim:rgba(201,169,110,0.12);--bg:#f5f1eb;--card:#fff;--muted:#7a7a8c;--border:#e8e4de;--danger:#dc2626;--success:#16a34a;}
-body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);}
+:root{--gold:#c9a96e;--gold-dim:rgba(201,169,110,0.12);--ink:#1a1a2e;--card:#fff;--muted:#7a7a8c;--border:#e8e4de;--danger:#dc2626;--success:#16a34a;}
 
-.pf-nav{background:#fff;padding:0 48px;height:64px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 0 var(--border);position:sticky;top:0;z-index:100;}
-.pf-nav-brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink);}
-.pf-nav-brand img{height:44px;}
-.pf-nav-brand-text{font-size:0.88rem;font-weight:700;}
-.pf-nav-brand-sub{font-size:0.7rem;color:var(--muted);}
-.pf-nav-links{display:flex;align-items:center;gap:8px;}
-.pf-nav-link{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:0.82rem;font-weight:600;text-decoration:none;transition:all .2s;}
-.ghost{color:var(--muted);}.ghost:hover{background:var(--bg);color:var(--ink);}
-.danger{color:var(--danger);}.danger:hover{background:#fef2f2;}
+.ap-wrap{ max-width:860px; margin:0 auto; padding:0 0 48px; }
 
-.pf-hero{background:var(--ink);padding:36px 48px;display:flex;align-items:center;gap:32px;position:relative;overflow:hidden;}
-.pf-hero::before{content:'';position:absolute;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(201,169,110,0.13) 0%,transparent 70%);top:-140px;right:-80px;pointer-events:none;}
-.pf-hero::after{content:'';position:absolute;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(201,169,110,0.08) 0%,transparent 70%);bottom:-80px;left:-40px;pointer-events:none;}
-.av-wrap{position:relative;flex-shrink:0;z-index:1;}
-.av{width:96px;height:96px;border-radius:50%;background:var(--gold-dim);border:3px solid rgba(201,169,110,0.5);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-style:italic;font-size:2.4rem;color:var(--gold);overflow:hidden;}
-.av img{width:100%;height:100%;object-fit:cover;}
-.av-btn{position:absolute;bottom:2px;right:2px;width:28px;height:28px;border-radius:50%;background:var(--gold);border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;font-size:0.72rem;cursor:pointer;transition:transform .2s;}
-.av-btn:hover{transform:scale(1.1);}
-.hero-info{flex:1;z-index:1;}
-.hero-name{font-family:'Playfair Display',serif;font-style:italic;font-size:1.8rem;color:#fff;margin-bottom:5px;}
-.hero-email{font-size:0.8rem;color:rgba(255,255,255,0.5);margin-bottom:12px;}
-.hero-badges{display:flex;gap:8px;flex-wrap:wrap;}
-.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 11px;border-radius:20px;font-size:0.67rem;font-weight:700;letter-spacing:.06em;}
-.b-member{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.65);border:1px solid rgba(255,255,255,0.2);}
-.b-verified{background:rgba(22,163,74,0.2);color:#4ade80;border:1px solid rgba(22,163,74,0.3);}
-.hero-stats{display:flex;gap:30px;z-index:1;flex-shrink:0;}
-.hs{text-align:center;}
-.hs-val{font-size:1.6rem;font-weight:800;color:#fff;}
-.hs-lbl{font-size:0.63rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-top:3px;}
+/* Alert */
+.ap-alert{ display:flex; align-items:center; gap:10px; padding:13px 18px; border-radius:12px; font-size:0.85rem; font-weight:600; margin-bottom:22px; animation:apDown .3s ease; }
+@keyframes apDown{ from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+.ap-alert-success{ background:#f0fdf4; border:1.5px solid #86efac; color:var(--success); }
+.ap-alert-error  { background:#fef2f2; border:1.5px solid #fca5a5; color:var(--danger); }
 
-.pf-main{max-width:1000px;margin:0 auto;padding:28px 24px 64px;display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;}
+/* Hero banner */
+.ap-hero{
+  background:var(--ink); border-radius:18px;
+  padding:32px 36px; display:flex; align-items:center; gap:28px;
+  margin-bottom:22px; position:relative; overflow:hidden;
+}
+.ap-hero::before{
+  content:''; position:absolute;
+  width:320px; height:320px; border-radius:50%;
+  background:radial-gradient(circle,rgba(201,169,110,0.13) 0%,transparent 70%);
+  top:-120px; right:-60px; pointer-events:none;
+}
+.ap-hero::after{
+  content:''; position:absolute;
+  width:180px; height:180px; border-radius:50%;
+  background:radial-gradient(circle,rgba(201,169,110,0.08) 0%,transparent 70%);
+  bottom:-60px; left:-30px; pointer-events:none;
+}
 
-.pf-alert-wrap{max-width:1000px;margin:16px auto 0;padding:0 24px;}
-.pf-alert{display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:12px;font-size:0.85rem;font-weight:600;}
-.a-success{background:#f0fdf4;border:1.5px solid #86efac;color:var(--success);}
-.a-error{background:#fef2f2;border:1.5px solid #fca5a5;color:var(--danger);}
+/* Avatar */
+.ap-av-wrap{ position:relative; flex-shrink:0; z-index:1; }
+.ap-av{
+  width:88px; height:88px; border-radius:50%;
+  background:var(--gold-dim); border:3px solid rgba(201,169,110,0.5);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Playfair Display',serif; font-style:italic;
+  font-size:2.2rem; color:var(--gold); overflow:hidden;
+}
+.ap-av img{ width:100%; height:100%; object-fit:cover; }
+.ap-av-btn{
+  position:absolute; bottom:2px; right:2px;
+  width:26px; height:26px; border-radius:50%;
+  background:var(--gold); border:2px solid var(--ink);
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.68rem; cursor:pointer; transition:transform .2s;
+}
+.ap-av-btn:hover{ transform:scale(1.1); }
 
-.card{background:var(--card);border-radius:18px;box-shadow:0 2px 12px rgba(26,26,46,.06);overflow:hidden;margin-bottom:20px;}
-.card-hd{padding:15px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
-.card-ico{width:32px;height:32px;border-radius:8px;background:var(--gold-dim);border:1.5px solid rgba(201,169,110,0.25);display:flex;align-items:center;justify-content:center;font-size:0.85rem;}
-.card-title{font-size:0.87rem;font-weight:700;color:var(--ink);}
-.card-bd{padding:20px;}
+/* Hero info */
+.ap-hero-info{ flex:1; z-index:1; }
+.ap-hero-name{
+  font-family:'Playfair Display',serif; font-style:italic;
+  font-size:1.7rem; color:#fff; margin-bottom:4px;
+}
+.ap-hero-email{ font-size:0.8rem; color:rgba(255,255,255,0.5); margin-bottom:12px; }
+.ap-hero-badges{ display:flex; gap:8px; }
+.ap-badge{
+  display:inline-flex; align-items:center; gap:5px;
+  padding:4px 12px; border-radius:20px;
+  font-size:0.68rem; font-weight:700; letter-spacing:.06em;
+}
+.ap-badge-admin{ background:rgba(201,169,110,0.2); color:var(--gold); border:1px solid rgba(201,169,110,0.35); }
+.ap-badge-verified{ background:rgba(22,163,74,0.2); color:#4ade80; border:1px solid rgba(22,163,74,0.3); }
 
-.fg-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.fg{}.fg.full{grid-column:1/-1;}
-.fg label{display:block;font-size:0.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
-.iw{position:relative;}
-.ii{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:0.82rem;color:var(--muted);pointer-events:none;}
-.inp,.sel,.ta{width:100%;padding:10px 12px 10px 36px;border:1.5px solid var(--border);border-radius:10px;font-family:'Sarabun',sans-serif;font-size:0.87rem;color:var(--ink);background:#fafaf8;outline:none;transition:border-color .2s,box-shadow .2s;}
-.inp:focus,.sel:focus,.ta:focus{border-color:var(--gold);background:#fff;box-shadow:0 0 0 3px rgba(201,169,110,.12);}
-.inp[readonly]{background:#f0ece6;color:var(--muted);cursor:not-allowed;}
-.ta{padding:10px 12px;min-height:80px;resize:vertical;}
-.sel{appearance:none;-webkit-appearance:none;}
-.sw::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:0.75rem;color:var(--muted);pointer-events:none;}
-.btn-row{display:flex;justify-content:flex-end;margin-top:16px;}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;transition:all .2s;}
-.btn:hover{transform:translateY(-1px);}
-.btn-ink{background:var(--ink);color:#fff;}.btn-ink:hover{background:#2a2a4a;box-shadow:0 6px 16px rgba(26,26,46,.2);}
-.sbar{height:4px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden;}
-.sfill{height:100%;width:0%;border-radius:2px;transition:width .3s,background .3s;}
+.ap-hero-stat{ z-index:1; text-align:center; flex-shrink:0; }
+.ap-stat-val{ font-size:1.6rem; font-weight:800; color:#fff; }
+.ap-stat-lbl{ font-size:0.63rem; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-top:3px; }
 
-.il{display:flex;flex-direction:column;gap:14px;}
-.ii-item{display:flex;align-items:flex-start;gap:11px;}
-.ii-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);flex-shrink:0;margin-top:5px;}
-.ii-lbl{font-size:0.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px;}
-.ii-val{font-size:0.87rem;font-weight:600;color:var(--ink);}
+/* Grid */
+.ap-grid{ display:grid; grid-template-columns:1fr 300px; gap:20px; align-items:start; }
 
-.bk{display:flex;align-items:center;gap:11px;padding:11px;border-radius:10px;border:1.5px solid var(--border);background:#fafaf8;margin-bottom:9px;transition:border-color .2s;}
-.bk:hover{border-color:var(--gold);}
-.bk:last-child{margin-bottom:0;}
-.bk-ico{font-size:1.1rem;flex-shrink:0;}
-.bk-room{font-size:0.83rem;font-weight:700;color:var(--ink);}
-.bk-date{font-size:0.72rem;color:var(--muted);margin-top:2px;}
-.bk-st{margin-left:auto;flex-shrink:0;display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:0.67rem;font-weight:700;}
-.bk-st.approved{background:#f0fdf4;color:var(--success);}
-.bk-st.pending{background:#fffbeb;color:#92400e;}
-.bk-st.cancelled{background:#fef2f2;color:var(--danger);}
-.bk-empty{text-align:center;padding:24px;color:var(--muted);font-size:0.82rem;}
+/* Card */
+.ap-card{ background:var(--card); border-radius:18px; box-shadow:0 2px 12px rgba(26,26,46,.06); overflow:hidden; margin-bottom:20px; }
+.ap-card-header{ padding:16px 22px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+.ap-card-icon{ width:34px; height:34px; border-radius:8px; background:var(--gold-dim); border:1.5px solid rgba(201,169,110,0.25); display:flex; align-items:center; justify-content:center; font-size:0.9rem; }
+.ap-card-title{ font-size:0.88rem; font-weight:700; color:var(--ink); }
+.ap-card-body{ padding:22px; }
 
-#avatar-file{display:none;}
+/* Form */
+.ap-fg{ margin-bottom:18px; }
+.ap-fg label{ display:block; font-size:0.67rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:7px; }
+.ap-iw{ position:relative; }
+.ap-ii{ position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:0.85rem; color:var(--muted); pointer-events:none; }
+.ap-input, .ap-textarea{
+  width:100%; padding:11px 12px 11px 36px;
+  border:1.5px solid var(--border); border-radius:10px;
+  font-family:'Sarabun',sans-serif; font-size:0.88rem;
+  color:var(--ink); background:#fafaf8; outline:none;
+  transition:border-color .2s, box-shadow .2s;
+}
+.ap-input:focus, .ap-textarea:focus{
+  border-color:var(--gold); background:#fff;
+  box-shadow:0 0 0 3px rgba(201,169,110,.12);
+}
+.ap-input[readonly]{ background:#f0ece6; color:var(--muted); cursor:not-allowed; }
+.ap-textarea{ padding:11px 12px; min-height:80px; resize:vertical; }
 
-@media(max-width:820px){.pf-main{grid-template-columns:1fr;}.pf-hero{flex-direction:column;text-align:center;padding:28px 24px;}.hero-stats{justify-content:center;}.pf-nav{padding:0 20px;}}
-@media(max-width:560px){.fg-grid{grid-template-columns:1fr;}.fg.full{grid-column:1;}.hero-name{font-size:1.4rem;}}
+/* ✅ Save button — จุดหลักที่เพิ่ม */
+.ap-btn-row{
+  display:flex; align-items:center; justify-content:flex-end;
+  gap:12px; margin-top:20px;
+  padding-top:18px; border-top:1px solid var(--border);
+}
+.ap-btn{
+  display:inline-flex; align-items:center; gap:7px;
+  padding:11px 24px; border:none; border-radius:10px;
+  font-family:'Sarabun',sans-serif; font-size:0.85rem;
+  font-weight:700; cursor:pointer; transition:all .2s;
+  letter-spacing:.04em; text-decoration:none;
+}
+.ap-btn:hover{ transform:translateY(-1px); }
+.ap-btn-primary{ background:var(--ink); color:#fff; }
+.ap-btn-primary:hover{ background:#2a2a4a; box-shadow:0 6px 16px rgba(26,26,46,.2); }
+.ap-btn-primary:disabled{ opacity:.6; cursor:not-allowed; transform:none; }
+.ap-btn-ghost{ background:transparent; color:var(--muted); border:1.5px solid var(--border); }
+.ap-btn-ghost:hover{ border-color:var(--gold); color:var(--gold); }
+
+/* Info list */
+.ap-info-list{ display:flex; flex-direction:column; gap:14px; }
+.ap-info-item{ display:flex; align-items:flex-start; gap:11px; }
+.ap-info-dot{ width:7px; height:7px; border-radius:50%; background:var(--gold); flex-shrink:0; margin-top:5px; }
+.ap-info-lbl{ font-size:0.67rem; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:2px; }
+.ap-info-val{ font-size:0.87rem; font-weight:600; color:var(--ink); }
+
+/* Password strength */
+.ap-sbar{ height:4px; background:var(--border); border-radius:2px; margin-top:6px; overflow:hidden; }
+.ap-sfill{ height:100%; width:0%; border-radius:2px; transition:width .3s, background .3s; }
+
+#ap-avatar-file{ display:none; }
+
+@media(max-width:760px){
+  .ap-grid{ grid-template-columns:1fr; }
+  .ap-hero{ flex-direction:column; text-align:center; padding:28px 22px; }
+}
 </style>
-</head>
-<body>
 
-<nav class="pf-nav">
-  <a href="index.php" class="pf-nav-brand">
-    <img src="Logo.png" alt="Logo">
-    <div>
-      <div class="pf-nav-brand-text">สถาบันวิจัยวลัยรุกขเวช</div>
-      <div class="pf-nav-brand-sub">มหาวิทยาลัยมหาสารคาม</div>
-    </div>
-  </a>
-  <div class="pf-nav-links">
-    <a href="index.php"        class="pf-nav-link ghost">🏠 หน้าหลัก</a>
-    <a href="booking_room.php" class="pf-nav-link ghost">🏨 จองห้องพัก</a>
-    <a href="logout.php"       class="pf-nav-link danger">🚪 ออกจากระบบ</a>
-  </div>
-</nav>
+<div class="ap-wrap">
 
-<div class="pf-hero">
-  <div class="av-wrap">
-    <div class="av" id="avDisplay">
-      <?php if (!empty($user['avatar'])): ?>
-        <img src="<?= h($user['avatar']) ?>" alt="avatar">
-      <?php else: ?>
-        <?= $avatarInitial ?>
-      <?php endif; ?>
-    </div>
-    <label for="avatar-file" class="av-btn" title="เปลี่ยนรูป">📷</label>
-  </div>
-  <div class="hero-info">
-    <div class="hero-name"><?= h($user['fullname'] ?? 'ผู้ใช้งาน') ?></div>
-    <div class="hero-email"><?= h($user['email']) ?></div>
-    <div class="hero-badges">
-      <span class="badge b-member">👤 Member</span>
-      <?php if ($user['is_verified']): ?>
-        <span class="badge b-verified">✓ ยืนยันอีเมลแล้ว</span>
-      <?php endif; ?>
-    </div>
-  </div>
-  <div class="hero-stats">
-    <div class="hs"><div class="hs-val"><?= $booking_count ?></div><div class="hs-lbl">การจอง</div></div>
-    <div class="hs"><div class="hs-val"><?= $join_days ?></div><div class="hs-lbl">วันที่ใช้งาน</div></div>
-  </div>
-</div>
-
-<?php if ($message): ?>
-  <div class="pf-alert-wrap">
-    <div class="pf-alert <?= $msg_type==='error'?'a-error':'a-success' ?>">
+  <?php if ($message): ?>
+    <div class="ap-alert <?= $msg_type==='error'?'ap-alert-error':'ap-alert-success' ?>">
       <?= $msg_type==='error'?'⚠':'✓' ?> <?= h($message) ?>
     </div>
-  </div>
-<?php endif; ?>
+  <?php endif; ?>
 
-<div class="pf-main">
-  <div>
-    <div class="card">
-      <div class="card-hd"><div class="card-ico">✏️</div><div class="card-title">แก้ไขข้อมูลส่วนตัว</div></div>
-      <div class="card-bd">
-        <form method="POST" enctype="multipart/form-data">
-          <input type="hidden" name="action" value="update_profile">
-          <input type="file" id="avatar-file" name="avatar" accept="image/*" onchange="previewAv(this)">
-          <div class="fg-grid">
-            <div class="fg full"><label>ชื่อ-นามสกุล *</label><div class="iw"><span class="ii">👤</span><input class="inp" type="text" name="fullname" value="<?= h($user['fullname']??'') ?>" required></div></div>
-            <div class="fg"><label>อีเมล</label><div class="iw"><span class="ii">✉️</span><input class="inp" type="text" value="<?= h($user['email']) ?>" readonly></div></div>
-            <div class="fg"><label>เบอร์โทรศัพท์</label><div class="iw"><span class="ii">📱</span><input class="inp" type="text" name="phone" value="<?= h($user['phone']??'') ?>" placeholder="08x-xxx-xxxx"></div></div>
-            <div class="fg"><label>เพศ</label><div class="iw sw"><span class="ii">⚧</span><select class="sel" name="gender"><option value="">ไม่ระบุ</option><option value="ชาย" <?= ($user['gender']??'')==='ชาย'?'selected':'' ?>>ชาย</option><option value="หญิง" <?= ($user['gender']??'')==='หญิง'?'selected':'' ?>>หญิง</option><option value="อื่นๆ" <?= ($user['gender']??'')==='อื่นๆ'?'selected':'' ?>>อื่นๆ</option></select></div></div>
-            <div class="fg"><label>วันเกิด</label><div class="iw"><span class="ii">🎂</span><input class="inp" type="date" name="birth_date" value="<?= h($user['birth_date']??'') ?>"></div></div>
-            <div class="fg full"><label>ที่อยู่</label><div class="iw"><span class="ii">🏠</span><input class="inp" type="text" name="address" value="<?= h($user['address']??'') ?>" placeholder="ที่อยู่ของคุณ"></div></div>
-            <div class="fg full"><label>แนะนำตัวเอง</label><div class="iw"><textarea class="ta" name="bio" placeholder="เล่าเกี่ยวกับตัวคุณสักเล็กน้อย..."><?= h($user['bio']??'') ?></textarea></div></div>
-          </div>
-          <div class="btn-row"><button type="submit" class="btn btn-ink">💾 บันทึกข้อมูล</button></div>
-        </form>
+  <!-- Hero -->
+  <div class="ap-hero">
+    <div class="ap-av-wrap">
+      <div class="ap-av" id="apAvDisplay">
+        <?php if (!empty($user['avatar'])): ?>
+          <img src="<?= h($user['avatar']) ?>" alt="avatar">
+        <?php else: ?>
+          <?= $avatarInitial ?>
+        <?php endif; ?>
+      </div>
+      <label for="ap-avatar-file" class="ap-av-btn" title="เปลี่ยนรูปโปรไฟล์">📷</label>
+    </div>
+
+    <div class="ap-hero-info">
+      <div class="ap-hero-name"><?= h($user['fullname'] ?? 'Admin') ?></div>
+      <div class="ap-hero-email"><?= h($user['email']) ?></div>
+      <div class="ap-hero-badges">
+        <span class="ap-badge ap-badge-admin">⚡ Administrator</span>
+        <?php if ($user['is_verified']): ?>
+          <span class="ap-badge ap-badge-verified">✓ ยืนยันอีเมลแล้ว</span>
+        <?php endif; ?>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-hd"><div class="card-ico">🔐</div><div class="card-title">เปลี่ยนรหัสผ่าน</div></div>
-      <div class="card-bd">
-        <form method="POST">
-          <input type="hidden" name="action" value="change_password">
-          <div class="fg-grid">
-            <div class="fg"><label>รหัสผ่านใหม่</label><div class="iw"><span class="ii">🔑</span><input class="inp" type="password" name="new_password" placeholder="อย่างน้อย 6 ตัวอักษร" required oninput="checkStr(this.value)"></div><div class="sbar"><div class="sfill" id="sfill"></div></div></div>
-            <div class="fg"><label>ยืนยันรหัสผ่านใหม่</label><div class="iw"><span class="ii">🔑</span><input class="inp" type="password" name="confirm_password" placeholder="••••••••" required></div></div>
-          </div>
-          <div class="btn-row"><button type="submit" class="btn btn-ink">🔄 เปลี่ยนรหัสผ่าน</button></div>
-        </form>
-      </div>
+    <div class="ap-hero-stat">
+      <div class="ap-stat-val"><?= $join_days ?></div>
+      <div class="ap-stat-lbl">วันที่ใช้งาน</div>
     </div>
   </div>
 
-  <div>
-    <div class="card">
-      <div class="card-hd"><div class="card-ico">🔖</div><div class="card-title">ข้อมูลบัญชี</div></div>
-      <div class="card-bd">
-        <div class="il">
-          <div class="ii-item"><div class="ii-dot"></div><div><div class="ii-lbl">สถานะ</div><div class="ii-val">👤 Member</div></div></div>
-          <div class="ii-item"><div class="ii-dot"></div><div><div class="ii-lbl">วันที่สมัคร</div><div class="ii-val"><?= h(date('d M Y',strtotime($user['created_at']))) ?></div></div></div>
-          <div class="ii-item"><div class="ii-dot"></div><div><div class="ii-lbl">ยืนยันอีเมล</div><div class="ii-val"><?= $user['is_verified']?'✅ ยืนยันแล้ว':'⏳ ยังไม่ยืนยัน' ?></div></div></div>
-          <div class="ii-item"><div class="ii-dot"></div><div><div class="ii-lbl">การจองทั้งหมด</div><div class="ii-val"><?= $booking_count ?> ครั้ง</div></div></div>
+  <!-- Main grid -->
+  <div class="ap-grid">
+
+    <!-- LEFT -->
+    <div>
+
+      <!-- แก้ไขข้อมูลส่วนตัว -->
+      <div class="ap-card">
+        <div class="ap-card-header">
+          <div class="ap-card-icon">✏️</div>
+          <div class="ap-card-title">แก้ไขข้อมูลส่วนตัว</div>
+        </div>
+        <div class="ap-card-body">
+          <form method="POST" enctype="multipart/form-data" id="profileForm">
+            <input type="hidden" name="action" value="update_profile">
+            <input type="file" id="ap-avatar-file" name="avatar" accept="image/*"
+                   onchange="previewApAv(this)">
+
+            <div class="ap-fg">
+              <label>ชื่อ-นามสกุล *</label>
+              <div class="ap-iw">
+                <span class="ap-ii">👤</span>
+                <input class="ap-input" type="text" name="fullname"
+                       value="<?= h($user['fullname'] ?? '') ?>" required
+                       placeholder="ชื่อ-นามสกุล">
+              </div>
+            </div>
+
+            <div class="ap-fg">
+              <label>อีเมล <span style="font-size:.6rem;color:var(--muted);text-transform:none;">(ไม่สามารถแก้ไขได้)</span></label>
+              <div class="ap-iw">
+                <span class="ap-ii">✉️</span>
+                <input class="ap-input" type="text" value="<?= h($user['email']) ?>" readonly>
+              </div>
+            </div>
+
+            <div class="ap-fg">
+              <label>เบอร์โทรศัพท์</label>
+              <div class="ap-iw">
+                <span class="ap-ii">📱</span>
+                <input class="ap-input" type="text" name="phone"
+                       value="<?= h($user['phone'] ?? '') ?>"
+                       placeholder="08x-xxx-xxxx">
+              </div>
+            </div>
+
+            <!-- ✅ ปุ่มบันทึก -->
+            <div class="ap-btn-row">
+              <span style="font-size:0.76rem;color:var(--muted);">
+                กด บันทึกข้อมูล เพื่อยืนยันการเปลี่ยนแปลง
+              </span>
+              <button type="submit" class="ap-btn ap-btn-primary" id="saveProfileBtn">
+                💾 บันทึกข้อมูล
+              </button>
+            </div>
+
+          </form>
         </div>
       </div>
-    </div>
 
-    <div class="card">
-      <div class="card-hd"><div class="card-ico">🏨</div><div class="card-title">การจองล่าสุด</div></div>
-      <div class="card-bd" style="padding:14px;">
-        <?php
-        $bk = $conn->prepare("SELECT * FROM room_bookings WHERE email=? ORDER BY id DESC LIMIT 5");
-        $bk->bind_param("s",$user['email']); $bk->execute();
-        $bkr = $bk->get_result();
-        $stLbl = ['pending'=>'รออนุมัติ','approved'=>'อนุมัติแล้ว','cancelled'=>'ยกเลิก'];
-        if ($bkr->num_rows > 0):
-          while ($r = $bkr->fetch_assoc()):
-            $s = $r['booking_status']??'pending';
-        ?>
-          <div class="bk"><div class="bk-ico">🛏️</div><div><div class="bk-room"><?= h($r['room_type']) ?></div><div class="bk-date"><?= h($r['checkin_date']) ?> → <?= h($r['checkout_date']) ?></div></div><span class="bk-st <?= $s ?>"><?= $stLbl[$s]??$s ?></span></div>
-        <?php endwhile; else: ?>
-          <div class="bk-empty"><div style="font-size:1.8rem;opacity:.3;margin-bottom:8px;">🏨</div>ยังไม่มีประวัติการจอง<br><a href="booking_room.php" style="color:var(--gold);font-weight:600;text-decoration:none;font-size:0.8rem;">จองห้องพักเลย →</a></div>
-        <?php endif; $bk->close(); ?>
-      </div>
-    </div>
+      <!-- เปลี่ยนรหัสผ่าน -->
+      <div class="ap-card">
+        <div class="ap-card-header">
+          <div class="ap-card-icon">🔐</div>
+          <div class="ap-card-title">ตั้งรหัสผ่านใหม่</div>
+        </div>
+        <div class="ap-card-body">
+          <form method="POST" id="passForm">
+            <input type="hidden" name="action" value="change_password">
 
-    <div class="card">
-      <div class="card-hd"><div class="card-ico">⚡</div><div class="card-title">เมนูด่วน</div></div>
-      <div class="card-bd" style="display:flex;flex-direction:column;gap:8px;">
-        <a href="booking_room.php" style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);text-decoration:none;color:var(--ink);font-size:0.85rem;font-weight:600;transition:border-color .2s;" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">🏨 <span>จองห้องพัก</span></a>
-        <a href="view_data.php" style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);text-decoration:none;color:var(--ink);font-size:0.85rem;font-weight:600;transition:border-color .2s;" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">📋 <span>ลงทะเบียนกิจกรรม</span></a>
-        <a href="news.php" style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);text-decoration:none;color:var(--ink);font-size:0.85rem;font-weight:600;transition:border-color .2s;" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">📰 <span>ข่าวสาร</span></a>
-        <a href="logout.php" style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;border:1.5px solid #fca5a5;text-decoration:none;color:var(--danger);font-size:0.85rem;font-weight:600;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='transparent'">🚪 <span>ออกจากระบบ</span></a>
+            <div class="ap-fg">
+              <label>รหัสผ่านใหม่</label>
+              <div class="ap-iw">
+                <span class="ap-ii">🔑</span>
+                <input class="ap-input" type="password" name="new_password"
+                       id="apNewPass" placeholder="อย่างน้อย 6 ตัวอักษร" required
+                       oninput="apCheckStr(this.value)">
+              </div>
+              <div class="ap-sbar"><div class="ap-sfill" id="apSfill"></div></div>
+            </div>
+
+            <div class="ap-fg" style="margin-bottom:0;">
+              <label>ยืนยันรหัสผ่านใหม่</label>
+              <div class="ap-iw">
+                <span class="ap-ii">🔑</span>
+                <input class="ap-input" type="password" name="confirm_password"
+                       placeholder="••••••••" required>
+              </div>
+            </div>
+
+            <!-- ✅ ปุ่มเปลี่ยนรหัสผ่าน -->
+            <div class="ap-btn-row">
+              <button type="submit" class="ap-btn ap-btn-primary">
+                🔄 เปลี่ยนรหัสผ่าน
+              </button>
+            </div>
+
+          </form>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
+
+    </div><!-- end left -->
+
+    <!-- RIGHT -->
+    <div>
+
+      <!-- ข้อมูลบัญชี -->
+      <div class="ap-card">
+        <div class="ap-card-header">
+          <div class="ap-card-icon">🔖</div>
+          <div class="ap-card-title">ข้อมูลบัญชี</div>
+        </div>
+        <div class="ap-card-body">
+          <div class="ap-info-list">
+            <div class="ap-info-item">
+              <div class="ap-info-dot"></div>
+              <div>
+                <div class="ap-info-lbl">สถานะ</div>
+                <div class="ap-info-val">⚡ Administrator</div>
+              </div>
+            </div>
+            <div class="ap-info-item">
+              <div class="ap-info-dot"></div>
+              <div>
+                <div class="ap-info-lbl">อีเมล</div>
+                <div class="ap-info-val" style="word-break:break-all;"><?= h($user['email']) ?></div>
+              </div>
+            </div>
+            <div class="ap-info-item">
+              <div class="ap-info-dot"></div>
+              <div>
+                <div class="ap-info-lbl">วันที่สมัคร</div>
+                <div class="ap-info-val"><?= h(date('d M Y', strtotime($user['created_at']))) ?></div>
+              </div>
+            </div>
+            <div class="ap-info-item">
+              <div class="ap-info-dot"></div>
+              <div>
+                <div class="ap-info-lbl">ยืนยันอีเมล</div>
+                <div class="ap-info-val"><?= $user['is_verified'] ? '✅ ยืนยันแล้ว' : '⏳ ยังไม่ยืนยัน' ?></div>
+              </div>
+            </div>
+            <div class="ap-info-item">
+              <div class="ap-info-dot"></div>
+              <div>
+                <div class="ap-info-lbl">ใช้งานมาแล้ว</div>
+                <div class="ap-info-val"><?= $join_days ?> วัน</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- เปลี่ยนรูปโปรไฟล์ -->
+      <div class="ap-card">
+        <div class="ap-card-header">
+          <div class="ap-card-icon">🖼️</div>
+          <div class="ap-card-title">รูปโปรไฟล์</div>
+        </div>
+        <div class="ap-card-body" style="text-align:center;">
+          <div class="ap-av" style="width:80px;height:80px;font-size:2rem;margin:0 auto 14px;" id="apAvPreview">
+            <?php if (!empty($user['avatar'])): ?>
+              <img src="<?= h($user['avatar']) ?>" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+            <?php else: ?>
+              <?= $avatarInitial ?>
+            <?php endif; ?>
+          </div>
+          <p style="font-size:0.76rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+            คลิกไอคอนกล้องที่รูปโปรไฟล์<br>เพื่อเปลี่ยนรูป (สูงสุด 2MB)
+          </p>
+          <label for="ap-avatar-file" class="ap-btn ap-btn-ghost" style="cursor:pointer;width:100%;justify-content:center;">
+            📷 เลือกรูปภาพ
+          </label>
+          <p style="font-size:0.7rem;color:var(--muted);margin-top:8px;">jpg, jpeg, png, webp, gif</p>
+        </div>
+      </div>
+
+    </div><!-- end right -->
+
+  </div><!-- end grid -->
+
+</div><!-- end wrap -->
 
 <script>
-function previewAv(input) {
+function previewApAv(input) {
   if (input.files && input.files[0]) {
     const r = new FileReader();
-    r.onload = e => { document.getElementById('avDisplay').innerHTML = '<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;">'; };
+    r.onload = e => {
+      const img = '<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+      document.getElementById('apAvDisplay').innerHTML = img;
+      document.getElementById('apAvPreview').innerHTML = img;
+    };
     r.readAsDataURL(input.files[0]);
   }
 }
-function checkStr(val) {
-  let s=0;
-  if(val.length>=6)s++;if(val.length>=10)s++;
-  if(/[A-Z]/.test(val))s++;if(/[0-9]/.test(val))s++;if(/[^A-Za-z0-9]/.test(val))s++;
-  const c=['#ef4444','#f97316','#eab308','#22c55e','#16a34a'];
-  const b=document.getElementById('sfill');
-  b.style.width=(s*20)+'%'; b.style.background=c[s-1]||'#e8e4de';
+
+function apCheckStr(val) {
+  let s = 0;
+  if (val.length>=6)  s++;
+  if (val.length>=10) s++;
+  if (/[A-Z]/.test(val)) s++;
+  if (/[0-9]/.test(val)) s++;
+  if (/[^A-Za-z0-9]/.test(val)) s++;
+  const c = ['#ef4444','#f97316','#eab308','#22c55e','#16a34a'];
+  const b = document.getElementById('apSfill');
+  b.style.width = (s*20)+'%';
+  b.style.background = c[s-1] || '#e8e4de';
 }
+
+// ป้องกันกด submit ซ้ำ
+document.getElementById('profileForm').addEventListener('submit', () => {
+  const btn = document.getElementById('saveProfileBtn');
+  btn.textContent = '⏳ กำลังบันทึก...';
+  btn.disabled = true;
+});
 </script>
-</body>
-</html>
-<?php $conn->close(); ?>
+
+<?php // include 'admin_layout_bottom.php'; $conn->close(); ?>

@@ -296,8 +296,8 @@ body::before {
 <div class="sidebar">
   <div class="sidebar-brand">
     <div class="sidebar-brand-line"></div>
-    <div class="sidebar-brand-name">Lumière</div>
-    <div class="sidebar-brand-sub">Admin Panel</div>
+    <div class="sidebar-brand-name">MSU</div>
+    <div class="sidebar-brand-sub">BOOKING ADMIN</div>
   </div>
 
   <div class="sidebar-scroll">
@@ -384,7 +384,6 @@ body::before {
       <div class="topbar-sub"><?= date('l, d F Y') ?></div>
     </div>
     <div class="topbar-actions">
-      <!-- ✅ logout.php ทำลาย session จริงๆ -->
       <a href="logout.php" class="btn btn-ghost btn-sm">ออกจากระบบ</a>
     </div>
   </div>

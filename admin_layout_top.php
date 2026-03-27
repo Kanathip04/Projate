@@ -346,11 +346,11 @@ body::before {
 
     <div class="menu-section">
       <span class="menu-section-label">ตั้งค่า</span>
+      <a href="profile.php" class="menu-item <?= $activeMenu==='profile'?'active':'' ?>">
+        <span class="icon">👤</span><span class="text">โปรไฟล์แอดมิน</span>
+      </a>
       <a href="change_password.php" class="menu-item <?= $activeMenu==='password'?'active':'' ?>">
         <span class="icon">🔐</span><span class="text">เปลี่ยนรหัสผ่าน</span>
-        <a href="profile.php" class="menu-item <?= $activeMenu==='profile'?'active':'' ?>">
-          <span class="icon">👤</span><span class="text">โปรไฟล์แอดมิน</span>
-        </a>
       </a>
     </div>
 
@@ -377,7 +377,6 @@ body::before {
       <div class="topbar-sub"><?= date('l, d F Y') ?></div>
     </div>
     <div class="topbar-actions">
-      <!-- ✅ logout.php ทำลาย session จริงๆ -->
       <a href="logout.php" class="btn btn-ghost btn-sm">ออกจากระบบ</a>
     </div>
   </div>

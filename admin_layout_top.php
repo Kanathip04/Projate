@@ -374,6 +374,7 @@ body::before {
       <div class="topbar-sub"><?= date('l, d F Y') ?></div>
     </div>
     <div class="topbar-actions">
+      <!-- ✅ logout.php ทำลาย session จริงๆ -->
       <a href="logout.php" class="btn btn-ghost btn-sm">ออกจากระบบ</a>
     </div>
   </div>

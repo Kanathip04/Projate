@@ -1,5 +1,5 @@
 <?php
-session_start();
+// session_start();  <--- ลบบรรทัดนี้ออก เพราะ admin_layout_top.php มี session_start() แล้ว
 
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
@@ -220,8 +220,7 @@ include "admin_layout_top.php";
     <div style="overflow-x:auto;">
       <table class="lm-table">
         <thead>
-          <tr>
-            <th>#</th>
+          32<th>#</th>
             <th>ชื่อเล่น</th>
             <th>ประเภท</th>
             <th>เวลา</th>

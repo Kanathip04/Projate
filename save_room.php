@@ -164,7 +164,7 @@ if ($id > 0) {
     }
 
     $stmt->bind_param(
-        "ssdssissiiisi",
+        "ssdisssiiisi",
         $room_name,
         $room_type,
         $price,

@@ -110,19 +110,22 @@ if ($action === 'fetch') {
 
 // ── Google Sheets sync ──────────────────────────────────────
 function pushToSheets($data) {
-    $url = 'https://script.google.com/macros/s/AKfycbygu-OAkt8DnHiHmlw8fbIlv3ZRUnSeGYWf2lYNJ_NkqoB0idnungpT-gSca4UqKQ5qww/exec';
+    $url  = 'https://script.google.com/macros/s/AKfycbygu-OAkt8DnHiHmlw8fbIlv3ZRUnSeGYWf2lYNJ_NkqoB0idnungpT-gSca4UqKQ5qww/exec';
     $json = json_encode($data);
-    $ctx  = stream_context_create([
-        'http' => [
-            'method'        => 'POST',
-            'header'        => 'Content-Type: application/json',
-            'content'       => $json,
-            'timeout'       => 5,
-            'ignore_errors' => true,
-        ],
-        'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
+    $ch   = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => $json,
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 10,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS      => 5,
     ]);
-    @file_get_contents($url, false, $ctx);
+    curl_exec($ch);
+    curl_close($ch);
 }
 
 // ── Send message ────────────────────────────────────────────

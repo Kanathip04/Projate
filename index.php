@@ -472,49 +472,6 @@ img{display:block;}
 }
 .news-see-all:hover{border-color:var(--gold);color:var(--gold);background:var(--gold-dim);}
 
-/* ─── CTA Banner ─────────────────────────── */
-.cta-section{
-  background:linear-gradient(125deg,var(--ink) 0%,#1f1f3e 50%,var(--ink2) 100%);
-  position:relative;overflow:hidden;
-}
-.cta-section::before{
-  content:'';position:absolute;inset:0;pointer-events:none;
-  background:
-    radial-gradient(ellipse at 80% 50%, rgba(201,169,110,.15) 0%, transparent 55%),
-    radial-gradient(ellipse at 10% 80%, rgba(201,169,110,.08) 0%, transparent 45%),
-    repeating-linear-gradient(90deg, rgba(201,169,110,.03) 0, rgba(201,169,110,.03) 1px, transparent 1px, transparent 72px);
-}
-.cta-inner{
-  max-width:1200px;margin:0 auto;
-  padding:clamp(56px,8vw,96px) clamp(20px,5vw,52px);
-  position:relative;z-index:1;
-  display:flex;align-items:center;justify-content:space-between;gap:32px;flex-wrap:wrap;
-}
-.cta-text{}
-.cta-tag{font-size:.66rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:14px;}
-.cta-title{
-  font-family:'Playfair Display',serif;font-style:italic;
-  font-size:clamp(1.6rem,3vw,2.4rem);color:#fff;line-height:1.25;
-}
-.cta-sub{font-size:.92rem;color:rgba(255,255,255,.55);margin-top:12px;line-height:1.7;max-width:480px;}
-.cta-btns{display:flex;gap:14px;flex-wrap:wrap;flex-shrink:0;}
-.cta-btn-primary{
-  display:inline-flex;align-items:center;gap:9px;
-  padding:14px 28px;border-radius:999px;
-  background:var(--gold);color:var(--ink);
-  font-size:.88rem;font-weight:700;letter-spacing:.04em;
-  transition:all .25s;
-}
-.cta-btn-primary:hover{background:var(--gold-light);transform:translateY(-2px);box-shadow:0 10px 30px rgba(201,169,110,.4);}
-.cta-btn-ghost{
-  display:inline-flex;align-items:center;gap:9px;
-  padding:13px 26px;border-radius:999px;
-  background:rgba(255,255,255,.1);color:#fff;
-  border:1.5px solid rgba(255,255,255,.25);
-  font-size:.88rem;font-weight:700;
-  transition:all .25s;
-}
-.cta-btn-ghost:hover{background:rgba(255,255,255,.18);transform:translateY(-2px);}
 
 /* ─── Footer ─────────────────────────────── */
 .footer{background:var(--ink);color:rgba(255,255,255,.55);}
@@ -942,20 +899,6 @@ img{display:block;}
 </section>
 <?php endif; ?>
 
-<!-- ══════════ CTA BANNER ══════════ -->
-<section class="cta-section">
-  <div class="cta-inner">
-    <div class="cta-text">
-      <div class="cta-tag">พร้อมเริ่มต้นแล้วหรือยัง?</div>
-      <h2 class="cta-title">จองห้องพักและลงทะเบียน<br>กิจกรรมได้เลยวันนี้</h2>
-      <p class="cta-sub">สะดวก รวดเร็ว ง่ายดาย เพียงไม่กี่ขั้นตอน ก็พร้อมเข้าร่วมกิจกรรมของสถาบัน</p>
-    </div>
-    <div class="cta-btns">
-      <a href="booking_room.php" class="cta-btn-primary">🏨 จองห้องพักเลย</a>
-      <a href="view_data.php" class="cta-btn-ghost">📋 ลงทะเบียนกิจกรรม</a>
-    </div>
-  </div>
-</section>
 
 <!-- ══════════ FOOTER ══════════ -->
 <footer class="footer">

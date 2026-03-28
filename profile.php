@@ -571,7 +571,7 @@ if ($isAdmin) {
                   <?php if (!empty($tUnits)): ?>
                     <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
                       <?php foreach ($tUnits as $u): ?>
-                        <span style="display:inline-flex;padding:2px 8px;border-radius:999px;font-size:.65rem;font-weight:700;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.28);color:#15803d;">หน่วยที่ <?= (int)$u ?></span>
+                        <span style="display:inline-flex;padding:2px 8px;border-radius:999px;font-size:.65rem;font-weight:700;background:rgba(26,26,46,.08);border:1px solid rgba(26,26,46,.18);color:var(--ink);">หน่วยที่ <?= (int)$u ?></span>
                       <?php endforeach; ?>
                     </div>
                   <?php endif; ?>

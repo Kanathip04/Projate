@@ -8,7 +8,7 @@ session_start();
 // ... โค้ดที่เหลือ
 // session_start();  <--- ลบบรรทัดนี้ออก เพราะ admin_layout_top.php มี session_start() แล้ว
 
-$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
+$conn = new mysqli("localhost", "root", "", "backoffice_db");
 $conn->set_charset("utf8mb4");
 
 if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);

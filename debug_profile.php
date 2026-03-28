@@ -8,7 +8,7 @@ echo "<pre>";
 echo "SESSION: "; print_r($_SESSION);
 echo "\n";
 
-$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
+$conn = new mysqli("localhost", "root", "", "backoffice_db");
 $conn->set_charset("utf8mb4");
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);

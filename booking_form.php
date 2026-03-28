@@ -8,7 +8,7 @@ header("Expires: 0");
 
 date_default_timezone_set('Asia/Bangkok');
 
-$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
+$conn = new mysqli("localhost", "root", "", "backoffice_db");
 $conn->set_charset("utf8mb4");
 
 if ($conn->connect_error) {

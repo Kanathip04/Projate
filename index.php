@@ -602,7 +602,7 @@ img{display:block;}
   <div class="nav-center">
     <a href="news.php"><span class="nav-icon">📰</span> ข่าวสาร</a>
     <a href="view_data.php"><span class="nav-icon">📋</span> ลงทะเบียน</a>
-    <a href="https://docs.google.com/forms/d/e/1FAIpQLSdukofM-5EFzR1Zddip7uZJ-pnBmLnhXCNyABKIEY8cwUxzyQ/viewform?usp=dialog" target="_blank"><span class="nav-icon">📝</span> แบบประเมิน</a>
+    <a href="survey.php"><span class="nav-icon">📝</span> แบบประเมิน</a>
     <a href="calendar.php"><span class="nav-icon">📅</span> ปฏิทิน</a>
     <a href="about_us.php"><span class="nav-icon">🌿</span> เกี่ยวกับ</a>
     <a href="booking_room.php"><span class="nav-icon">🏨</span> จองห้องพัก</a>
@@ -675,7 +675,7 @@ img{display:block;}
     <a href="booking_room.php"><div class="nav-drawer-icon">🏨</div> จองห้องพัก</a>
     <a href="view_data.php"><div class="nav-drawer-icon">📋</div> ลงทะเบียนกิจกรรม</a>
     <a href="calendar.php"><div class="nav-drawer-icon">📅</div> ปฏิทินกิจกรรม</a>
-    <a href="https://docs.google.com/forms/d/e/1FAIpQLSdukofM-5EFzR1Zddip7uZJ-pnBmLnhXCNyABKIEY8cwUxzyQ/viewform?usp=dialog" target="_blank"><div class="nav-drawer-icon">📝</div> แบบประเมิน</a>
+    <a href="survey.php"><div class="nav-drawer-icon">📝</div> แบบประเมิน</a>
     <a href="about_us.php"><div class="nav-drawer-icon">🌿</div> เกี่ยวกับสถาบัน</a>
     <div class="drawer-divider"></div>
     <?php if ($isLoggedIn): ?>

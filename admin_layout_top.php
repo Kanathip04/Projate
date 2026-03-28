@@ -365,6 +365,13 @@ body::before {
 </div>
 
 <div class="menu-section">
+  <span class="menu-section-label">ประเมินผล</span>
+  <a href="admin_survey.php" class="menu-item <?= $activeMenu==='survey'?'active':'' ?>">
+    <span class="icon">📝</span><span class="text">ผลการประเมิน</span>
+  </a>
+</div>
+
+<div class="menu-section">
   <span class="menu-section-label">ตั้งค่า</span>
   <a href="change_password.php" class="menu-item <?= $activeMenu==='password'?'active':'' ?>">
     <span class="icon">🔐</span><span class="text">เปลี่ยนรหัสผ่าน</span>

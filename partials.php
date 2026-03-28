@@ -11,7 +11,7 @@
 
   <div class="nav-center">
     <a href="view_data.php">พิเศษสำหรับคุณ</a>
-    <a href="https://docs.google.com/forms/..." target="_blank">แบบประเมิน</a>
+    <a href="survey.php">แบบประเมิน</a>
     <a href="contact.php">ติดต่อเจ้าหน้าที่</a>
     <a href="login.php">Admin</a>
   </div>

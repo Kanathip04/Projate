@@ -60,6 +60,25 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);hei
   text-decoration:none;font-size:13px;font-weight:600;transition:.2s;
 }
 .btn-back:hover{border-color:var(--gold);color:var(--gold)}
+.btn-export{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);
+  color:#22c55e;padding:7px 14px;border-radius:10px;
+  text-decoration:none;font-size:13px;font-weight:600;transition:.2s;cursor:pointer;
+}
+.btn-export:hover{background:rgba(34,197,94,.22);border-color:#22c55e}
+/* Export modal */
+.export-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center}
+.export-overlay.show{display:flex}
+.export-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 28px 24px;width:360px;max-width:95vw;position:relative}
+.export-title{font-size:16px;font-weight:700;margin-bottom:18px;color:var(--gold)}
+.export-row{margin-bottom:14px}
+.export-row label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;letter-spacing:.05em;text-transform:uppercase}
+.export-row input{width:100%;padding:9px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none}
+.export-row input:focus{border-color:var(--gold)}
+.btn-dl{width:100%;padding:12px;background:#22c55e;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:6px;transition:.2s}
+.btn-dl:hover{background:#16a34a}
+.export-close{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer}
 
 /* ── LAYOUT ── */
 .layout{display:flex;flex:1;overflow:hidden}
@@ -304,7 +323,31 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);hei
     <span id="onlineCount">0</span> ออนไลน์
   </div>
   <button class="sound-btn" id="soundBtn" title="เสียงแจ้งเตือน">🔔</button>
+  <?php if ($myRole === 'admin'): ?>
+  <button class="btn-export" onclick="openExport()">📥 Export Excel</button>
+  <?php endif; ?>
   <a href="index.php" class="btn-back">← กลับ</a>
+</div>
+
+<!-- Export Modal -->
+<div class="export-overlay" id="exportOverlay" onclick="if(event.target===this)closeExport()">
+  <div class="export-card">
+    <button class="export-close" onclick="closeExport()">✕</button>
+    <div class="export-title">📥 Export ประวัติแชท</div>
+    <div class="export-row">
+      <label>วันที่เริ่มต้น</label>
+      <input type="date" id="expFrom">
+    </div>
+    <div class="export-row">
+      <label>วันที่สิ้นสุด</label>
+      <input type="date" id="expTo">
+    </div>
+    <div class="export-row">
+      <label>ค้นหาข้อความ (ถ้ามี)</label>
+      <input type="text" id="expSearch" placeholder="พิมพ์คำค้นหา...">
+    </div>
+    <button class="btn-dl" onclick="doExport()">⬇ Download Excel</button>
+  </div>
 </div>
 
 <div class="layout">
@@ -651,7 +694,32 @@ function updateTyping(names){
   bar.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div><span>${escHtml(who)} กำลังพิมพ์...</span>`;
 }
 
-// ── Profile modal ────────────────────────────────────────
+// ── Export modal ─────────────────────────────────────────
+function openExport(){
+  // ตั้งค่า default: วันนี้
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('expTo').value = today;
+  document.getElementById('exportOverlay').classList.add('show');
+}
+function closeExport(){
+  document.getElementById('exportOverlay').classList.remove('show');
+}
+function doExport(){
+  const from   = document.getElementById('expFrom').value;
+  const to     = document.getElementById('expTo').value;
+  const search = document.getElementById('expSearch').value;
+  let url = 'chat_export.php?';
+  if (from)   url += 'from='   + encodeURIComponent(from)   + '&';
+  if (to)     url += 'to='     + encodeURIComponent(to)     + '&';
+  if (search) url += 'search=' + encodeURIComponent(search) + '&';
+  window.location.href = url;
+  closeExport();
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeExport(); closeProfileDirect(); }
+});
+
+// ── Profile modal ─────────────────────────────────────────
 function showProfile(userId){
   fetch(`chat_api.php?action=profile&user_id=${userId}`)
     .then(r=>r.json())
@@ -687,7 +755,6 @@ function closeProfileDirect(){
   document.getElementById('profileOverlay').classList.remove('show');
 }
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') document.getElementById('profileOverlay').classList.remove('show');
 });
 
 // ── Heartbeat ────────────────────────────────────────────

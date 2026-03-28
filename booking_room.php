@@ -141,6 +141,9 @@ $result = $stmt->get_result();
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>จองห้องพัก | สถาบันวิจัยวลัยรุกขเวช</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{
     margin:0;
@@ -148,27 +151,24 @@ $result = $stmt->get_result();
     box-sizing:border-box;
 }
 :root{
-    --brand:#6f8428;
-    --brand-dark:#58691f;
-    --brand-light:#f4f8ea;
-    --brand-soft:#eef5dc;
-    --text:#1f2937;
-    --muted:#6b7280;
-    --line:#e5e7eb;
+    --ink:#1a1a2e;
+    --gold:#c9a96e;
+    --gold-dark:#a8864d;
+    --bg:#f5f1eb;
+    --card:#ffffff;
+    --muted:#7a7a8c;
+    --border:#e8e4de;
     --white:#ffffff;
-    --bg:#f8fafc;
     --danger:#d92d20;
     --danger-bg:#fff1f1;
-    --info:#1d4ed8;
-    --info-bg:#eff6ff;
     --success:#15803d;
     --success-bg:#ecfdf3;
-    --card-shadow:0 14px 35px rgba(0,0,0,.08);
+    --card-shadow:0 14px 35px rgba(26,26,46,.10);
 }
 body{
-    font-family:'Segoe UI', Tahoma, sans-serif;
+    font-family:'Sarabun', 'Segoe UI', Tahoma, sans-serif;
     background:var(--bg);
-    color:var(--text);
+    color:var(--ink);
 }
 a{
     text-decoration:none;
@@ -178,7 +178,7 @@ a{
 }
 .hero{
     background:
-        linear-gradient(135deg, rgba(62,79,14,.92), rgba(111,132,40,.88)),
+        linear-gradient(135deg, rgba(26,26,46,.97) 0%, rgba(26,26,46,.88) 100%),
         url('uploads/room-banner.jpg') center/cover no-repeat;
     color:#fff;
     padding:70px 20px 120px;
@@ -189,7 +189,7 @@ a{
     content:"";
     position:absolute;
     inset:0;
-    background:linear-gradient(to bottom, rgba(255,255,255,0) 65%, rgba(248,250,252,1) 100%);
+    background:linear-gradient(to bottom, rgba(255,255,255,0) 65%, var(--bg) 100%);
 }
 .hero-inner{
     width:min(1180px, 92%);
@@ -205,23 +205,25 @@ a{
     font-size:14px;
     font-weight:600;
     color:#fff;
-    background:rgba(255,255,255,0.15);
-    border:1px solid rgba(255,255,255,0.35);
+    background:rgba(201,169,110,0.18);
+    border:1px solid rgba(201,169,110,0.45);
     backdrop-filter:blur(8px);
     transition:.25s ease;
 }
 .back-home-btn:hover{
-    background:rgba(255,255,255,0.25);
+    background:rgba(201,169,110,0.32);
+    color:var(--gold);
 }
 .hero-badge{
     display:inline-block;
     padding:10px 18px;
-    border:1px solid rgba(255,255,255,.35);
-    background:rgba(255,255,255,.12);
+    border:1px solid rgba(201,169,110,.45);
+    background:rgba(201,169,110,.14);
     backdrop-filter:blur(8px);
     border-radius:999px;
     font-size:14px;
     font-weight:600;
+    color:var(--gold);
     margin-bottom:18px;
 }
 .hero h1{
@@ -229,11 +231,15 @@ a{
     line-height:1.2;
     margin-bottom:14px;
     max-width:760px;
+    color:#ffffff;
+}
+.hero h1 span{
+    color:var(--gold);
 }
 .hero p{
     font-size:18px;
     line-height:1.8;
-    color:rgba(255,255,255,.92);
+    color:rgba(255,255,255,.85);
     max-width:760px;
 }
 .section{
@@ -251,7 +257,7 @@ a{
 }
 .section-head h3{
     font-size:34px;
-    color:#111827;
+    color:var(--ink);
 }
 .section-head p{
     color:var(--muted);
@@ -264,15 +270,16 @@ a{
     gap:24px;
 }
 .room-card{
-    background:#fff;
-    border-radius:24px;
+    background:var(--card);
+    border-radius:20px;
     overflow:hidden;
-    border:1px solid #edf0f5;
+    border:1px solid var(--border);
     box-shadow:var(--card-shadow);
     transition:.25s ease;
 }
 .room-card:hover{
     transform:translateY(-6px);
+    box-shadow:0 20px 48px rgba(26,26,46,.14);
 }
 .room-image-wrap{
     position:relative;
@@ -288,13 +295,14 @@ a{
     position:absolute;
     top:16px;
     right:16px;
-    background:rgba(17,24,39,.82);
-    color:#fff;
+    background:rgba(26,26,46,.88);
+    color:var(--gold);
     padding:10px 14px;
     border-radius:999px;
     font-size:14px;
     font-weight:700;
     backdrop-filter:blur(8px);
+    border:1px solid rgba(201,169,110,.3);
 }
 .room-stock-badge{
     position:absolute;
@@ -325,12 +333,12 @@ a{
     font-size:24px;
     font-weight:800;
     margin-bottom:10px;
-    color:#111827;
+    color:var(--ink);
 }
 .room-desc{
     font-size:15px;
     line-height:1.7;
-    color:#4b5563;
+    color:var(--muted);
     margin-bottom:18px;
     min-height:76px;
 }
@@ -341,15 +349,15 @@ a{
     margin-bottom:20px;
 }
 .meta-item{
-    background:#f8fafc;
-    border:1px solid #e9eef5;
+    background:var(--bg);
+    border:1px solid var(--border);
     padding:12px 14px;
     border-radius:14px;
     font-size:14px;
-    color:#374151;
+    color:var(--muted);
 }
 .meta-item strong{
-    color:#111827;
+    color:var(--ink);
 }
 .booking-summary{
     display:flex;
@@ -368,14 +376,14 @@ a{
     border:1px solid transparent;
 }
 .summary-pill.total{
-    background:var(--info-bg);
-    color:var(--info);
-    border-color:#dbeafe;
+    background:rgba(26,26,46,.07);
+    color:var(--ink);
+    border-color:rgba(26,26,46,.15);
 }
 .summary-pill.booked{
-    background:var(--brand-soft);
-    color:var(--brand-dark);
-    border-color:#dfe9bf;
+    background:rgba(201,169,110,.12);
+    color:var(--gold-dark);
+    border-color:rgba(201,169,110,.35);
 }
 .summary-pill.left{
     background:var(--success-bg);
@@ -397,11 +405,11 @@ a{
 .price{
     font-size:28px;
     font-weight:800;
-    color:var(--brand-dark);
+    color:var(--gold-dark);
 }
 .price span{
     font-size:14px;
-    color:#6b7280;
+    color:var(--muted);
     font-weight:500;
 }
 .book-btn{
@@ -411,15 +419,17 @@ a{
     min-width:160px;
     padding:13px 18px;
     border-radius:14px;
-    background:var(--brand);
+    background:var(--ink);
     color:#fff;
     font-weight:700;
     transition:.2s ease;
     border:none;
     cursor:pointer;
+    font-family:'Sarabun', sans-serif;
 }
 .book-btn:hover{
-    background:var(--brand-dark);
+    background:var(--gold);
+    color:var(--ink);
 }
 .book-btn.disabled{
     background:#9ca3af;
@@ -427,23 +437,26 @@ a{
     pointer-events:none;
 }
 .empty-box{
-    background:#fff;
-    border:1px solid #e5e7eb;
+    background:var(--card);
+    border:1px solid var(--border);
     border-radius:20px;
     padding:40px 25px;
     text-align:center;
-    color:#6b7280;
+    color:var(--muted);
     box-shadow:var(--card-shadow);
 }
 .footer-note{
     width:min(1180px, 92%);
     margin:0 auto 50px;
-    background:var(--brand-light);
-    border:1px solid #e2ecd0;
+    background:rgba(26,26,46,.05);
+    border:1px solid var(--border);
     border-radius:20px;
     padding:20px;
-    color:#3f4b1d;
+    color:var(--muted);
     line-height:1.8;
+}
+.footer-note strong{
+    color:var(--ink);
 }
 @media (max-width: 768px){
     .hero{
@@ -489,26 +502,29 @@ a{
     font-weight:700;
     font-size:15px;
     color:#fff;
-    background:rgba(255,255,255,0.18);
-    border:1px solid rgba(255,255,255,0.35);
+    background:rgba(201,169,110,0.18);
+    border:1px solid rgba(201,169,110,0.40);
     backdrop-filter:blur(8px);
     -webkit-backdrop-filter:blur(8px);
     transition:all .25s ease;
     box-shadow:0 8px 20px rgba(0,0,0,.12);
+    font-family:'Sarabun', sans-serif;
 }
 
 .top-action-btn:hover{
     transform:translateY(-2px);
-    background:rgba(255,255,255,0.25);
+    background:rgba(201,169,110,0.30);
+    color:var(--gold);
 }
 
 .top-action-btn.secondary{
-    background:#1f2937;
-    border:1px solid rgba(255,255,255,0.12);
+    background:rgba(26,26,46,.55);
+    border:1px solid rgba(201,169,110,0.25);
 }
 
 .top-action-btn.secondary:hover{
-    background:#111827;
+    background:rgba(26,26,46,.80);
+    color:var(--gold);
 }
 </style>
 </head>

@@ -30,7 +30,7 @@ if ($user_email === '') {
     die('ไม่พบ session email ของผู้ใช้ กรุณาตรวจสอบไฟล์ login ว่าเก็บ email ไว้ใน session หรือไม่');
 }
 
-$sql = "SELECT 
+$sql = "SELECT
             id,
             full_name,
             phone,
@@ -123,212 +123,294 @@ function statusClass($status) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ติดตามสถานะการจอง</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        *{
-            box-sizing:border-box;
-            margin:0;
-            padding:0;
-            font-family:'Segoe UI', Tahoma, sans-serif;
+        /* ── Reset & Base ─────────────────────────────────────────── */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
-        body{
-            background:#f4f6f9;
-            color:#1f2937;
+        :root {
+            --ink:        #1a1a2e;
+            --gold:       #c9a96e;
+            --gold-light: #e8d5b0;
+            --bg:         #f5f1eb;
+            --card:       #fff;
+            --muted:      #7a7a8c;
+            --border:     #e8e4de;
         }
 
-        .hero{
-            background:linear-gradient(135deg, #6b7f22, #879f31);
-            color:#fff;
-            padding:40px 20px 90px;
+        body {
+            background: var(--bg);
+            color: var(--ink);
+            font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
         }
 
-        .container{
-            width:min(1180px, 92%);
-            margin:0 auto;
+        /* ── Layout helpers ───────────────────────────────────────── */
+        .container {
+            width: min(1180px, 92%);
+            margin: 0 auto;
         }
 
-        .top-menu{
-            display:flex;
-            gap:12px;
-            flex-wrap:wrap;
-            margin-bottom:24px;
+        /* ── Hero ─────────────────────────────────────────────────── */
+        .hero {
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 55%, #252545 100%);
+            color: #fff;
+            padding: 44px 20px 96px;
+            position: relative;
+            overflow: hidden;
         }
 
-        .top-menu a{
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            padding:12px 20px;
-            border-radius:999px;
-            text-decoration:none;
-            color:#fff;
-            font-weight:700;
-            border:1px solid rgba(255,255,255,.35);
-            background:rgba(255,255,255,.12);
-            transition:.25s ease;
+        /* subtle decorative circle */
+        .hero::after {
+            content: '';
+            position: absolute;
+            right: -120px;
+            top: -120px;
+            width: 480px;
+            height: 480px;
+            border-radius: 50%;
+            background: rgba(201, 169, 110, 0.07);
+            pointer-events: none;
         }
 
-        .top-menu a:hover{
-            background:rgba(255,255,255,.2);
-            transform:translateY(-2px);
+        /* ── Top navigation menu ──────────────────────────────────── */
+        .top-menu {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
         }
 
-        .hero h1{
-            font-size:46px;
-            margin-bottom:10px;
-            font-weight:800;
+        .top-menu a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            border-radius: 999px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 700;
+            font-size: 15px;
+            border: 1px solid rgba(201, 169, 110, 0.45);
+            background: rgba(201, 169, 110, 0.12);
+            transition: background .25s ease, transform .2s ease;
         }
 
-        .hero p{
-            font-size:18px;
-            max-width:760px;
-            line-height:1.7;
+        .top-menu a:hover {
+            background: rgba(201, 169, 110, 0.25);
+            transform: translateY(-2px);
         }
 
-        .content{
-            margin-top:-38px;
-            padding-bottom:50px;
+        /* ── Hero text ────────────────────────────────────────────── */
+        .hero h1 {
+            font-size: 46px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
         }
 
-        .list{
-            display:grid;
-            gap:22px;
+        .hero h1 span {
+            color: var(--gold);
         }
 
-        .card{
-            background:#fff;
-            border-radius:24px;
-            overflow:hidden;
-            box-shadow:0 12px 30px rgba(0,0,0,.08);
-            border:1px solid rgba(0,0,0,.05);
+        .hero p {
+            font-size: 17px;
+            max-width: 760px;
+            line-height: 1.75;
+            color: rgba(255, 255, 255, 0.82);
         }
 
-        .card-body{
-            padding:24px;
+        /* ── Content section ──────────────────────────────────────── */
+        .content {
+            margin-top: -42px;
+            padding-bottom: 60px;
         }
 
-        .card-top{
-            display:flex;
-            justify-content:space-between;
-            align-items:flex-start;
-            gap:12px;
-            flex-wrap:wrap;
-            margin-bottom:20px;
+        .list {
+            display: grid;
+            gap: 24px;
         }
 
-        .room-name{
-            font-size:30px;
-            font-weight:800;
-            color:#111827;
+        /* ── Card ─────────────────────────────────────────────────── */
+        .card {
+            background: var(--card);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(26, 26, 46, 0.10), 0 1px 4px rgba(26, 26, 46, 0.06);
+            border: 1px solid var(--border);
+            transition: box-shadow .25s ease, transform .2s ease;
         }
 
-        .badge{
-            padding:8px 14px;
-            border-radius:999px;
-            font-size:14px;
-            font-weight:700;
+        .card:hover {
+            box-shadow: 0 16px 44px rgba(26, 26, 46, 0.14);
+            transform: translateY(-2px);
         }
 
-        .pending{ background:#fef3c7; color:#92400e; }
-        .approved{ background:#dcfce7; color:#166534; }
-        .rejected{ background:#fee2e2; color:#991b1b; }
-        .cancelled{ background:#f3f4f6; color:#374151; }
-        .completed{ background:#dbeafe; color:#1d4ed8; }
-        .unknown{ background:#e5e7eb; color:#111827; }
-
-        .grid{
-            display:grid;
-            grid-template-columns:repeat(2, minmax(220px, 1fr));
-            gap:14px;
-            margin-bottom:16px;
+        /* gold accent bar at the top of each card */
+        .card::before {
+            content: '';
+            display: block;
+            height: 4px;
+            background: linear-gradient(90deg, var(--gold), var(--gold-light));
         }
 
-        .item{
-            background:#f9fafb;
-            border:1px solid #e5e7eb;
-            border-radius:16px;
-            padding:14px 16px;
+        .card-body {
+            padding: 26px 28px 28px;
         }
 
-        .item .label{
-            display:block;
-            font-size:13px;
-            color:#6b7280;
-            margin-bottom:6px;
-            font-weight:600;
+        /* ── Card top row ─────────────────────────────────────────── */
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 22px;
         }
 
-        .item .value{
-            font-size:16px;
-            color:#111827;
-            font-weight:700;
+        .room-name {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--ink);
+            letter-spacing: -0.3px;
         }
 
-        .note-box{
-            background:#f8fafc;
-            border:1px solid #e5e7eb;
-            border-radius:16px;
-            padding:14px 16px;
+        /* ── Status badges ────────────────────────────────────────── */
+        .badge {
+            padding: 7px 16px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 700;
+            white-space: nowrap;
         }
 
-        .note-box .label{
-            display:block;
-            font-size:13px;
-            color:#6b7280;
-            margin-bottom:6px;
-            font-weight:700;
+        /* semantic badge colors kept as requested */
+        .pending     { background: #fef3c7; color: #92400e; }
+        .approved    { background: #dcfce7; color: #166534; }
+        .rejected    { background: #fee2e2; color: #991b1b; }
+        .cancelled   { background: #f3f4f6; color: #374151; }
+        .completed   { background: #dbeafe; color: #1d4ed8; }
+        .unavailable { background: #e5e7eb; color: #374151; }
+        .unknown     { background: #e5e7eb; color: var(--ink); }
+
+        /* ── Info grid ────────────────────────────────────────────── */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(200px, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
         }
 
-        .note-box .value{
-            line-height:1.7;
-            color:#111827;
+        .item {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px 16px;
         }
 
-        .empty{
-            background:#fff;
-            border-radius:24px;
-            padding:50px 24px;
-            text-align:center;
-            box-shadow:0 12px 30px rgba(0,0,0,.08);
+        .item .label {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .empty h3{
-            font-size:28px;
-            margin-bottom:10px;
+        .item .value {
+            font-size: 16px;
+            color: var(--ink);
+            font-weight: 700;
         }
 
-        .empty p{
-            color:#6b7280;
-            margin-bottom:20px;
+        /* ── Note box ─────────────────────────────────────────────── */
+        .note-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px 18px;
         }
 
-        .empty a{
-            display:inline-block;
-            padding:12px 22px;
-            border-radius:999px;
-            text-decoration:none;
-            background:#6b7f22;
-            color:#fff;
-            font-weight:700;
+        .note-box .label {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 6px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        @media (max-width: 900px){
-            .grid{
-                grid-template-columns:1fr;
+        .note-box .value {
+            line-height: 1.75;
+            color: var(--ink);
+            font-size: 15px;
+        }
+
+        /* ── Empty state ──────────────────────────────────────────── */
+        .empty {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 60px 24px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(26, 26, 46, 0.10);
+            border: 1px solid var(--border);
+        }
+
+        .empty h3 {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--ink);
+            margin-bottom: 10px;
+        }
+
+        .empty p {
+            color: var(--muted);
+            margin-bottom: 24px;
+            font-size: 16px;
+        }
+
+        .empty a {
+            display: inline-block;
+            padding: 12px 28px;
+            border-radius: 999px;
+            text-decoration: none;
+            background: var(--ink);
+            color: #fff;
+            font-weight: 700;
+            font-size: 15px;
+            transition: background .25s ease, transform .2s ease;
+        }
+
+        .empty a:hover {
+            background: #2a2a4a;
+            transform: translateY(-2px);
+        }
+
+        /* ── Responsive ───────────────────────────────────────────── */
+        @media (max-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr;
             }
 
-            .hero h1{
-                font-size:34px;
+            .hero h1 {
+                font-size: 32px;
             }
 
-            .room-name{
-                font-size:24px;
+            .room-name {
+                font-size: 22px;
+            }
+
+            .card-body {
+                padding: 20px;
             }
         }
-        .unavailable{
-    background:#e5e7eb;
-    color:#374151;
-}
     </style>
 </head>
 <body>
@@ -340,7 +422,7 @@ function statusClass($status) {
             <a href="index.php">หน้าหลัก</a>
         </div>
 
-        <h1>ติดตามสถานะการจอง</h1>
+        <h1>ติดตามสถานะ<span>การจอง</span></h1>
         <p>ตรวจสอบรายการจองของคุณ พร้อมดูสถานะการอนุมัติ วันที่เข้าพัก วันที่ออก จำนวนผู้เข้าพัก และรายละเอียดการจอง</p>
     </div>
 </section>

@@ -8,6 +8,9 @@ $result = $conn->query("SELECT * FROM news ORDER BY id DESC");
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ข่าวสาร</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
     *{
         box-sizing:border-box;
@@ -16,23 +19,21 @@ $result = $conn->query("SELECT * FROM news ORDER BY id DESC");
     }
 
     :root{
-        --bg:#f4f6f8;
-        --card:#ffffff;
-        --text:#1f2937;
-        --muted:#6b7280;
-        --primary:#638411;
-        --primary-dark:#4f6b0d;
-        --line:#e5e7eb;
-        --shadow:0 10px 30px rgba(0,0,0,.07);
-        --radius:22px;
+        --ink:#1a1a2e;
+        --gold:#c9a96e;
+        --gold-light:rgba(201,169,110,.15);
+        --bg:#f5f1eb;
+        --card:#fff;
+        --muted:#7a7a8c;
+        --border:#e8e4de;
+        --shadow:0 10px 32px rgba(26,26,46,.08);
+        --radius:18px;
     }
 
     body{
-        font-family:'Segoe UI', Tahoma, sans-serif;
-        background:
-            radial-gradient(circle at top, rgba(99,132,17,.08), transparent 28%),
-            linear-gradient(180deg, #f7f9fb 0%, #f3f5f7 100%);
-        color:var(--text);
+        font-family:'Sarabun', sans-serif;
+        background:var(--bg);
+        color:var(--ink);
         min-height:100vh;
     }
 
@@ -40,99 +41,126 @@ $result = $conn->query("SELECT * FROM news ORDER BY id DESC");
         text-decoration:none;
     }
 
-    .page-wrap{
-        width:100%;
-        max-width:1100px;
-        margin:0 auto;
-        padding:28px 18px 60px;
+    /* ── Hero header ── */
+    .page-hero{
+        background:linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+        padding:48px 18px 52px;
+        text-align:center;
+        position:relative;
+        overflow:hidden;
+    }
+
+    .page-hero::before{
+        content:'';
+        position:absolute;
+        inset:0;
+        background:radial-gradient(ellipse at 50% 0%, rgba(201,169,110,.18) 0%, transparent 65%);
+        pointer-events:none;
     }
 
     .topbar{
         display:flex;
-        justify-content:space-between;
+        justify-content:flex-start;
         align-items:center;
-        gap:16px;
-        flex-wrap:wrap;
-        margin-bottom:26px;
+        max-width:1100px;
+        margin:0 auto 32px;
+        position:relative;
+        z-index:1;
     }
 
     .back-btn{
         display:inline-flex;
         align-items:center;
-        gap:10px;
-        background:#fff;
-        color:var(--primary);
-        border:1px solid rgba(99,132,17,.18);
-        padding:12px 18px;
+        gap:8px;
+        background:transparent;
+        color:#fff;
+        border:1.5px solid rgba(255,255,255,.3);
+        padding:10px 20px;
         border-radius:999px;
+        font-family:'Sarabun', sans-serif;
         font-size:15px;
-        font-weight:700;
-        box-shadow:0 6px 18px rgba(0,0,0,.05);
+        font-weight:600;
         transition:.25s ease;
     }
 
     .back-btn:hover{
-        background:var(--primary);
-        color:#fff;
+        background:var(--gold);
+        border-color:var(--gold);
+        color:var(--ink);
         transform:translateY(-2px);
     }
 
-    .page-head{
-        text-align:center;
-        padding:18px 0 8px;
-        margin-bottom:28px;
-    }
-
-    .page-head .badge{
+    .hero-badge{
         display:inline-block;
-        background:rgba(99,132,17,.12);
-        color:var(--primary-dark);
+        background:var(--gold-light);
+        color:var(--gold);
+        border:1px solid rgba(201,169,110,.35);
         font-size:13px;
         font-weight:700;
-        padding:8px 14px;
+        padding:6px 16px;
         border-radius:999px;
-        margin-bottom:14px;
+        margin-bottom:16px;
+        letter-spacing:.5px;
+        position:relative;
+        z-index:1;
     }
 
-    .page-head h1{
-        font-size:44px;
-        line-height:1.2;
-        margin-bottom:10px;
-        color:#121826;
+    .hero-title{
+        font-size:46px;
         font-weight:800;
-        letter-spacing:-0.5px;
+        color:#fff;
+        line-height:1.2;
+        margin-bottom:12px;
+        letter-spacing:-.5px;
+        position:relative;
+        z-index:1;
     }
 
-    .page-head p{
-        color:var(--muted);
+    .hero-title span{
+        color:var(--gold);
+    }
+
+    .hero-sub{
+        color:rgba(255,255,255,.65);
         font-size:17px;
-        max-width:700px;
+        max-width:680px;
         margin:0 auto;
-        line-height:1.8;
+        line-height:1.85;
+        position:relative;
+        z-index:1;
     }
 
+    /* ── Content wrap ── */
+    .page-wrap{
+        width:100%;
+        max-width:1100px;
+        margin:0 auto;
+        padding:36px 18px 64px;
+    }
+
+    /* ── News list ── */
     .news-list{
         display:flex;
         flex-direction:column;
-        gap:26px;
+        gap:28px;
     }
 
     .news-card{
         background:var(--card);
         border-radius:var(--radius);
         box-shadow:var(--shadow);
-        border:1px solid rgba(0,0,0,.04);
+        border:1px solid var(--border);
         overflow:hidden;
         transition:.25s ease;
     }
 
     .news-card:hover{
-        transform:translateY(-3px);
-        box-shadow:0 16px 34px rgba(0,0,0,.09);
+        transform:translateY(-4px);
+        box-shadow:0 20px 44px rgba(26,26,46,.12);
     }
 
     .news-inner{
-        padding:28px;
+        padding:30px;
     }
 
     .news-meta{
@@ -146,29 +174,38 @@ $result = $conn->query("SELECT * FROM news ORDER BY id DESC");
     .news-date{
         display:inline-flex;
         align-items:center;
-        background:#f3f4f6;
-        color:#4b5563;
-        padding:8px 14px;
+        gap:6px;
+        background:var(--gold-light);
+        color:var(--ink);
+        border:1px solid rgba(201,169,110,.25);
+        padding:6px 14px;
         border-radius:999px;
         font-size:13px;
         font-weight:600;
     }
 
+    .news-date::before{
+        content:'📅';
+        font-size:12px;
+    }
+
     .news-title{
-        font-size:34px;
+        font-size:28px;
         font-weight:800;
-        line-height:1.35;
+        line-height:1.4;
         margin-bottom:18px;
-        color:#111827;
+        color:var(--ink);
         word-break:break-word;
+        border-left:4px solid var(--gold);
+        padding-left:14px;
     }
 
     .news-image{
-        margin-bottom:20px;
-        border-radius:18px;
+        margin-bottom:22px;
+        border-radius:14px;
         overflow:hidden;
-        background:#eef1f4;
-        border:1px solid #edf0f2;
+        background:var(--border);
+        border:1px solid var(--border);
     }
 
     .news-image img{
@@ -184,93 +221,105 @@ $result = $conn->query("SELECT * FROM news ORDER BY id DESC");
     }
 
     .news-content{
-        font-size:17px;
+        font-size:16.5px;
         line-height:2;
-        color:#374151;
+        color:#3a3a4a;
         white-space:pre-line;
         word-break:break-word;
     }
 
+    /* ── Empty state ── */
     .empty-box{
-        background:#fff;
-        border-radius:22px;
+        background:var(--card);
+        border-radius:var(--radius);
         box-shadow:var(--shadow);
-        padding:60px 30px;
+        border:1px solid var(--border);
+        padding:64px 30px;
         text-align:center;
-        color:#6b7280;
+    }
+
+    .empty-icon{
+        font-size:48px;
+        margin-bottom:18px;
     }
 
     .empty-box h2{
-        color:#111827;
-        font-size:28px;
+        color:var(--ink);
+        font-size:26px;
+        font-weight:800;
         margin-bottom:10px;
     }
 
     .empty-box p{
+        color:var(--muted);
         font-size:16px;
         line-height:1.8;
     }
 
+    /* ── Footer note ── */
     .footer-note{
         text-align:center;
-        color:#8a8f98;
+        color:var(--muted);
         font-size:14px;
-        margin-top:26px;
+        margin-top:28px;
+        padding-top:24px;
+        border-top:1px solid var(--border);
     }
 
+    /* ── Responsive ── */
     @media (max-width: 768px){
-        .page-wrap{
-            padding:20px 14px 40px;
+        .page-hero{
+            padding:36px 14px 42px;
         }
 
-        .topbar{
-            margin-bottom:18px;
-        }
-
-        .page-head{
-            margin-bottom:22px;
-        }
-
-        .page-head h1{
+        .hero-title{
             font-size:32px;
         }
 
-        .page-head p{
+        .hero-sub{
             font-size:15px;
         }
 
-        .news-inner{
-            padding:18px;
-        }
-
-        .news-title{
-            font-size:24px;
-        }
-
-        .news-content{
-            font-size:15px;
-            line-height:1.85;
+        .topbar{
+            margin-bottom:24px;
         }
 
         .back-btn{
             width:100%;
             justify-content:center;
         }
+
+        .page-wrap{
+            padding:24px 14px 44px;
+        }
+
+        .news-inner{
+            padding:20px;
+        }
+
+        .news-title{
+            font-size:21px;
+        }
+
+        .news-content{
+            font-size:15px;
+            line-height:1.9;
+        }
     }
 </style>
 </head>
 <body>
 
-<div class="page-wrap">
-
+<div class="page-hero">
     <div class="topbar">
         <a href="index.php" class="back-btn">← กลับหน้าหลัก</a>
     </div>
+    <div class="hero-badge">ประชาสัมพันธ์</div>
+    <h1 class="hero-title">ข่าวสาร<span> &amp; กิจกรรม</span></h1>
+    <p class="hero-sub">ติดตามข่าวสาร กิจกรรม ประกาศ และความเคลื่อนไหวล่าสุดของหน่วยงานได้ที่นี่</p>
+</div>
 
-    <div class="page-head">
-        <h1>ข่าวสาร</h1>
-        <p>ติดตามข่าวสาร กิจกรรม ประกาศ และความเคลื่อนไหวล่าสุดของหน่วยงานได้ที่นี่</p>
-    </div>
+<div class="page-wrap">
 
     <div class="news-list">
         <?php if($result && $result->num_rows > 0): ?>
@@ -301,6 +350,7 @@ $result = $conn->query("SELECT * FROM news ORDER BY id DESC");
             <?php endwhile; ?>
         <?php else: ?>
             <div class="empty-box">
+                <div class="empty-icon">📰</div>
                 <h2>ยังไม่มีข่าวสาร</h2>
                 <p>ขณะนี้ยังไม่มีข้อมูลข่าวประชาสัมพันธ์ กรุณาตรวจสอบอีกครั้งภายหลัง</p>
             </div>

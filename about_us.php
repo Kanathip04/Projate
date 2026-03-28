@@ -31,6 +31,9 @@ $imagePath = !empty($about['image_path']) ? $about['image_path'] : 'uploads/a0.j
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ประวัติสถาบัน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet">
 
 <style>
 *{
@@ -39,23 +42,23 @@ $imagePath = !empty($about['image_path']) ? $about['image_path'] : 'uploads/a0.j
     padding:0;
 }
 :root{
-    --main:#09422A;
-    --main-soft:#176046;
-    --accent:#C8A96B;
-    --white:#ffffff;
+    --ink:#1a1a2e;
+    --ink-mid:#2a2a4a;
+    --gold:#c9a96e;
+    --bg:#f5f1eb;
+    --card:#fff;
+    --muted:#7a7a8c;
+    --border:#e8e4de;
     --text:#2b2b2b;
-    --muted:#666;
-    --bg:#f3f5f4;
-    --line:#e7ece9;
     --shadow:0 18px 45px rgba(0,0,0,0.10);
     --shadow-hover:0 25px 55px rgba(0,0,0,0.14);
     --radius-xl:32px;
 }
 body{
-    font-family:'Segoe UI', Tahoma, sans-serif;
+    font-family:'Sarabun', 'Segoe UI', Tahoma, sans-serif;
     background:
-        radial-gradient(circle at top left, rgba(9,66,42,0.05), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(200,169,107,0.08), transparent 24%),
+        radial-gradient(circle at top left, rgba(26,26,46,0.05), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(201,169,110,0.08), transparent 24%),
         var(--bg);
     color:var(--text);
     line-height:1.85;
@@ -65,11 +68,11 @@ body{
     top:24px;
     left:28px;
     text-decoration:none;
-    color:var(--main);
+    color:var(--ink);
     font-weight:700;
     font-size:15px;
     padding:11px 18px;
-    border:1.8px solid rgba(9,66,42,0.75);
+    border:1.8px solid rgba(26,26,46,0.75);
     border-radius:999px;
     background:rgba(255,255,255,0.88);
     z-index:999;
@@ -77,7 +80,7 @@ body{
     transition:all .28s ease;
 }
 .back-btn:hover{
-    background:var(--main);
+    background:var(--ink);
     color:#fff;
     transform:translateY(-2px);
 }
@@ -90,7 +93,7 @@ body{
     display:grid;
     grid-template-columns:1.08fr 0.92fr;
     background:rgba(255,255,255,0.94);
-    border:1px solid rgba(9,66,42,0.06);
+    border:1px solid var(--border);
     border-radius:var(--radius-xl);
     overflow:hidden;
     box-shadow:var(--shadow);
@@ -98,7 +101,7 @@ body{
 .about-text{
     position:relative;
     padding:72px 64px;
-    background:linear-gradient(180deg, #fcfcfc 0%, #f6f7f6 100%);
+    background:linear-gradient(180deg, #fafaf8 0%, #f5f3ef 100%);
     display:flex;
     flex-direction:column;
     justify-content:center;
@@ -110,11 +113,11 @@ body{
     left:0;
     width:100%;
     height:8px;
-    background:linear-gradient(90deg, var(--main) 0%, var(--accent) 100%);
+    background:linear-gradient(90deg, var(--ink) 0%, var(--gold) 100%);
 }
 .about-text h4{
     display:inline-block;
-    color:var(--main-soft);
+    color:var(--ink-mid);
     letter-spacing:7px;
     font-weight:800;
     font-size:13px;
@@ -126,13 +129,13 @@ body{
     display:block;
     width:58px;
     height:2px;
-    background:var(--accent);
+    background:var(--gold);
     margin-top:8px;
     border-radius:10px;
 }
 .about-text h1{
     font-size:64px;
-    color:var(--main);
+    color:var(--ink);
     margin-bottom:22px;
     line-height:1.05;
     font-weight:800;
@@ -146,7 +149,7 @@ body{
     font-size:17px;
     color:var(--muted);
     margin-bottom:18px;
-    text-align:left; /* แก้ตรงนี้ */
+    text-align:left;
     letter-spacing:0;
     word-spacing:0;
     line-height:1.9;
@@ -155,14 +158,14 @@ body{
     position:relative;
     min-height:760px;
     overflow:hidden;
-    background:#dfe8e2;
+    background:#dde0e8;
 }
 .about-image::before{
     content:"";
     position:absolute;
     inset:0;
     background:
-        linear-gradient(rgba(9,66,42,0.10), rgba(9,66,42,0.08)),
+        linear-gradient(rgba(26,26,46,0.10), rgba(26,26,46,0.08)),
         url('<?php echo htmlspecialchars($imagePath) . '?v=' . time(); ?>') center center / cover no-repeat;
     transform:scale(1.03);
 }
@@ -170,18 +173,18 @@ body{
     content:"";
     position:absolute;
     inset:0;
-    background:linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(9,66,42,0.05) 100%);
+    background:linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(26,26,46,0.05) 100%);
 }
 .image-badge{
     position:absolute;
     right:24px;
     bottom:24px;
     background:rgba(255,255,255,0.90);
-    color:var(--main);
+    color:var(--ink);
     padding:14px 18px;
     border-radius:18px;
     box-shadow:0 12px 25px rgba(0,0,0,0.12);
-    border:1px solid rgba(9,66,42,0.08);
+    border:1px solid var(--border);
     max-width:260px;
     z-index:2;
 }

@@ -422,7 +422,8 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);line
     มหาวิทยาลัยมหาสารคาม
   </p>
   <div class="hero-actions">
-    <a href="#pricing" class="hero-btn hero-btn-primary">⛺ ดูราคา & บริการ</a>
+    <a href="booking_tent.php" class="hero-btn hero-btn-primary">⛺ จองเต็นท์เลย</a>
+    <a href="#pricing" class="hero-btn hero-btn-ghost">💰 ดูราคา & บริการ</a>
     <a href="#contact" class="hero-btn hero-btn-ghost">📞 ติดต่อเรา</a>
   </div>
   <div class="scroll-hint">

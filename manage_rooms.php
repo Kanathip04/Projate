@@ -454,13 +454,6 @@ include 'admin_layout_top.php';
                      value="<?= htmlspecialchars($editData['max_guests'] ?? '2') ?>">
             </div>
           </div>
-
-          <div class="rm-form-row">
-            <div class="rm-form-group">
-              <label>ขนาดห้อง</label>
-              <input type="text" name="room_size" placeholder="เช่น 28 ตร.ม."
-                     value="<?= htmlspecialchars($editData['room_size'] ?? '') ?>">
-            </div>
             <div class="rm-form-group">
               <label>ประเภทเตียง</label>
               <input type="text" name="bed_type" placeholder="เช่น เตียงคู่"

@@ -110,7 +110,7 @@ if ($action === 'fetch') {
 
 // ── Google Sheets sync ──────────────────────────────────────
 function pushToSheets($data) {
-    $url  = 'https://script.google.com/macros/s/AKfycbygu-OAkt8DnHiHmlw8fbIlv3ZRUnSeGYWf2lYNJ_NkqoB0idnungpT-gSca4UqKQ5qww/exec';
+    $url  = 'https://script.google.com/macros/s/AKfycbygu-OAkt8DnHiHmlw8fblIv3ZRUnSeGYWf2lYNJ_NkqoB0idnungpT-gSca4UqKQ5qww/exec';
     $json = json_encode($data);
     $ch   = curl_init($url);
     curl_setopt_array($ch, [

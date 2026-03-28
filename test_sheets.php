@@ -2,7 +2,7 @@
 session_start();
 if (empty($_SESSION['user_id'])) { exit('กรุณา login ก่อน'); }
 
-$url  = 'https://script.google.com/macros/s/AKfycbygu-OAkt8DnHiHmlw8fbIlv3ZRUnSeGYWf2lYNJ_NkqoB0idnungpT-gSca4UqKQ5qww/exec';
+$url  = 'https://script.google.com/macros/s/AKfycbygu-OAkt8DnHiHmlw8fblIv3ZRUnSeGYWf2lYNJ_NkqoB0idnungpT-gSca4UqKQ5qww/exec';
 $json = json_encode([
     'created_at' => '28/03/2569 14:00:00',
     'user_name'  => 'TestUser',

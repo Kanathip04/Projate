@@ -1,4 +1,5 @@
 <?php
+require_once 'auth_guard.php';
 include 'config.php';
 $result = $conn->query("SELECT * FROM news ORDER BY id DESC");
 ?>

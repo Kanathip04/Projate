@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:walai.msu.ac.th)"
+      "WebFetch(domain:walai.msu.ac.th)",
+      "Bash(ls c:/xampp/htdocs/Projate/*.php)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//c/xampp/htdocs/Projate/**)",
+      "Bash(done)"
     ]
   }
 }

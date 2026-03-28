@@ -1,4 +1,5 @@
 <?php
+require_once 'auth_guard.php';
 date_default_timezone_set('Asia/Bangkok');
 
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");

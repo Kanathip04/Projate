@@ -43,12 +43,30 @@ $conn->query("CREATE TABLE IF NOT EXISTS `tent_bookings` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-/* === นับการจองที่อนุมัติแล้วต่อเต็นท์ === */
+/* === นับการจองที่อนุมัติแล้วต่อเต็นท์ (รองรับ tent_units JSON) === */
 $approvedMap = [];
-$resAp = $conn->query("SELECT tent_id, COUNT(*) AS cnt FROM tent_bookings WHERE booking_status='approved' GROUP BY tent_id");
+$colChk = $conn->query("SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA='backoffice_db' AND TABLE_NAME='tent_bookings' AND COLUMN_NAME='tent_units'");
+$hasUnitsCol = ($colChk && (int)$colChk->fetch_assoc()['cnt'] > 0);
+
+if ($hasUnitsCol) {
+    $resAp = $conn->query(
+        "SELECT tent_id,
+                SUM(CASE
+                    WHEN tent_units IS NOT NULL AND tent_units != ''
+                    THEN JSON_LENGTH(tent_units)
+                    ELSE 1
+                END) AS approved_total
+         FROM tent_bookings
+         WHERE booking_status='approved'
+         GROUP BY tent_id"
+    );
+} else {
+    $resAp = $conn->query("SELECT tent_id, COUNT(*) AS approved_total FROM tent_bookings WHERE booking_status='approved' GROUP BY tent_id");
+}
 if ($resAp) {
     while ($r = $resAp->fetch_assoc()) {
-        $approvedMap[(int)$r['tent_id']] = (int)$r['cnt'];
+        $approvedMap[(int)$r['tent_id']] = (int)$r['approved_total'];
     }
 }
 

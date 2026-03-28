@@ -191,9 +191,9 @@ include 'admin_layout_top.php';
         </thead>
         <tbody>
           <?php if ($result && $result->num_rows > 0): ?>
-            <?php while ($row = $result->fetch_assoc()): ?>
+            <?php $rowNum = 0; while ($row = $result->fetch_assoc()): $rowNum++; ?>
               <tr>
-                <td style="color:var(--muted);font-size:0.76rem;"><?= (int)$row['id'] ?></td>
+                <td style="color:var(--muted);font-size:0.76rem;"><?= $rowNum ?></td>
                 <td>
                   <div class="bk-name"><?= h($row['full_name']) ?></div>
                   <div class="bk-meta"><?= (int)$row['guests'] ?> คน</div>

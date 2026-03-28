@@ -8,6 +8,22 @@ if ($conn->connect_error) die("DB Error: " . $conn->connect_error);
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
+$conn->query("CREATE TABLE IF NOT EXISTS `tent_bookings` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `tent_id` INT UNSIGNED DEFAULT NULL,
+    `full_name` VARCHAR(200) NOT NULL,
+    `phone` VARCHAR(30) NOT NULL,
+    `email` VARCHAR(200) DEFAULT '',
+    `tent_type` VARCHAR(200) DEFAULT '',
+    `guests` INT DEFAULT 1,
+    `checkin_date` DATE DEFAULT NULL,
+    `checkout_date` DATE DEFAULT NULL,
+    `note` TEXT,
+    `booking_status` ENUM('pending','approved','rejected','cancelled') DEFAULT 'pending',
+    `archived` TINYINT(1) DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
 $currentPage = basename($_SERVER['PHP_SELF']);
 $message = ''; $message_type = 'success';
 

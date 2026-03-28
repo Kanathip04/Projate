@@ -587,56 +587,51 @@ if ($isAdmin) {
     </div>
 
     <!-- ── สถานะการจองเต็นท์ ── -->
-    <div class="pf-card full">
+    <div class="pf-card">
       <div class="pf-card-header">
         <div class="pf-card-icon">⛺</div>
-        <div class="pf-card-title">สถานะการจองเต็นท์</div>
+        <div class="pf-card-title">ข้อมูลการจองเต็นท์</div>
       </div>
       <div class="pf-card-body">
+        <div class="pf-info-list">
+          <div class="pf-info-item">
+            <div class="pf-info-dot"></div>
+            <div>
+              <div class="pf-info-lbl">จำนวนการจองเต็นท์ทั้งหมด</div>
+              <div class="pf-info-val"><?= $tent_booking_count ?> ครั้ง</div>
+            </div>
+          </div>
+        </div>
+
         <?php if ($tent_bookings_result && $tent_bookings_result->num_rows > 0): ?>
-          <div class="bs-table-wrap">
-            <table class="bs-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>ประเภทเต็นท์</th>
-                  <th>หน่วยที่จอง</th>
-                  <th>ผู้เข้าพัก</th>
-                  <th>วันเช็คอิน</th>
-                  <th>วันเช็คเอาท์</th>
-                  <th>สถานะ</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php $tNum = 0; while ($trow = $tent_bookings_result->fetch_assoc()): $tNum++;
-                  $tStatus = !empty($trow['archived']) && (int)$trow['archived'] === 1 ? 'unavailable' : ($trow['booking_status'] ?? 'pending');
-                  $tUnits  = !empty($trow['tent_units']) ? json_decode($trow['tent_units'], true) : [];
-                ?>
-                <tr>
-                  <td style="color:var(--muted);font-size:.76rem;"><?= $tNum ?></td>
-                  <td style="font-weight:700;"><?= h($trow['tent_type'] ?? '-') ?></td>
-                  <td>
-                    <?php if (!empty($tUnits)): ?>
-                      <div style="display:flex;flex-wrap:wrap;gap:4px;">
-                        <?php foreach ($tUnits as $u): ?>
-                          <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:.65rem;font-weight:700;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.28);color:#15803d;">หน่วยที่ <?= (int)$u ?></span>
-                        <?php endforeach; ?>
-                      </div>
-                    <?php else: ?>
-                      <span style="color:var(--muted);font-size:.8rem;">—</span>
-                    <?php endif; ?>
-                  </td>
-                  <td><?= (int)$trow['guests'] ?> คน</td>
-                  <td style="font-size:.82rem;"><?= !empty($trow['checkin_date'])  ? date('d/m/Y', strtotime($trow['checkin_date']))  : '-' ?></td>
-                  <td style="font-size:.82rem;"><?= !empty($trow['checkout_date']) ? date('d/m/Y', strtotime($trow['checkout_date'])) : '-' ?></td>
-                  <td><span class="bs-badge <?= bsClass($tStatus) ?>"><?= bsText($tStatus) ?></span></td>
-                </tr>
-                <?php endwhile; ?>
-              </tbody>
-            </table>
+          <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px;">
+            <div style="font-size:0.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">สถานะการจอง</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <?php while ($trow = $tent_bookings_result->fetch_assoc()):
+                $tStatus = !empty($trow['archived']) && (int)$trow['archived'] === 1 ? 'unavailable' : ($trow['booking_status'] ?? 'pending');
+                $tUnits  = !empty($trow['tent_units']) ? json_decode($trow['tent_units'], true) : [];
+              ?>
+              <div style="padding:8px 10px;background:#fafaf8;border:1px solid var(--border);border-radius:10px;font-size:0.8rem;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                  <div>
+                    <span style="font-weight:700;color:var(--ink);">⛺ <?= h($trow['tent_type'] ?? '-') ?></span>
+                    <span style="color:var(--muted);margin-left:6px;"><?= !empty($trow['checkin_date']) ? date('d/m/Y', strtotime($trow['checkin_date'])) : '-' ?> → <?= !empty($trow['checkout_date']) ? date('d/m/Y', strtotime($trow['checkout_date'])) : '-' ?></span>
+                  </div>
+                  <span class="bs-badge <?= bsClass($tStatus) ?>"><?= bsText($tStatus) ?></span>
+                </div>
+                <?php if (!empty($tUnits)): ?>
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
+                    <?php foreach ($tUnits as $u): ?>
+                      <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:.65rem;font-weight:700;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.28);color:#15803d;">หน่วยที่ <?= (int)$u ?></span>
+                    <?php endforeach; ?>
+                  </div>
+                <?php endif; ?>
+              </div>
+              <?php endwhile; ?>
+            </div>
           </div>
         <?php else: ?>
-          <div class="bs-empty">⛺ ยังไม่มีรายการจองเต็นท์</div>
+          <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;font-size:0.8rem;color:var(--muted);text-align:center;">ยังไม่มีรายการจองเต็นท์</div>
         <?php endif; ?>
       </div>
     </div>

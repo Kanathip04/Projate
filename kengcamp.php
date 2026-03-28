@@ -64,7 +64,7 @@ $contacts   = json_decode($row['contacts_json']   ?? '[]', true) ?: [];
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>เก็งแคมป์ — ENJOY YOUR LIFE WITH NATURE</title>
+<title>เกิ้งแคมป์ — ENJOY YOUR LIFE WITH NATURE</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -400,7 +400,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);line
 
 <!-- ─── NAV ─── -->
 <nav class="nav">
-  <a href="index.php" class="nav-logo">⛺ <span>เก็งแคมป์</span></a>
+  <a href="index.php" class="nav-logo">⛺ <span>เกิ้งแคมป์</span></a>
   <div class="nav-links">
     <a href="index.php">หน้าหลัก</a>
     <a href="view_data.php">ลงทะเบียน</a>
@@ -414,7 +414,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);line
     <span class="hero-badge-dot"></span>
     เปิดรับนักท่องเที่ยว · WRBRI MSU
   </div>
-  <h1><em>เก็งแคมป์</em></h1>
+  <h1><em>เกิ้งแคมป์</em></h1>
   <div class="hero-en">Enjoy Your Life With Nature</div>
   <p class="hero-desc">
     สัมผัสธรรมชาติแท้ๆ กลางป่าวลัยรุกขเวช<br>
@@ -616,7 +616,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);line
 
 <!-- ─── FOOTER ─── -->
 <footer class="footer">
-  <div class="footer-logo"><span>เก็ง</span>แคมป์</div>
+  <div class="footer-logo"><span>เกิ้ง</span>แคมป์</div>
   <div class="footer-sub">สถาบันวิจัยวลัยรุกขเวช · มหาวิทยาลัยมหาสารคาม · WRBRI MSU</div>
 </footer>
 

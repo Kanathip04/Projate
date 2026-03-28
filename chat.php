@@ -182,6 +182,29 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);hei
 /* system message */
 .sys-msg{text-align:center;font-size:12px;color:var(--muted);padding:6px 0;font-style:italic}
 
+/* ── PROFILE MODAL ── */
+.profile-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:100;display:none;align-items:center;justify-content:center}
+.profile-overlay.show{display:flex}
+.profile-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px 28px;min-width:280px;max-width:340px;width:90%;position:relative;animation:popIn .2s cubic-bezier(.34,1.56,.64,1)}
+@keyframes popIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+.profile-close{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;transition:.15s}
+.profile-close:hover{color:var(--text)}
+.profile-av{width:80px;height:80px;border-radius:50%;overflow:hidden;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:var(--gold);border:3px solid var(--gold);margin:0 auto 14px}
+.profile-av img{width:100%;height:100%;object-fit:cover}
+.profile-name{font-size:18px;font-weight:700;text-align:center;color:var(--text)}
+.profile-role-tag{display:inline-block;margin:6px auto 0;padding:3px 12px;border-radius:999px;font-size:12px;font-weight:700}
+.profile-role-tag.admin{background:rgba(201,169,110,.15);color:var(--gold);border:1px solid var(--gold)}
+.profile-role-tag.user{background:rgba(255,255,255,.07);color:var(--muted);border:1px solid var(--border)}
+.profile-info{margin-top:18px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);padding-top:14px}
+.profile-row{display:flex;gap:8px;font-size:13px;color:var(--muted)}
+.profile-row span:first-child{min-width:70px;flex-shrink:0}
+.profile-row span:last-child{color:var(--text);font-weight:500}
+
+/* clickable avatars/names */
+.msg-av.clickable,.msg-name.clickable,.online-item.clickable{cursor:pointer}
+.msg-av.clickable:hover{opacity:.8}
+.msg-name.clickable:hover{text-decoration:underline;text-underline-offset:2px}
+
 /* ── TYPING ── */
 .typing-bar{
   min-height:24px;padding:0 20px 4px;
@@ -321,6 +344,19 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);hei
   </div>
 </div>
 
+<!-- Profile Modal -->
+<div class="profile-overlay" id="profileOverlay" onclick="closeProfile(event)">
+  <div class="profile-card" id="profileCard">
+    <button class="profile-close" onclick="closeProfileDirect()">✕</button>
+    <div class="profile-av" id="profileAv"></div>
+    <div class="profile-name" id="profileName"></div>
+    <div style="text-align:center"><span class="profile-role-tag" id="profileRoleTag"></span></div>
+    <div class="profile-info">
+      <div class="profile-row"><span>สมาชิกตั้งแต่</span><span id="profileSince">—</span></div>
+    </div>
+  </div>
+</div>
+
 <audio id="notifSound" preload="auto">
   <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivsKSShHR1g5mptKqXhoFxcXmMpbKvnI2Fd3J3iJ+vtqqajId4cneMo7KxopOIe3J2iZ+xsqKSiHtyd4eesrGikIh7cXaInLCxoZCIe3F2h5ywsaGPh3txdomcs7KhoI+He3F1iJqxsaKQiHtxdYiYsbGikI" type="audio/wav">
 </audio>
@@ -394,12 +430,13 @@ function scrollToBottom(force=false){
 }
 
 // ── Avatar helper ────────────────────────────────────────
-function avatarEl(av, name, role){
+function avatarEl(av, name, role, userId){
   const first = name ? name.charAt(0).toUpperCase() : '?';
+  const click = userId ? `onclick="showProfile(${userId})" class="msg-av clickable"` : `class="msg-av"`;
   if (av && av !== '') {
-    return `<div class="msg-av"><img src="${av}?v=1" alt="${escHtml(name)}" onerror="this.parentNode.innerHTML='${first}'"></div>`;
+    return `<div ${click} title="${escHtml(name)}"><img src="${av}?v=1" alt="${escHtml(name)}" onerror="this.style.display='none'"><span style="display:none">${first}</span></div>`;
   }
-  return `<div class="msg-av">${first}</div>`;
+  return `<div ${click} title="${escHtml(name)}">${first}</div>`;
 }
 function escHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
@@ -433,13 +470,13 @@ function renderMessages(msgs){
     const roleTag = m.role === 'admin' ? `<span class="msg-admin-tag">⚡ Admin</span>` : '';
     const metaMe  = isMe
       ? `<span class="msg-time">${relTime(m.ts)}</span>`
-      : `<span class="msg-name">${escHtml(m.user_name)}</span>${roleTag}<span class="msg-time">${relTime(m.ts)}</span>`;
+      : `<span class="msg-name clickable" onclick="showProfile(${m.user_id})">${escHtml(m.user_name)}</span>${roleTag}<span class="msg-time">${relTime(m.ts)}</span>`;
 
     const delBtn = (isMe || MY_ROLE === 'admin')
       ? `<button onclick="deleteMsg(${m.id})" title="ลบ">🗑️</button>` : '';
 
     wrap.innerHTML = `
-      ${avatarEl(m.avatar, m.user_name, m.role)}
+      ${avatarEl(m.avatar, m.user_name, m.role, m.user_id)}
       <div class="msg-body">
         <div class="msg-meta">${metaMe}</div>
         <div class="bubble" id="bubble-${m.id}">
@@ -595,7 +632,7 @@ function updateOnline(users){
   list.innerHTML = users.map(u => {
     const av = u.avatar ? `<img src="${u.avatar}?v=1" alt="" onerror="this.style.display='none'">` : u.user_name.charAt(0).toUpperCase();
     const roleTag = u.role === 'admin' ? `<span class="badge-admin">⚡ Admin</span>` : 'Member';
-    return `<div class="online-item">
+    return `<div class="online-item clickable" onclick="showProfile(${u.user_id})">
       <div class="oa">${av}<span class="oa-dot"></span></div>
       <div class="on">
         <div class="on-name">${escHtml(u.user_name)}</div>
@@ -611,6 +648,38 @@ function updateTyping(names){
   const who = names.length === 1 ? names[0] : names.slice(0,-1).join(', ') + ' และ ' + names[names.length-1];
   bar.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div><span>${escHtml(who)} กำลังพิมพ์...</span>`;
 }
+
+// ── Profile modal ────────────────────────────────────────
+function showProfile(userId){
+  fetch(`chat_api.php?action=profile&user_id=${userId}`)
+    .then(r=>r.json())
+    .then(d=>{
+      if (!d.ok) return;
+      const u = d.user;
+      const first = u.fullname ? u.fullname.charAt(0).toUpperCase() : '?';
+      const avEl = document.getElementById('profileAv');
+      avEl.innerHTML = u.avatar
+        ? `<img src="${u.avatar}?v=1" alt="" onerror="this.style.display='none'">${first}`
+        : first;
+      document.getElementById('profileName').textContent = u.fullname;
+      const rt = document.getElementById('profileRoleTag');
+      rt.textContent = u.role === 'admin' ? '⚡ Administrator' : '👤 Member';
+      rt.className = 'profile-role-tag ' + (u.role === 'admin' ? 'admin' : 'user');
+      const since = u.created_at ? new Date(u.created_at).toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'}) : '—';
+      document.getElementById('profileSince').textContent = since;
+      document.getElementById('profileOverlay').classList.add('show');
+    });
+}
+function closeProfile(e){
+  if (e.target === document.getElementById('profileOverlay'))
+    document.getElementById('profileOverlay').classList.remove('show');
+}
+function closeProfileDirect(){
+  document.getElementById('profileOverlay').classList.remove('show');
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('profileOverlay').classList.remove('show');
+});
 
 // ── Heartbeat ────────────────────────────────────────────
 function heartbeat(){ fetch('chat_api.php?action=heartbeat'); }

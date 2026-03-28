@@ -855,12 +855,7 @@ img{display:block;}
         </a>
         <?php endforeach; ?>
 
-        <!-- Filler CTA card if less than 2 side news -->
-        <?php if (count($sideNews) < 2): ?>
-        <a href="news.php" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:20px;background:var(--gold-dim);border:1.5px dashed var(--gold-border);border-radius:var(--r-sm);color:var(--gold);font-weight:700;font-size:.85rem;text-align:center;">
-          📰 ดูข่าวสารทั้งหมด →
-        </a>
-        <?php endif; ?>
+
       </div>
     </div>
 

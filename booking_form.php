@@ -40,6 +40,19 @@ if (!$result || $result->num_rows === 0) {
 
 $room = $result->fetch_assoc();
 
+/* === ดึงข้อมูล profile ของ user === */
+$user_name  = $_SESSION['user_name']  ?? '';
+$user_email = $_SESSION['user_email'] ?? '';
+$user_phone = '';
+if (!empty($_SESSION['user_id'])) {
+    $uStmt = $conn->prepare("SELECT phone FROM users WHERE id = ? LIMIT 1");
+    $uStmt->bind_param("i", $_SESSION['user_id']);
+    $uStmt->execute();
+    $uRow = $uStmt->get_result()->fetch_assoc();
+    $uStmt->close();
+    $user_phone = $uRow['phone'] ?? '';
+}
+
 if ($guests === '' || !is_numeric($guests) || (int)$guests < 1) {
     $guests = 1;
 }
@@ -255,17 +268,17 @@ if ($checkout === '' || $checkout <= $checkin) {
         <div class="form-grid">
           <div class="form-group">
             <label>ชื่อผู้จอง</label>
-            <input type="text" name="customer_name" placeholder="กรอกชื่อ-นามสกุล" required>
+            <input type="text" name="customer_name" placeholder="กรอกชื่อ-นามสกุล" value="<?= htmlspecialchars($user_name) ?>" required>
           </div>
 
           <div class="form-group">
             <label>เบอร์โทร</label>
-            <input type="text" name="phone" placeholder="0XX-XXX-XXXX" required>
+            <input type="text" name="phone" placeholder="0XX-XXX-XXXX" value="<?= htmlspecialchars($user_phone) ?>" required>
           </div>
 
           <div class="form-group">
             <label>อีเมล</label>
-            <input type="email" name="email" placeholder="example@email.com">
+            <input type="email" name="email" placeholder="example@email.com" value="<?= htmlspecialchars($user_email) ?>">
           </div>
 
           <div class="form-group">

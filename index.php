@@ -667,6 +667,7 @@ img{display:block;}
     <a href="survey.php"><span class="nav-icon">📝</span> แบบประเมิน</a>
     <a href="calendar.php"><span class="nav-icon">📅</span> ปฏิทิน</a>
     <a href="about_us.php"><span class="nav-icon">🌿</span> เกี่ยวกับ</a>
+    <a href="kengcamp.php"><span class="nav-icon">⛺</span> เก็งแคมป์</a>
     <a href="booking_room.php"><span class="nav-icon">🏨</span> จองห้องพัก</a>
     <?php if ($isLoggedIn): ?><a href="chat.php"><span class="nav-icon">💬</span> แชทโลก</a><?php endif; ?>
   </div>
@@ -734,6 +735,7 @@ img{display:block;}
     <?php endif; ?>
     <a href="index.php"><div class="nav-drawer-icon">🏠</div> หน้าแรก</a>
     <a href="news.php"><div class="nav-drawer-icon">📰</div> ข่าวสาร</a>
+    <a href="kengcamp.php"><div class="nav-drawer-icon">⛺</div> เก็งแคมป์</a>
     <a href="booking_room.php"><div class="nav-drawer-icon">🏨</div> จองห้องพัก</a>
     <a href="view_data.php"><div class="nav-drawer-icon">📋</div> ลงทะเบียนกิจกรรม</a>
     <a href="calendar.php"><div class="nav-drawer-icon">📅</div> ปฏิทินกิจกรรม</a>

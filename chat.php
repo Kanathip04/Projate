@@ -174,7 +174,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);hei
 }
 .me .emoji-picker{right:0}
 .them .emoji-picker{left:0}
-.bubble:hover .emoji-picker,.emoji-picker.show{display:flex}
+.emoji-picker.show{display:flex}
 .ep-btn{background:none;border:none;cursor:pointer;font-size:20px;padding:4px;
         border-radius:8px;transition:.15s}
 .ep-btn:hover{background:rgba(255,255,255,.1);transform:scale(1.2)}

@@ -108,6 +108,23 @@ if ($action === 'fetch') {
     exit;
 }
 
+// ── Google Sheets sync ──────────────────────────────────────
+function pushToSheets($data) {
+    $url = 'https://script.google.com/macros/s/AKfycbygu-OAkt8DnHiHmlw8fbIlv3ZRUnSeGYWf2lYNJ_NkqoB0idnungpT-gSca4UqKQ5qww/exec';
+    $json = json_encode($data);
+    $ctx  = stream_context_create([
+        'http' => [
+            'method'        => 'POST',
+            'header'        => 'Content-Type: application/json',
+            'content'       => $json,
+            'timeout'       => 5,
+            'ignore_errors' => true,
+        ],
+        'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
+    ]);
+    @file_get_contents($url, false, $ctx);
+}
+
 // ── Send message ────────────────────────────────────────────
 if ($action === 'send') {
     $msg = trim($_POST['message'] ?? '');
@@ -121,6 +138,16 @@ if ($action === 'send') {
     $conn->query("INSERT INTO chat_messages (user_id,user_name,avatar,role,message)
                   VALUES ($uid,'$unEsc','$avEsc','$roEsc','$msgEsc')");
     $newId = (int)$conn->insert_id;
+
+    // Push to Google Sheets แบบ background (non-blocking)
+    $thYear = (int)date('Y') + 543;
+    pushToSheets([
+        'created_at' => date('d/m/') . $thYear . ' ' . date('H:i:s'),
+        'user_name'  => $uname,
+        'role'       => $role,
+        'message'    => $msg,
+    ]);
+
     // Clear typing
     $conn->query("DELETE FROM chat_typing WHERE user_id=$uid");
     echo json_encode(['ok' => true, 'id' => $newId]);

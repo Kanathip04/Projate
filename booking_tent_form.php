@@ -137,14 +137,6 @@ select{appearance:none;cursor:pointer;}
                         <input type="date" name="checkout_date" value="<?= $tomorrow ?>" min="<?= $tomorrow ?>" required>
                     </div>
 
-                    <div class="form-group">
-                        <label>วิธีชำระเงิน</label>
-                        <select name="payment_method">
-                            <option value="โอนเงิน">โอนเงิน</option>
-                            <option value="ชำระเงินสด">ชำระเงินสด</option>
-                        </select>
-                    </div>
-
                     <div class="form-group full">
                         <label>หมายเหตุเพิ่มเติม</label>
                         <textarea name="note" placeholder="ข้อมูลเพิ่มเติม หรือความต้องการพิเศษ..."></textarea>

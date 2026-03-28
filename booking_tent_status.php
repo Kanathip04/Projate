@@ -152,4 +152,4 @@ body{background:var(--bg);color:var(--ink);font-family:'Sarabun','Segoe UI',Taho
 </section>
 </body>
 </html>
-<?php $stmt->close(); ?>
+<?php $stmt->close(); $conn->close(); ?>

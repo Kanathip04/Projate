@@ -16,7 +16,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = (int)($_POST['id'] ?? 0);
 
     if ($action === 'approve' && $id > 0) {
-        $conn->prepare("UPDATE tent_bookings SET booking_status='approved' WHERE id=?")->execute_simple($id);
         $st = $conn->prepare("UPDATE tent_bookings SET booking_status='approved' WHERE id=?");
         $st->bind_param("i", $id); $st->execute(); $st->close();
         header("Location: admin_tent_approved.php?msg=" . urlencode("อนุมัติรายการเรียบร้อยแล้ว") . "&type=success"); exit;

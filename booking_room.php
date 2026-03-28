@@ -83,12 +83,28 @@ if (tableExists($conn, 'room_bookings')) {
     $hasBookingStatus = in_array('booking_status', $bookingColumns, true);
 
     if ($hasBookingRoomId && $hasBookingStatus) {
-        $sqlApproved = "
-            SELECT room_id, COUNT(*) AS approved_total
-            FROM room_bookings
-            WHERE booking_status = 'approved'
-            GROUP BY room_id
-        ";
+        $hasRoomUnitsCol = in_array('room_units', $bookingColumns, true);
+        if ($hasRoomUnitsCol) {
+            /* นับจากจำนวนหน่วยจริงใน room_units JSON */
+            $sqlApproved = "
+                SELECT room_id,
+                       SUM(CASE
+                           WHEN room_units IS NOT NULL AND room_units != ''
+                           THEN JSON_LENGTH(room_units)
+                           ELSE 1
+                       END) AS approved_total
+                FROM room_bookings
+                WHERE booking_status = 'approved'
+                GROUP BY room_id
+            ";
+        } else {
+            $sqlApproved = "
+                SELECT room_id, COUNT(*) AS approved_total
+                FROM room_bookings
+                WHERE booking_status = 'approved'
+                GROUP BY room_id
+            ";
+        }
 
         $resApproved = $conn->query($sqlApproved);
         if ($resApproved) {

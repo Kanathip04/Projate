@@ -18,6 +18,13 @@ if ($conn->connect_error) {
     die("เชื่อมต่อฐานข้อมูลไม่สำเร็จ: " . $conn->connect_error);
 }
 
+/* === เพิ่มคอลัมน์ room_units ถ้ายังไม่มี === */
+$colCheck = $conn->query("SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA='backoffice_db' AND TABLE_NAME='room_bookings' AND COLUMN_NAME='room_units'");
+if ($colCheck && (int)$colCheck->fetch_assoc()['cnt'] === 0) {
+    $conn->query("ALTER TABLE room_bookings ADD COLUMN room_units TEXT DEFAULT NULL");
+}
+
 /* -----------------------------
    รับเฉพาะ POST
 ------------------------------ */
@@ -39,6 +46,10 @@ $checkout_date = trim($_POST['checkout_date'] ?? '');
 $adults        = isset($_POST['adults']) ? (int)$_POST['adults'] : 1;
 $children      = isset($_POST['children']) ? (int)$_POST['children'] : 0;
 $note          = trim($_POST['note'] ?? '');
+$raw_units     = $_POST['room_units'] ?? [];
+if (!is_array($raw_units)) $raw_units = [];
+$selected_units = array_values(array_filter(array_map('intval', $raw_units), fn($u) => $u > 0));
+$room_units_json = !empty($selected_units) ? json_encode($selected_units) : null;
 
 /* -----------------------------
    แปลงค่าให้ตรงกับโครงสร้างตารางจริง
@@ -74,6 +85,9 @@ if ($checkout_date === '') {
 if ($adults < 1) {
     $errors[] = "จำนวนผู้ใหญ่ต้องไม่น้อยกว่า 1";
 }
+if (empty($selected_units)) {
+    $errors[] = "กรุณาเลือกห้องอย่างน้อย 1 ห้อง";
+}
 if ($children < 0) {
     $errors[] = "จำนวนเด็กห้ามติดลบ";
 }
@@ -99,8 +113,8 @@ if (!empty($errors)) {
    ใช้คอลัมน์ตามตารางจริง
 ------------------------------ */
 $sql = "INSERT INTO room_bookings
-        (room_id, full_name, phone, email, room_type, guests, checkin_date, checkout_date, note, booking_status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        (room_id, full_name, phone, email, room_type, guests, checkin_date, checkout_date, note, booking_status, room_units)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 $stmt = $conn->prepare($sql);
 
@@ -122,7 +136,7 @@ note          = s
 status        = s
 */
 $bind = $stmt->bind_param(
-    "issssissss",
+    "issssisssss",
     $room_id,
     $full_name,
     $phone,
@@ -132,7 +146,8 @@ $bind = $stmt->bind_param(
     $checkin_date,
     $checkout_date,
     $note,
-    $status
+    $status,
+    $room_units_json
 );
 
 if (!$bind) {
@@ -197,6 +212,12 @@ if ($stmt->execute()) {
             <h1>ส่งคำขอจองสำเร็จ</h1>
             <p>ระบบบันทึกข้อมูลการจองเรียบร้อยแล้ว</p>
             <p><strong>ห้อง:</strong> <?php echo htmlspecialchars($room_type); ?></p>
+            <?php if (!empty($selected_units)): ?>
+            <p><strong>ห้องที่จอง:</strong>
+              <?php echo implode(', ', array_map(fn($u) => 'ห้องที่ '.$u, $selected_units)); ?>
+              (<?= count($selected_units) ?> ห้อง)
+            </p>
+            <?php endif; ?>
             <p><strong>ผู้จอง:</strong> <?php echo htmlspecialchars($full_name); ?></p>
             <p><strong>จำนวนผู้เข้าพัก:</strong> <?php echo (int)$guests; ?> คน</p>
             <p><strong>สถานะ:</strong> รอการยืนยัน</p>

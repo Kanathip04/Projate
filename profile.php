@@ -470,7 +470,7 @@ if ($isAdmin) {
       </div>
     </div>
 
-    <!-- ── ข้อมูลบัญชี (readonly) ── -->
+    <!-- ── ข้อมูลบัญชี + การจอง ── -->
     <div class="pf-card">
       <div class="pf-card-header">
         <div class="pf-card-icon">🔖</div>
@@ -507,48 +507,25 @@ if ($isAdmin) {
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- ── สถานะการจอง ── -->
-    <div class="pf-card full">
-      <div class="pf-card-header">
-        <div class="pf-card-icon">🛎️</div>
-        <div class="pf-card-title">สถานะการจองของฉัน</div>
-      </div>
-      <div class="pf-card-body">
         <?php if ($bookings_result && $bookings_result->num_rows > 0): ?>
-          <div class="bs-table-wrap">
-            <table class="bs-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>ห้อง</th>
-                  <th>วันเข้าพัก</th>
-                  <th>วันออก</th>
-                  <th>จำนวน</th>
-                  <th>วันที่จอง</th>
-                  <th>สถานะ</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php while ($brow = $bookings_result->fetch_assoc()):
-                  $bStatus = getBookingStatus($brow); ?>
-                <tr>
-                  <td>#<?= (int)$brow['id'] ?></td>
-                  <td><?= h($brow['room_type'] ?? '-') ?></td>
-                  <td><?= !empty($brow['checkin_date'])  ? date('d/m/Y', strtotime($brow['checkin_date']))  : '-' ?></td>
-                  <td><?= !empty($brow['checkout_date']) ? date('d/m/Y', strtotime($brow['checkout_date'])) : '-' ?></td>
-                  <td><?= h($brow['guests'] ?? '-') ?> คน</td>
-                  <td><?= !empty($brow['created_at']) ? date('d/m/Y H:i', strtotime($brow['created_at'])) : '-' ?></td>
-                  <td><span class="bs-badge <?= bsClass($bStatus) ?>"><?= bsText($bStatus) ?></span></td>
-                </tr>
-                <?php endwhile; ?>
-              </tbody>
-            </table>
+          <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px;">
+            <div style="font-size:0.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">สถานะการจอง</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <?php while ($brow = $bookings_result->fetch_assoc()):
+                $bStatus = getBookingStatus($brow); ?>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:#fafaf8;border:1px solid var(--border);border-radius:10px;font-size:0.8rem;">
+                <div>
+                  <span style="font-weight:700;color:var(--ink);"><?= h($brow['room_type'] ?? '-') ?></span>
+                  <span style="color:var(--muted);margin-left:6px;"><?= !empty($brow['checkin_date']) ? date('d/m/Y', strtotime($brow['checkin_date'])) : '-' ?> → <?= !empty($brow['checkout_date']) ? date('d/m/Y', strtotime($brow['checkout_date'])) : '-' ?></span>
+                </div>
+                <span class="bs-badge <?= bsClass($bStatus) ?>"><?= bsText($bStatus) ?></span>
+              </div>
+              <?php endwhile; ?>
+            </div>
           </div>
         <?php else: ?>
-          <div class="bs-empty">ยังไม่มีรายการจอง</div>
+          <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;font-size:0.8rem;color:var(--muted);text-align:center;">ยังไม่มีรายการจอง</div>
         <?php endif; ?>
       </div>
     </div>

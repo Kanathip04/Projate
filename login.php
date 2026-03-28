@@ -1,9 +1,16 @@
 <?php
 session_start();
 
-// ถ้า login อยู่แล้ว → redirect ตาม role
+// ถ้า login อยู่แล้ว → ตรวจ role จาก DB แล้ว redirect
 if (!empty($_SESSION['user_id'])) {
-    header(($_SESSION['user_role'] ?? '') === 'admin'
+    require_once 'config.php';
+    $__s = $conn->prepare("SELECT role FROM users WHERE id = ? LIMIT 1");
+    $__s->bind_param("i", $_SESSION['user_id']);
+    $__s->execute();
+    $__r = $__s->get_result()->fetch_assoc();
+    $__s->close();
+    $_SESSION['user_role'] = $__r['role'] ?? 'user';
+    header(($_SESSION['user_role'] === 'admin')
         ? "Location: admin_dashboard.php"
         : "Location: index.php");
     exit;

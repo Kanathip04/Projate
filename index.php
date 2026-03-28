@@ -1,6 +1,5 @@
 <?php
 session_start();
-require_once 'auth_guard.php';
 
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");

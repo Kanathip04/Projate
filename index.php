@@ -606,6 +606,7 @@ img{display:block;}
     <a href="calendar.php"><span class="nav-icon">📅</span> ปฏิทิน</a>
     <a href="about_us.php"><span class="nav-icon">🌿</span> เกี่ยวกับ</a>
     <a href="booking_room.php"><span class="nav-icon">🏨</span> จองห้องพัก</a>
+    <?php if ($isLoggedIn): ?><a href="chat.php"><span class="nav-icon">💬</span> แชทโลก</a><?php endif; ?>
   </div>
 
   <!-- Right actions -->
@@ -632,6 +633,7 @@ img{display:block;}
             </span>
           </div>
           <a href="profile.php" class="dd-item"><div class="dd-icon">👤</div> โปรไฟล์ของฉัน</a>
+          <a href="chat.php" class="dd-item"><div class="dd-icon">💬</div> แชทโลก</a>
           <a href="booking_status.php" class="dd-item"><div class="dd-icon">🛎️</div> สถานะการจอง</a>
           <?php if ($isAdmin): ?>
             <hr class="dd-divider">
@@ -678,6 +680,7 @@ img{display:block;}
     <div class="drawer-divider"></div>
     <?php if ($isLoggedIn): ?>
       <a href="profile.php"><div class="nav-drawer-icon">👤</div> โปรไฟล์ของฉัน</a>
+      <a href="chat.php"><div class="nav-drawer-icon">💬</div> แชทโลก</a>
       <a href="booking_status.php"><div class="nav-drawer-icon">🛎️</div> สถานะการจอง</a>
       <?php if ($isAdmin): ?><a href="admin_dashboard.php"><div class="nav-drawer-icon">📊</div> Admin Dashboard</a><?php endif; ?>
       <a href="logout.php" style="color:#dc2626;"><div class="nav-drawer-icon" style="background:#fef2f2;">🚪</div> ออกจากระบบ</a>

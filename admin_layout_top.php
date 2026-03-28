@@ -339,6 +339,15 @@ body::before {
   <a href="manage_rooms.php" class="menu-item <?= $activeMenu==='rooms'?'active':'' ?>">
     <span class="icon">🛏️</span><span class="text">จัดการห้องพัก</span>
   </a>
+  <a href="admin_tent_list.php" class="menu-item <?= $activeMenu==='tent_booking'?'active':'' ?>">
+    <span class="icon">⛺</span><span class="text">การจองเต็นท์</span>
+  </a>
+  <a href="admin_tent_approved.php" class="menu-item <?= $activeMenu==='tent_approved'?'active':'' ?>">
+    <span class="icon">✅</span><span class="text">เต็นท์อนุมัติแล้ว</span>
+  </a>
+  <a href="manage_tents.php" class="menu-item <?= $activeMenu==='tent_manage'?'active':'' ?>">
+    <span class="icon">🏕️</span><span class="text">จัดการเต็นท์</span>
+  </a>
 </div>
 
 <div class="menu-section">

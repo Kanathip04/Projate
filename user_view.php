@@ -385,6 +385,13 @@ $firstChar = function_exists('mb_substr')
   .uv-group.full{grid-column:1;}
   .uv-hero{flex-direction:column;align-items:flex-start;}
 }
+.bs-badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:.7rem;font-weight:700;white-space:nowrap;}
+.bs-pending  {background:#fef3c7;color:#92400e;}
+.bs-approved {background:#dcfce7;color:#166534;}
+.bs-rejected {background:#fee2e2;color:#991b1b;}
+.bs-cancelled{background:#f3f4f6;color:#374151;}
+.bs-completed{background:#dbeafe;color:#1d4ed8;}
+.bs-unavailable,.bs-unknown{background:#e5e7eb;color:#374151;}
 </style>
 
 <div class="uv-wrap">
@@ -592,6 +599,26 @@ $firstChar = function_exists('mb_substr')
             </div>
             <?php endif; ?>
           </div>
+
+          <?php if ($bookings_result && $bookings_result->num_rows > 0): ?>
+            <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px;">
+              <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">สถานะการจอง</div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <?php while ($brow = $bookings_result->fetch_assoc()):
+                  $bStatus = getBookingStatus($brow); ?>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:#fafaf8;border:1px solid var(--border);border-radius:10px;font-size:.8rem;">
+                  <div>
+                    <span style="font-weight:700;color:var(--ink);"><?= h($brow['room_type'] ?? '-') ?></span>
+                    <span style="color:var(--muted);margin-left:6px;"><?= !empty($brow['checkin_date']) ? date('d/m/Y', strtotime($brow['checkin_date'])) : '-' ?> → <?= !empty($brow['checkout_date']) ? date('d/m/Y', strtotime($brow['checkout_date'])) : '-' ?></span>
+                  </div>
+                  <span class="bs-badge <?= bsClass($bStatus) ?>"><?= bsText($bStatus) ?></span>
+                </div>
+                <?php endwhile; ?>
+              </div>
+            </div>
+          <?php else: ?>
+            <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;font-size:.8rem;color:var(--muted);text-align:center;">ยังไม่มีรายการจอง</div>
+          <?php endif; ?>
         </div>
       </div>
     </div>

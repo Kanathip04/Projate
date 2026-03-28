@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fullname   = trim($_POST['fullname']   ?? '');
         $phone      = trim($_POST['phone']      ?? '');
         $gender     = trim($_POST['gender']     ?? ''); $gender = $gender === '' ? null : $gender;
-        $birth_date = trim($_POST['birth_date'] ?? '');
+        $birth_date = trim($_POST['birth_date'] ?? ''); $birth_date = $birth_date === '' ? null : $birth_date;
         $address    = trim($_POST['address']    ?? '');
         $bio        = trim($_POST['bio']        ?? '');
 

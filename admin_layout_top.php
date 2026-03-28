@@ -3,11 +3,24 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// ✅ เช็คทั้ง login และเป็น admin เท่านั้น
-if (empty($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
-    header("Location: login.php");
-    exit;
+// ✅ เช็คทั้ง login และเป็น admin เท่านั้น — ตรวจจาก DB ทุกครั้ง
+if (empty($_SESSION['user_id'])) {
+    header("Location: login.php"); exit;
 }
+if (!isset($conn) || !($conn instanceof mysqli)) {
+    $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
+    $conn->set_charset("utf8mb4");
+}
+$_chk = $conn->prepare("SELECT role FROM users WHERE id = ? LIMIT 1");
+$_chk->bind_param("i", $_SESSION['user_id']);
+$_chk->execute();
+$_chkRow = $_chk->get_result()->fetch_assoc();
+$_chk->close();
+if (!$_chkRow || $_chkRow['role'] !== 'admin') {
+    $_SESSION['user_role'] = $_chkRow['role'] ?? 'user';
+    header("Location: login.php"); exit;
+}
+$_SESSION['user_role'] = 'admin';
 
 if (!isset($pageTitle))  $pageTitle  = "Admin Panel";
 if (!isset($activeMenu)) $activeMenu = "";

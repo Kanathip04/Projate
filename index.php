@@ -812,6 +812,12 @@ img{display:block;}
         <div class="srv-desc">ลงทะเบียนเข้าร่วมกิจกรรม ทัศนศึกษา และการอบรมต่างๆ</div>
         <div class="srv-more">ลงทะเบียนเลย →</div>
       </a>
+      <a href="kengcamp.php" class="srv-card">
+        <div class="srv-icon">⛺</div>
+        <div class="srv-title">เก็งแคมป์</div>
+        <div class="srv-desc">กางเต็นท์สัมผัสธรรมชาติ พายเรือคายัค เส้นทางเดินป่าศึกษาธรรมชาติ</div>
+        <div class="srv-more">ดูรายละเอียด →</div>
+      </a>
       <a href="calendar.php" class="srv-card">
         <div class="srv-icon">📅</div>
         <div class="srv-title">ปฏิทินกิจกรรม</div>

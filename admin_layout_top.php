@@ -350,6 +350,9 @@ body::before {
 
 <div class="menu-section">
   <span class="menu-section-label">คอนเทนต์</span>
+  <a href="admin_kengcamp.php" class="menu-item <?= $activeMenu==='kengcamp'?'active':'' ?>">
+    <span class="icon">⛺</span><span class="text">เก็งแคมป์</span>
+  </a>
   <a href="admin_add_news.php" class="menu-item <?= $activeMenu==='news_add'?'active':'' ?>">
     <span class="icon">📰</span><span class="text">เพิ่มข่าวสาร</span>
   </a>

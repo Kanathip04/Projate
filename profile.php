@@ -510,48 +510,6 @@ if ($isAdmin) {
       </div>
     </div>
 
-    <!-- ── เปลี่ยนรหัสผ่าน ── -->
-    <div class="pf-card">
-      <div class="pf-card-header">
-        <div class="pf-card-icon">🔐</div>
-        <div class="pf-card-title">เปลี่ยนรหัสผ่าน</div>
-      </div>
-      <div class="pf-card-body">
-        <form method="POST">
-          <input type="hidden" name="action" value="change_password">
-          <div class="pf-form-group" style="margin-bottom:16px;">
-            <label>รหัสผ่านปัจจุบัน</label>
-            <div class="pf-input-wrap">
-              <span class="pf-input-icon">🔒</span>
-              <input class="pf-input" type="password" name="current_password"
-                     placeholder="••••••••" required>
-            </div>
-          </div>
-          <div class="pf-form-group" style="margin-bottom:16px;">
-            <label>รหัสผ่านใหม่</label>
-            <div class="pf-input-wrap">
-              <span class="pf-input-icon">🔑</span>
-              <input class="pf-input" type="password" name="new_password"
-                     placeholder="อย่างน้อย 6 ตัวอักษร" required
-                     oninput="checkStrength(this.value)">
-            </div>
-            <div class="strength-bar"><div class="strength-fill" id="sbar"></div></div>
-          </div>
-          <div class="pf-form-group" style="margin-bottom:0;">
-            <label>ยืนยันรหัสผ่านใหม่</label>
-            <div class="pf-input-wrap">
-              <span class="pf-input-icon">🔑</span>
-              <input class="pf-input" type="password" name="confirm_password"
-                     placeholder="••••••••" required>
-            </div>
-          </div>
-          <div class="pf-btn-row">
-            <button type="submit" class="pf-btn pf-btn-primary">🔄 เปลี่ยนรหัสผ่าน</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
     <!-- ── สถานะการจอง ── -->
     <div class="pf-card full">
       <div class="pf-card-header">
@@ -592,6 +550,48 @@ if ($isAdmin) {
         <?php else: ?>
           <div class="bs-empty">ยังไม่มีรายการจอง</div>
         <?php endif; ?>
+      </div>
+    </div>
+
+    <!-- ── เปลี่ยนรหัสผ่าน ── -->
+    <div class="pf-card">
+      <div class="pf-card-header">
+        <div class="pf-card-icon">🔐</div>
+        <div class="pf-card-title">เปลี่ยนรหัสผ่าน</div>
+      </div>
+      <div class="pf-card-body">
+        <form method="POST">
+          <input type="hidden" name="action" value="change_password">
+          <div class="pf-form-group" style="margin-bottom:16px;">
+            <label>รหัสผ่านปัจจุบัน</label>
+            <div class="pf-input-wrap">
+              <span class="pf-input-icon">🔒</span>
+              <input class="pf-input" type="password" name="current_password"
+                     placeholder="••••••••" required>
+            </div>
+          </div>
+          <div class="pf-form-group" style="margin-bottom:16px;">
+            <label>รหัสผ่านใหม่</label>
+            <div class="pf-input-wrap">
+              <span class="pf-input-icon">🔑</span>
+              <input class="pf-input" type="password" name="new_password"
+                     placeholder="อย่างน้อย 6 ตัวอักษร" required
+                     oninput="checkStrength(this.value)">
+            </div>
+            <div class="strength-bar"><div class="strength-fill" id="sbar"></div></div>
+          </div>
+          <div class="pf-form-group" style="margin-bottom:0;">
+            <label>ยืนยันรหัสผ่านใหม่</label>
+            <div class="pf-input-wrap">
+              <span class="pf-input-icon">🔑</span>
+              <input class="pf-input" type="password" name="confirm_password"
+                     placeholder="••••••••" required>
+            </div>
+          </div>
+          <div class="pf-btn-row">
+            <button type="submit" class="pf-btn pf-btn-primary">🔄 เปลี่ยนรหัสผ่าน</button>
+          </div>
+        </form>
       </div>
     </div>
 

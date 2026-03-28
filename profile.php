@@ -107,6 +107,24 @@ $booking_count = (int)$conn->query("SELECT COUNT(*) c FROM room_bookings WHERE e
                             ->fetch_assoc()['c'];
 $join_days = (int)((time() - strtotime($user['created_at'])) / 86400);
 
+// ── Bookings list ──
+$bookings_result = $conn->query("SELECT id, room_type, guests, checkin_date, checkout_date, note, status, booking_status, archived, created_at, room_id FROM room_bookings WHERE email='{$conn->real_escape_string($user['email'])}' ORDER BY id DESC");
+
+function getBookingStatus($row) {
+    if (isset($row['archived']) && (int)$row['archived'] === 1) return 'unavailable';
+    if (!empty($row['booking_status'])) return $row['booking_status'];
+    if (!empty($row['status'])) return $row['status'];
+    return 'pending';
+}
+function bsText($s) {
+    $map = ['approved'=>'อนุมัติแล้ว','pending'=>'รออนุมัติ','rejected'=>'ไม่อนุมัติ','cancelled'=>'ยกเลิกแล้ว','completed'=>'เสร็จสิ้น','unavailable'=>'ไม่พร้อมใช้งาน'];
+    return $map[$s] ?? 'ไม่ทราบสถานะ';
+}
+function bsClass($s) {
+    $map = ['approved'=>'bs-approved','pending'=>'bs-pending','rejected'=>'bs-rejected','cancelled'=>'bs-cancelled','completed'=>'bs-completed','unavailable'=>'bs-unavailable'];
+    return $map[$s] ?? 'bs-unknown';
+}
+
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
 $roleLabel = ($user['role'] ?? 'user') === 'admin' ? 'Administrator' : 'Member';
@@ -277,6 +295,34 @@ if ($isAdmin) {
 
 /* ── Avatar upload hidden ── */
 #avatar-file{display:none;}
+
+/* ── Booking Status Section ── */
+.bs-table-wrap{overflow-x:auto;}
+.bs-table{width:100%;border-collapse:collapse;font-size:0.82rem;}
+.bs-table th{
+  padding:10px 14px;text-align:left;font-size:0.68rem;
+  font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);border-bottom:2px solid var(--border);
+}
+.bs-table td{
+  padding:12px 14px;border-bottom:1px solid var(--border);
+  color:var(--ink);vertical-align:middle;
+}
+.bs-table tr:last-child td{border-bottom:none;}
+.bs-table tr:hover td{background:#fafaf8;}
+.bs-badge{
+  display:inline-flex;align-items:center;
+  padding:4px 10px;border-radius:20px;
+  font-size:0.7rem;font-weight:700;white-space:nowrap;
+}
+.bs-pending  {background:#fef3c7;color:#92400e;}
+.bs-approved {background:#dcfce7;color:#166534;}
+.bs-rejected {background:#fee2e2;color:#991b1b;}
+.bs-cancelled{background:#f3f4f6;color:#374151;}
+.bs-completed{background:#dbeafe;color:#1d4ed8;}
+.bs-unavailable{background:#e5e7eb;color:#374151;}
+.bs-unknown  {background:#e5e7eb;color:#111827;}
+.bs-empty{text-align:center;color:var(--muted);padding:24px 0;font-size:0.85rem;}
 
 /* ── Responsive ── */
 @media(max-width:700px){
@@ -503,6 +549,49 @@ if ($isAdmin) {
             <button type="submit" class="pf-btn pf-btn-primary">🔄 เปลี่ยนรหัสผ่าน</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- ── สถานะการจอง ── -->
+    <div class="pf-card full">
+      <div class="pf-card-header">
+        <div class="pf-card-icon">🛎️</div>
+        <div class="pf-card-title">สถานะการจองของฉัน</div>
+      </div>
+      <div class="pf-card-body">
+        <?php if ($bookings_result && $bookings_result->num_rows > 0): ?>
+          <div class="bs-table-wrap">
+            <table class="bs-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>ห้อง</th>
+                  <th>วันเข้าพัก</th>
+                  <th>วันออก</th>
+                  <th>จำนวน</th>
+                  <th>วันที่จอง</th>
+                  <th>สถานะ</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php while ($brow = $bookings_result->fetch_assoc()):
+                  $bStatus = getBookingStatus($brow); ?>
+                <tr>
+                  <td>#<?= (int)$brow['id'] ?></td>
+                  <td><?= h($brow['room_type'] ?? '-') ?></td>
+                  <td><?= !empty($brow['checkin_date'])  ? date('d/m/Y', strtotime($brow['checkin_date']))  : '-' ?></td>
+                  <td><?= !empty($brow['checkout_date']) ? date('d/m/Y', strtotime($brow['checkout_date'])) : '-' ?></td>
+                  <td><?= h($brow['guests'] ?? '-') ?> คน</td>
+                  <td><?= !empty($brow['created_at']) ? date('d/m/Y H:i', strtotime($brow['created_at'])) : '-' ?></td>
+                  <td><span class="bs-badge <?= bsClass($bStatus) ?>"><?= bsText($bStatus) ?></span></td>
+                </tr>
+                <?php endwhile; ?>
+              </tbody>
+            </table>
+          </div>
+        <?php else: ?>
+          <div class="bs-empty">ยังไม่มีรายการจอง</div>
+        <?php endif; ?>
       </div>
     </div>
 

@@ -265,6 +265,33 @@ img{display:block;}
   border:1.5px solid rgba(255,255,255,.28);backdrop-filter:blur(10px);
 }
 .hero-btn-ghost:hover{background:rgba(255,255,255,.2);transform:translateY(-2px);}
+.hero-btn-register{
+  background:#fff;color:var(--ink);
+  border:none;
+  box-shadow:0 4px 20px rgba(0,0,0,.18),0 1px 4px rgba(0,0,0,.1);
+  position:relative;overflow:hidden;
+}
+.hero-btn-register::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent 0%,rgba(201,169,110,.18) 50%,transparent 100%);
+  transform:translateX(-100%);transition:transform .5s ease;
+}
+.hero-btn-register:hover{
+  background:#fff;color:var(--gold);
+  transform:translateY(-3px);
+  box-shadow:0 10px 32px rgba(0,0,0,.22),0 2px 8px rgba(201,169,110,.25);
+}
+.hero-btn-register:hover::before{transform:translateX(100%);}
+.hero-btn-register .reg-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--gold);flex-shrink:0;
+  box-shadow:0 0 0 0 rgba(201,169,110,.6);
+  animation:pulse-dot 1.8s ease-in-out infinite;
+}
+@keyframes pulse-dot{
+  0%,100%{box-shadow:0 0 0 0 rgba(201,169,110,.6);}
+  50%{box-shadow:0 0 0 6px rgba(201,169,110,0);}
+}
 
 /* Scroll hint */
 .hero-scroll{
@@ -359,6 +386,41 @@ img{display:block;}
   display:inline-flex;align-items:center;gap:5px;
   font-size:.76rem;font-weight:700;color:var(--gold);
   margin-top:2px;
+}
+/* ── Featured register card ── */
+.srv-card-register{
+  background:linear-gradient(145deg,var(--ink) 0%,#252545 100%);
+  border-color:rgba(201,169,110,.35);
+  order:-1;
+}
+.srv-card-register::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 0%,rgba(201,169,110,.15) 0%,transparent 65%);
+}
+.srv-card-register::after{
+  background:linear-gradient(90deg,var(--gold),var(--gold-light),var(--gold));
+  transform:scaleX(1);height:4px;
+}
+.srv-card-register .srv-icon{
+  background:rgba(201,169,110,.18);border-color:rgba(201,169,110,.5);
+  font-size:clamp(1.5rem,2.8vw,2rem);
+  width:clamp(60px,7vw,76px);height:clamp(60px,7vw,76px);
+}
+.srv-card-register .srv-title{color:#fff;font-size:clamp(1rem,1.6vw,1.1rem);}
+.srv-card-register .srv-desc{color:rgba(255,255,255,.6);}
+.srv-card-register .srv-more{
+  color:var(--gold);background:rgba(201,169,110,.15);
+  padding:6px 16px;border-radius:999px;border:1px solid rgba(201,169,110,.35);
+  font-size:.78rem;margin-top:4px;transition:all .25s;
+}
+.srv-card-register:hover{border-color:rgba(201,169,110,.6);}
+.srv-card-register:hover .srv-icon{background:var(--gold);border-color:var(--gold);}
+.srv-card-register:hover .srv-more{background:var(--gold);color:var(--ink);}
+.srv-reg-badge{
+  position:absolute;top:14px;right:14px;
+  background:var(--gold);color:var(--ink);
+  font-size:.62rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 10px;border-radius:999px;
 }
 
 /* ─── About Section ──────────────────────── */
@@ -710,7 +772,7 @@ img{display:block;}
       </p>
       <div class="hero-cta fade-up fade-up-4">
         <a href="booking_room.php" class="hero-btn hero-btn-primary">🏨 จองห้องพัก</a>
-        <a href="view_data.php" class="hero-btn hero-btn-ghost">📋 ลงทะเบียนกิจกรรม</a>
+        <a href="view_data.php" class="hero-btn hero-btn-register"><span class="reg-dot"></span> ลงทะเบียนกิจกรรม</a>
       </div>
     </div>
   </div>
@@ -743,11 +805,12 @@ img{display:block;}
         <div class="srv-desc">ติดตามข่าวสาร กิจกรรม และประกาศล่าสุดจากสถาบัน</div>
         <div class="srv-more">อ่านข่าวสาร →</div>
       </a>
-      <a href="view_data.php" class="srv-card">
+      <a href="view_data.php" class="srv-card srv-card-register">
+        <div class="srv-reg-badge">เปิดรับสมัคร</div>
         <div class="srv-icon">📋</div>
         <div class="srv-title">ลงทะเบียนกิจกรรม</div>
         <div class="srv-desc">ลงทะเบียนเข้าร่วมกิจกรรม ทัศนศึกษา และการอบรมต่างๆ</div>
-        <div class="srv-more">ลงทะเบียน →</div>
+        <div class="srv-more">ลงทะเบียนเลย →</div>
       </a>
       <a href="calendar.php" class="srv-card">
         <div class="srv-icon">📅</div>

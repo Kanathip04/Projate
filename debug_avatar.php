@@ -1,6 +1,6 @@
 <?php
 mysqli_report(MYSQLI_REPORT_OFF);
-$conn = new mysqli("localhost", "root", "", "backoffice_db");
+$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 if ($conn->connect_error) die("Connect error: " . $conn->connect_error);
 $conn->set_charset("utf8mb4");
 echo "<pre>";

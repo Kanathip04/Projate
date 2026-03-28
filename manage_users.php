@@ -21,7 +21,7 @@ if (file_exists(__DIR__ . '/config.php')) {
 }
 
 if (!isset($conn) || !($conn instanceof mysqli)) {
-    $conn = new mysqli("localhost", "root", "", "backoffice_db");
+    $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
     $conn->set_charset("utf8mb4");
     if ($conn->connect_error) {
         die("DB Error: " . $conn->connect_error);

@@ -1,5 +1,5 @@
 <?php
-$conn = new mysqli("localhost", "root", "", "backoffice_db");
+$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 
 if (isset($_GET['id'])) {
     $id = $_GET['id'];

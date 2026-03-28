@@ -1,6 +1,6 @@
 <?php
 require_once 'auth_guard.php';
-$conn = new mysqli("localhost", "root", "", "backoffice_db");
+$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 
 if ($conn->connect_error) {

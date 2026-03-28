@@ -9,7 +9,7 @@ if (empty($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
 }
 
 $currentPage = basename($_SERVER['PHP_SELF']);
-$conn = new mysqli("localhost", "root", "", "backoffice_db");
+$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 if ($conn->connect_error) die("DB Error: " . $conn->connect_error);
 

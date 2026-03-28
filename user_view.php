@@ -131,7 +131,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'update_user') {
         $fullname = trim($_POST['fullname'] ?? '');
         $phone = $hasPhone ? trim($_POST['phone'] ?? '') : '';
-        $gender = $hasGender ? trim($_POST['gender'] ?? '') : '';
+        $rawGender = $hasGender ? trim($_POST['gender'] ?? '') : '';
+        $gender = ($rawGender === '') ? null : $rawGender;
         $birthDate = $hasBirthDate ? trim($_POST['birth_date'] ?? '') : '';
         $address = $hasAddress ? trim($_POST['address'] ?? '') : '';
         $bio = $hasBio ? trim($_POST['bio'] ?? '') : '';

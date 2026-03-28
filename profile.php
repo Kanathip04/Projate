@@ -108,7 +108,7 @@ $booking_count = (int)$conn->query("SELECT COUNT(*) c FROM room_bookings WHERE e
 $join_days = (int)((time() - strtotime($user['created_at'])) / 86400);
 
 // ── Room Bookings list ──
-$bookings_result = $conn->query("SELECT id, room_type, guests, checkin_date, checkout_date, note, status, booking_status, archived, created_at, room_id FROM room_bookings WHERE email='{$conn->real_escape_string($user['email'])}' ORDER BY id DESC");
+$bookings_result = $conn->query("SELECT id, room_type, guests, checkin_date, checkout_date, note, status, booking_status, archived, created_at, room_id, room_units FROM room_bookings WHERE email='{$conn->real_escape_string($user['email'])}' ORDER BY id DESC");
 
 // ── Tent Bookings list ──
 $tent_bookings_result = null;
@@ -533,13 +533,24 @@ if ($isAdmin) {
 
               <?php if ($hasRoom): ?>
                 <?php while ($brow = $bookings_result->fetch_assoc()):
-                  $bStatus = getBookingStatus($brow); ?>
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:#fafaf8;border:1px solid var(--border);border-radius:10px;font-size:0.8rem;">
-                  <div>
-                    <span style="font-weight:700;color:var(--ink);">🏨 <?= h($brow['room_type'] ?? '-') ?></span>
-                    <span style="color:var(--muted);margin-left:6px;"><?= !empty($brow['checkin_date']) ? date('d/m/Y', strtotime($brow['checkin_date'])) : '-' ?> → <?= !empty($brow['checkout_date']) ? date('d/m/Y', strtotime($brow['checkout_date'])) : '-' ?></span>
+                  $bStatus  = getBookingStatus($brow);
+                  $bUnits   = !empty($brow['room_units']) ? json_decode($brow['room_units'], true) : [];
+                ?>
+                <div style="padding:8px 10px;background:#fafaf8;border:1px solid var(--border);border-radius:10px;font-size:0.8rem;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div>
+                      <span style="font-weight:700;color:var(--ink);">🏨 <?= h($brow['room_type'] ?? '-') ?></span>
+                      <span style="color:var(--muted);margin-left:6px;"><?= !empty($brow['checkin_date']) ? date('d/m/Y', strtotime($brow['checkin_date'])) : '-' ?> → <?= !empty($brow['checkout_date']) ? date('d/m/Y', strtotime($brow['checkout_date'])) : '-' ?></span>
+                    </div>
+                    <span class="bs-badge <?= bsClass($bStatus) ?>"><?= bsText($bStatus) ?></span>
                   </div>
-                  <span class="bs-badge <?= bsClass($bStatus) ?>"><?= bsText($bStatus) ?></span>
+                  <?php if (!empty($bUnits)): ?>
+                    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
+                      <?php foreach ($bUnits as $u): ?>
+                        <span style="display:inline-flex;padding:2px 8px;border-radius:999px;font-size:.65rem;font-weight:700;background:rgba(26,26,46,.08);border:1px solid rgba(26,26,46,.18);color:var(--ink);">ห้องที่ <?= (int)$u ?></span>
+                      <?php endforeach; ?>
+                    </div>
+                  <?php endif; ?>
                 </div>
                 <?php endwhile; ?>
               <?php endif; ?>

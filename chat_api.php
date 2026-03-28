@@ -142,7 +142,19 @@ if ($action === 'send') {
                   VALUES ($uid,'$unEsc','$avEsc','$roEsc','$msgEsc')");
     $newId = (int)$conn->insert_id;
 
-    // Push to Google Sheets แบบ background (non-blocking)
+    // Clear typing
+    $conn->query("DELETE FROM chat_typing WHERE user_id=$uid");
+
+    // ── ส่ง response กลับหา client ก่อน แล้วค่อย push Sheets ──
+    $responseJson = json_encode(['ok' => true, 'id' => $newId]);
+    header('Content-Length: ' . strlen($responseJson));
+    header('Connection: close');
+    echo $responseJson;
+    if (ob_get_level()) ob_end_flush();
+    flush();
+
+    // Push to Google Sheets หลัง client ได้รับ response แล้ว
+    ignore_user_abort(true);
     $thYear = (int)date('Y') + 543;
     pushToSheets([
         'created_at' => date('d/m/') . $thYear . ' ' . date('H:i:s'),
@@ -150,10 +162,6 @@ if ($action === 'send') {
         'role'       => $role,
         'message'    => $msg,
     ]);
-
-    // Clear typing
-    $conn->query("DELETE FROM chat_typing WHERE user_id=$uid");
-    echo json_encode(['ok' => true, 'id' => $newId]);
     exit;
 }
 

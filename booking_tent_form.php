@@ -1,6 +1,4 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 session_start();
 require_once 'auth_guard.php';
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
@@ -33,8 +31,9 @@ $user_name  = $_SESSION['user_name']  ?? '';
 $user_email = $_SESSION['user_email'] ?? '';
 $user_phone = '';
 if (!empty($_SESSION['user_id'])) {
+    $uid   = (int)$_SESSION['user_id'];
     $uStmt = $conn->prepare("SELECT phone FROM users WHERE id = ? LIMIT 1");
-    $uStmt->bind_param("i", (int)$_SESSION['user_id']);
+    $uStmt->bind_param("i", $uid);
     $uStmt->execute();
     $uRow = $uStmt->get_result()->fetch_assoc();
     $uStmt->close();

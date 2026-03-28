@@ -147,6 +147,8 @@ include 'admin_layout_top.php';
 .bk-empty-text{font-size:0.83rem;color:var(--muted);line-height:1.7;}
 @media(max-width:900px){.bk-stats{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:560px){.bk-stats{grid-template-columns:1fr;}}
+.unit-pills{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;}
+.unit-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:0.65rem;font-weight:700;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.28);color:#15803d;}
 </style>
 
 <div class="bk-wrap">
@@ -226,7 +228,7 @@ include 'admin_layout_top.php';
             <th>สถานะ</th>
             <th>วันที่จอง</th>
             <th style="width:210px;">จัดการ</th>
-          </tr>0
+          </tr>
         </thead>
         <tbody>
           <?php if ($result && $result->num_rows > 0): ?>
@@ -241,7 +243,17 @@ include 'admin_layout_top.php';
                   <div><?= h($row['phone']) ?></div>
                   <div class="bk-meta"><?= h($row['email']) ?></div>
                 </td>
-                <td><?= h($row['room_type']) ?></td>
+                <td>
+                  <?= h($row['room_type']) ?>
+                  <?php $units = !empty($row['room_units']) ? json_decode($row['room_units'], true) : []; ?>
+                  <?php if (!empty($units)): ?>
+                    <div class="unit-pills">
+                      <?php foreach ($units as $u): ?>
+                        <span class="unit-pill">🔑 ห้องที่ <?= (int)$u ?></span>
+                      <?php endforeach; ?>
+                    </div>
+                  <?php endif; ?>
+                </td>
                 <td>
                   <div style="font-size:0.79rem;">📅 <?= h($row['checkin_date']) ?></div>
                   <div style="font-size:0.79rem;color:var(--muted);">→ <?= h($row['checkout_date']) ?></div>

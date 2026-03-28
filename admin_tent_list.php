@@ -156,6 +156,8 @@ include 'admin_layout_top.php';
 .tk-empty{padding:48px 24px;text-align:center;}
 .tk-empty-icon{font-size:2.2rem;margin-bottom:10px;opacity:.35;}
 .tk-empty-text{font-size:.83rem;color:var(--muted);line-height:1.7;}
+.unit-pills{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;}
+.unit-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:.65rem;font-weight:700;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.28);color:#15803d;}
 @media(max-width:900px){.tk-stats{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:560px){.tk-stats{grid-template-columns:1fr;}}
 </style>
@@ -256,7 +258,17 @@ include 'admin_layout_top.php';
                                     <div><?= h($row['phone']) ?></div>
                                     <div class="tk-meta"><?= h($row['email']) ?></div>
                                 </td>
-                                <td><?= h($row['tent_type']) ?></td>
+                                <td>
+                                  <?= h($row['tent_type']) ?>
+                                  <?php $units = !empty($row['tent_units']) ? json_decode($row['tent_units'], true) : []; ?>
+                                  <?php if (!empty($units)): ?>
+                                    <div class="unit-pills">
+                                      <?php foreach ($units as $u): ?>
+                                        <span class="unit-pill">🔑 หน่วยที่ <?= (int)$u ?></span>
+                                      <?php endforeach; ?>
+                                    </div>
+                                  <?php endif; ?>
+                                </td>
                                 <td>
                                     <div style="font-size:.79rem;">📅 <?= h($row['checkin_date']) ?></div>
                                     <div style="font-size:.79rem;color:var(--muted);">→ <?= h($row['checkout_date']) ?></div>

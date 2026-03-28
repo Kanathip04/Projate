@@ -178,7 +178,7 @@ if ($action === 'delete') {
 if ($action === 'profile') {
     $targetId = (int)($_GET['user_id'] ?? 0);
     if (!$targetId) { echo json_encode(['error' => 'invalid']); exit; }
-    $row = $conn->query("SELECT id, fullname, avatar, role, created_at FROM users WHERE id=$targetId LIMIT 1")->fetch_assoc();
+    $row = $conn->query("SELECT id, fullname, avatar, role, bio, created_at FROM users WHERE id=$targetId LIMIT 1")->fetch_assoc();
     if (!$row) { echo json_encode(['error' => 'not_found']); exit; }
     echo json_encode(['ok' => true, 'user' => $row]);
     exit;

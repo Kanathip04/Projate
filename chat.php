@@ -199,6 +199,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);hei
 .profile-row{display:flex;gap:8px;font-size:13px;color:var(--muted)}
 .profile-row span:first-child{min-width:70px;flex-shrink:0}
 .profile-row span:last-child{color:var(--text);font-weight:500}
+.profile-bio{margin-top:12px;font-size:13px;color:var(--muted);line-height:1.6;background:var(--bg);border-radius:10px;padding:10px 12px;font-style:italic;word-break:break-word}
 
 /* clickable avatars/names */
 .msg-av.clickable,.msg-name.clickable,.online-item.clickable{cursor:pointer}
@@ -354,6 +355,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);hei
     <div class="profile-info">
       <div class="profile-row"><span>สมาชิกตั้งแต่</span><span id="profileSince">—</span></div>
     </div>
+    <div class="profile-bio" id="profileBio" style="display:none"></div>
   </div>
 </div>
 
@@ -667,6 +669,13 @@ function showProfile(userId){
       rt.className = 'profile-role-tag ' + (u.role === 'admin' ? 'admin' : 'user');
       const since = u.created_at ? new Date(u.created_at).toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'}) : '—';
       document.getElementById('profileSince').textContent = since;
+      const bioEl = document.getElementById('profileBio');
+      if (u.bio && u.bio.trim()) {
+        bioEl.textContent = u.bio.trim();
+        bioEl.style.display = 'block';
+      } else {
+        bioEl.style.display = 'none';
+      }
       document.getElementById('profileOverlay').classList.add('show');
     });
 }

@@ -329,39 +329,69 @@ input:focus, select:focus {
 /* Submit button */
 .submit-row {
   grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 .submit-btn {
-  flex: 1;
-  height: 52px;
-  background: var(--ink);
+  position: relative;
+  width: 100%;
+  height: 60px;
+  background: linear-gradient(135deg, #c9a96e 0%, #b8924d 50%, #c9a96e 100%);
+  background-size: 200% 100%;
   color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: 14px;
   font-family: 'Sarabun', sans-serif;
-  font-size: 0.9rem;
+  font-size: 1.05rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
+  box-shadow: 0 6px 20px rgba(201,169,110,0.45), 0 2px 6px rgba(201,169,110,0.25);
+  overflow: hidden;
+}
+.submit-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 60%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.submit-btn::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #c9a96e, #e8d5b0, #c9a96e);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 .submit-btn:hover {
-  background: #2a2a4a;
+  background-position: 100% 0;
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(26,26,46,0.2);
+  box-shadow: 0 14px 36px rgba(201,169,110,0.5), 0 4px 12px rgba(201,169,110,0.3);
 }
+.submit-btn:hover::after { opacity: 1; }
+.submit-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(201,169,110,0.35);
+}
+.submit-btn .btn-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.submit-btn .btn-label { line-height: 1; }
 .submit-note {
+  text-align: center;
   font-size: 0.74rem;
   color: var(--muted);
   line-height: 1.6;
+  margin-top: 12px;
 }
 
 /* Required star */
@@ -509,12 +539,12 @@ input:focus, select:focus {
 
           <!-- Submit -->
           <div class="submit-row">
-            <button type="submit" class="submit-btn">
-              ✓ ยืนยันการลงทะเบียน
+            <button type="submit" class="submit-btn" id="submitBtn">
+              <span class="btn-icon">✦</span>
+              <span class="btn-label">ยืนยันการลงทะเบียน</span>
             </button>
             <div class="submit-note">
-              ช่อง <span class="req">*</span> จำเป็นต้องกรอก<br>
-              ข้อมูลของคุณจะถูกเก็บเป็นความลับ
+              ช่อง <span class="req">*</span> จำเป็นต้องกรอก &nbsp;·&nbsp; ข้อมูลของคุณจะถูกเก็บเป็นความลับ
             </div>
           </div>
 
@@ -525,6 +555,17 @@ input:focus, select:focus {
   </div>
 </div>
 
+<script>
+document.querySelector('form').addEventListener('submit', function() {
+  const btn = document.getElementById('submitBtn');
+  btn.innerHTML = '<span class="btn-icon" style="animation:spin .7s linear infinite;display:inline-block">⟳</span><span class="btn-label">กำลังบันทึก...</span>';
+  btn.disabled = true;
+  btn.style.opacity = '.85';
+});
+</script>
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
 </body>
 </html>
 <?php $conn->close(); ?>

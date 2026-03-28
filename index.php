@@ -28,6 +28,7 @@ $isLoggedIn = !empty($_SESSION['user_id']);
 $isAdmin    = ($_SESSION['user_role'] ?? '') === 'admin';
 $userName   = $_SESSION['user_name'] ?? '';
 $avatarInitial = strtoupper(mb_substr($userName, 0, 1));
+$avatarRow = $isLoggedIn ? $conn->query("SELECT avatar FROM users WHERE id=".(int)$_SESSION['user_id'])->fetch_assoc() : null;
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -35,373 +36,613 @@ $avatarInitial = strtoupper(mb_substr($userName, 0, 1));
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>สถาบันวิจัยวลัยรุกขเวช — WRBRI</title>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;1,700&display=swap" rel="stylesheet"/>
-
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet"/>
 <style>
-*{ box-sizing:border-box; margin:0; padding:0; }
+/* ─── Reset & Variables ─────────────────── */
+*{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --ink:#1a1a2e; --gold:#c9a96e; --gold-dim:rgba(201,169,110,.12);
-  --bg:#f5f1eb; --card:#fff; --muted:#7a7a8c; --border:#e8e4de;
-  --shadow:0 8px 32px rgba(26,26,46,.09);
+  --ink:#1a1a2e;
+  --ink2:#2a2a4e;
+  --gold:#c9a96e;
+  --gold-light:#e8c98a;
+  --gold-dim:rgba(201,169,110,.12);
+  --gold-border:rgba(201,169,110,.28);
+  --bg:#f5f1eb;
+  --bg2:#f0ece4;
+  --card:#fff;
+  --muted:#7a7a8c;
+  --border:#e8e4de;
+  --shadow-sm:0 2px 12px rgba(26,26,46,.07);
+  --shadow:0 8px 32px rgba(26,26,46,.10);
+  --shadow-lg:0 20px 60px rgba(26,26,46,.14);
+  --r:16px;
+  --r-sm:10px;
 }
-html{ scroll-behavior:smooth; }
-body{ font-family:'Sarabun',sans-serif; background:var(--bg); color:var(--ink); }
-a{ text-decoration:none; }
+html{scroll-behavior:smooth;}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;}
+a{text-decoration:none;color:inherit;}
+img{display:block;}
 
-/* ═══════════════════════════════
-   NAVBAR
-═══════════════════════════════ */
+/* ─── Navbar ─────────────────────────────── */
 .navbar{
-  width:100%; background:#fff;
-  padding:0 48px;
-  display:flex; align-items:center; justify-content:space-between; gap:24px;
-  position:sticky; top:0; z-index:200;
-  box-shadow:0 1px 0 var(--border);
-  height:76px;
+  position:sticky;top:0;z-index:500;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  height:68px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 clamp(16px,4vw,52px);
+  gap:16px;
 }
-.nav-brand{
-  display:flex; align-items:center; gap:14px; flex-shrink:0;
-}
-.nav-brand img{ height:52px; }
-.nav-brand-text{ line-height:1.35; }
-.nav-brand-name{ font-size:1rem; font-weight:800; color:var(--ink); }
-.nav-brand-sub{ font-size:0.7rem; color:var(--muted); }
+.nav-brand{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.nav-brand img{height:46px;width:auto;}
+.nav-brand-text{line-height:1.3;}
+.nav-brand-name{font-size:.95rem;font-weight:800;color:var(--ink);}
+.nav-brand-sub{font-size:.65rem;color:var(--muted);white-space:nowrap;}
 
-.nav-links{
-  display:flex; align-items:center; gap:4px;
-  flex:1; justify-content:center;
+.nav-center{display:flex;align-items:center;gap:2px;flex:1;justify-content:center;}
+.nav-center a{
+  display:flex;align-items:center;gap:5px;
+  padding:7px 13px;border-radius:999px;
+  font-size:.84rem;font-weight:600;color:var(--muted);
+  transition:all .2s;white-space:nowrap;
 }
-.nav-links a{
-  display:flex; align-items:center; gap:6px;
-  padding:8px 14px; border-radius:8px;
-  font-size:0.87rem; font-weight:600; color:#444;
-  transition:all .2s;
-}
-.nav-links a:hover{ background:var(--gold-dim); color:var(--ink); }
-.nav-links .nav-icon{ font-size:0.85rem; opacity:.7; }
+.nav-center a:hover,.nav-center a.active{background:var(--gold-dim);color:var(--ink);}
+.nav-icon{font-size:.78rem;}
 
-.nav-actions{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.nav-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
 
-/* Login button */
-.btn-login{
-  display:inline-flex; align-items:center; gap:7px;
-  padding:9px 20px; background:var(--ink); color:#fff;
-  border-radius:999px; font-size:0.82rem; font-weight:700;
-  letter-spacing:.04em; transition:all .25s;
+/* Login btn */
+.btn-nav-login{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:8px 20px;background:var(--ink);color:#fff;
+  border-radius:999px;font-size:.82rem;font-weight:700;letter-spacing:.03em;
+  transition:all .22s;border:none;cursor:pointer;
 }
-.btn-login:hover{ background:#2a2a4a; transform:translateY(-1px); box-shadow:0 6px 16px rgba(26,26,46,.2); }
+.btn-nav-login:hover{background:var(--ink2);transform:translateY(-1px);box-shadow:0 6px 18px rgba(26,26,46,.22);}
+
+/* Hamburger */
+.nav-ham{
+  display:none;flex-direction:column;justify-content:center;align-items:center;gap:5px;
+  width:40px;height:40px;border-radius:10px;background:var(--gold-dim);
+  cursor:pointer;border:1.5px solid var(--gold-border);flex-shrink:0;
+}
+.nav-ham span{width:18px;height:2px;background:var(--ink);border-radius:2px;transition:all .3s;}
+.nav-ham.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.nav-ham.open span:nth-child(2){opacity:0;}
+.nav-ham.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+
+/* Mobile drawer */
+.nav-drawer{
+  display:none;
+  position:fixed;top:68px;left:0;right:0;bottom:0;z-index:400;
+  background:rgba(26,26,46,.45);backdrop-filter:blur(4px);
+  opacity:0;visibility:hidden;transition:all .28s;
+}
+.nav-drawer.open{opacity:1;visibility:visible;}
+.nav-drawer-inner{
+  background:#fff;
+  padding:16px;
+  display:flex;flex-direction:column;gap:4px;
+  box-shadow:var(--shadow-lg);
+}
+.nav-drawer a{
+  display:flex;align-items:center;gap:12px;
+  padding:13px 16px;border-radius:12px;
+  font-size:.95rem;font-weight:600;color:var(--ink);
+  transition:background .15s;
+}
+.nav-drawer a:hover{background:var(--gold-dim);}
+.nav-drawer-icon{
+  width:36px;height:36px;border-radius:10px;
+  background:var(--gold-dim);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;
+}
+.drawer-divider{height:1px;background:var(--border);margin:8px 0;}
 
 /* User dropdown */
-.user-menu{ position:relative; }
+.user-menu{position:relative;}
 .user-trigger{
-  display:flex; align-items:center; gap:10px;
-  padding:5px 14px 5px 5px; border-radius:999px;
-  border:1.5px solid var(--border); background:#fff;
-  cursor:pointer; transition:all .2s; user-select:none;
+  display:flex;align-items:center;gap:9px;
+  padding:4px 12px 4px 4px;border-radius:999px;
+  border:1.5px solid var(--border);background:#fff;
+  cursor:pointer;transition:all .2s;user-select:none;
 }
-.user-trigger:hover{ border-color:var(--gold); box-shadow:0 2px 10px rgba(201,169,110,.15); }
+.user-trigger:hover{border-color:var(--gold);box-shadow:0 2px 12px rgba(201,169,110,.18);}
 .user-avatar{
-  width:36px; height:36px; border-radius:50%;
-  background:var(--ink); color:var(--gold);
-  display:flex; align-items:center; justify-content:center;
-  font-size:0.85rem; font-weight:700; flex-shrink:0; overflow:hidden;
+  width:34px;height:34px;border-radius:50%;
+  background:var(--ink);color:var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.82rem;font-weight:700;overflow:hidden;flex-shrink:0;
 }
-.user-avatar img{ width:100%; height:100%; object-fit:cover; border-radius:50%; }
-.user-name{ font-size:0.85rem; font-weight:600; color:var(--ink); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.user-chevron{ font-size:0.7rem; color:var(--muted); transition:transform .2s; }
-.user-menu.open .user-chevron{ transform:rotate(180deg); }
-
+.user-avatar img{width:100%;height:100%;object-fit:cover;}
+.user-name{font-size:.83rem;font-weight:600;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-chevron{font-size:.68rem;color:var(--muted);transition:transform .22s;}
+.user-menu.open .user-chevron{transform:rotate(180deg);}
 .user-dropdown{
-  position:absolute; top:calc(100% + 10px); right:0;
-  background:#fff; border-radius:16px;
-  box-shadow:0 16px 48px rgba(26,26,46,.15), 0 2px 8px rgba(26,26,46,.06);
-  border:1px solid var(--border); min-width:230px; padding:8px;
-  opacity:0; visibility:hidden; transform:translateY(-8px);
-  transition:all .22s ease; z-index:300;
+  position:absolute;top:calc(100% + 8px);right:0;
+  background:#fff;border-radius:18px;
+  box-shadow:var(--shadow-lg),0 2px 8px rgba(26,26,46,.06);
+  border:1px solid var(--border);min-width:230px;padding:8px;
+  opacity:0;visibility:hidden;transform:translateY(-6px);
+  transition:all .22s;z-index:600;
 }
-.user-menu.open .user-dropdown{ opacity:1; visibility:visible; transform:translateY(0); }
-
-.dd-header{ padding:12px 14px 10px; border-bottom:1px solid var(--border); margin-bottom:6px; }
-.dd-name{ font-size:0.88rem; font-weight:700; color:var(--ink); }
-.dd-email{ font-size:0.74rem; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.user-menu.open .user-dropdown{opacity:1;visibility:visible;transform:translateY(0);}
+.dd-header{padding:12px 14px 10px;border-bottom:1px solid var(--border);margin-bottom:6px;}
+.dd-name{font-size:.87rem;font-weight:700;}
+.dd-email{font-size:.72rem;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dd-role{
-  display:inline-flex; align-items:center; gap:4px; margin-top:6px;
-  padding:2px 8px; border-radius:20px; font-size:0.66rem; font-weight:700; letter-spacing:.06em;
+  display:inline-flex;align-items:center;gap:4px;margin-top:6px;
+  padding:2px 8px;border-radius:20px;font-size:.64rem;font-weight:700;letter-spacing:.06em;
 }
-.role-admin{ background:rgba(201,169,110,.15); color:#a07c3a; }
-.role-user{ background:#f0f0f0; color:var(--muted); }
-
+.role-admin{background:rgba(201,169,110,.15);color:#a07c3a;}
+.role-user{background:#f0f0f0;color:var(--muted);}
 .dd-item{
-  display:flex; align-items:center; gap:10px; padding:9px 14px;
-  border-radius:9px; font-size:0.84rem; font-weight:500; color:var(--ink);
-  cursor:pointer; transition:background .15s;
+  display:flex;align-items:center;gap:10px;padding:9px 14px;
+  border-radius:9px;font-size:.83rem;font-weight:500;
+  cursor:pointer;transition:background .15s;
 }
-.dd-item:hover{ background:var(--bg); }
-.dd-item.danger{ color:#dc2626; }
-.dd-item.danger:hover{ background:#fef2f2; }
+.dd-item:hover{background:var(--bg);}
+.dd-item.danger{color:#dc2626;}
+.dd-item.danger:hover{background:#fef2f2;}
 .dd-icon{
-  width:30px; height:30px; border-radius:8px; background:var(--bg);
-  display:flex; align-items:center; justify-content:center; font-size:0.85rem; flex-shrink:0;
+  width:30px;height:30px;border-radius:8px;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;
 }
-.dd-item.danger .dd-icon{ background:#fef2f2; }
-.dd-divider{ border:none; border-top:1px solid var(--border); margin:6px 0; }
+.dd-item.danger .dd-icon{background:#fef2f2;}
+.dd-divider{border:none;border-top:1px solid var(--border);margin:6px 0;}
 
-/* ═══════════════════════════════
-   HERO
-═══════════════════════════════ */
+/* ─── Hero ────────────────────────────────── */
 .hero{
-  position:relative; height:520px; overflow:hidden;
-  background:url('<?php echo htmlspecialchars($heroImage); ?>') center/cover no-repeat;
+  position:relative;
+  height:clamp(480px,60vh,620px);
+  overflow:hidden;
+  background:var(--ink);
 }
+.hero-bg{
+  position:absolute;inset:0;
+  background-image:url('<?php echo htmlspecialchars($heroImage); ?>');
+  background-size:cover;background-position:center;
+  transform:scale(1.04);
+  transition:transform 8s ease;
+}
+.hero:hover .hero-bg{transform:scale(1);}
 .hero-overlay{
-  position:absolute; inset:0;
-  background:linear-gradient(135deg, rgba(26,26,46,.82) 0%, rgba(26,26,46,.55) 50%, rgba(26,26,46,.3) 100%);
+  position:absolute;inset:0;
+  background:linear-gradient(
+    125deg,
+    rgba(26,26,46,.88) 0%,
+    rgba(26,26,46,.62) 45%,
+    rgba(26,26,46,.28) 100%
+  );
 }
-.hero-grid{
-  position:absolute; inset:0; pointer-events:none;
-  background-image:repeating-linear-gradient(90deg,rgba(201,169,110,.04) 0,rgba(201,169,110,.04) 1px,transparent 1px,transparent 80px);
+.hero-particles{
+  position:absolute;inset:0;pointer-events:none;
+  background-image:
+    radial-gradient(circle at 15% 30%, rgba(201,169,110,.08) 0%, transparent 40%),
+    radial-gradient(circle at 85% 70%, rgba(201,169,110,.06) 0%, transparent 35%),
+    repeating-linear-gradient(90deg, rgba(201,169,110,.025) 0, rgba(201,169,110,.025) 1px, transparent 1px, transparent 72px),
+    repeating-linear-gradient(0deg, rgba(201,169,110,.015) 0, rgba(201,169,110,.015) 1px, transparent 1px, transparent 72px);
 }
 .hero-content{
-  position:relative; z-index:2;
-  height:100%; display:flex; align-items:center;
-  max-width:1200px; margin:0 auto; padding:0 48px;
+  position:relative;z-index:2;height:100%;
+  display:flex;align-items:center;
+  max-width:1200px;margin:0 auto;
+  padding:0 clamp(20px,5vw,52px);
 }
-.hero-text{ max-width:620px; }
-.hero-eyebrow{
-  display:inline-flex; align-items:center; gap:8px;
-  padding:6px 14px; border-radius:999px;
-  background:rgba(201,169,110,.2); border:1px solid rgba(201,169,110,.35);
-  font-size:0.7rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase;
-  color:var(--gold); margin-bottom:20px;
+.hero-text{max-width:600px;}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 14px;border-radius:999px;
+  background:rgba(201,169,110,.18);border:1px solid rgba(201,169,110,.38);
+  font-size:.68rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:22px;backdrop-filter:blur(8px);
 }
+.hero-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--gold);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(1.3);}}
 .hero-title{
-  font-family:'Playfair Display',serif; font-style:italic;
-  font-size:clamp(2rem,4vw,3.2rem); color:#fff; line-height:1.2; margin-bottom:16px;
+  font-family:'Playfair Display',serif;
+  font-size:clamp(1.9rem,4.5vw,3.4rem);
+  color:#fff;line-height:1.18;margin-bottom:18px;
+  font-weight:700;
 }
-.hero-sub{ font-size:1rem; color:rgba(255,255,255,.7); line-height:1.8; margin-bottom:32px; }
-.hero-actions{ display:flex; gap:14px; flex-wrap:wrap; }
+.hero-title span{color:var(--gold);font-style:italic;}
+.hero-sub{
+  font-size:clamp(.88rem,1.5vw,1rem);
+  color:rgba(255,255,255,.68);line-height:1.85;
+  margin-bottom:36px;max-width:500px;
+}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap;}
 .hero-btn{
-  display:inline-flex; align-items:center; gap:8px;
-  padding:13px 28px; border-radius:999px;
-  font-size:0.88rem; font-weight:700; letter-spacing:.04em;
+  display:inline-flex;align-items:center;gap:9px;
+  padding:13px 26px;border-radius:999px;
+  font-size:.87rem;font-weight:700;letter-spacing:.03em;
   transition:all .25s;
 }
-.hero-btn-primary{
-  background:var(--gold); color:var(--ink);
-}
-.hero-btn-primary:hover{ background:#e0bb7a; transform:translateY(-2px); box-shadow:0 8px 24px rgba(201,169,110,.4); }
+.hero-btn-primary{background:var(--gold);color:var(--ink);}
+.hero-btn-primary:hover{background:var(--gold-light);transform:translateY(-2px);box-shadow:0 10px 30px rgba(201,169,110,.45);}
 .hero-btn-ghost{
-  background:rgba(255,255,255,.12); color:#fff;
-  border:1.5px solid rgba(255,255,255,.3); backdrop-filter:blur(8px);
+  background:rgba(255,255,255,.1);color:#fff;
+  border:1.5px solid rgba(255,255,255,.28);backdrop-filter:blur(10px);
 }
-.hero-btn-ghost:hover{ background:rgba(255,255,255,.22); transform:translateY(-2px); }
+.hero-btn-ghost:hover{background:rgba(255,255,255,.2);transform:translateY(-2px);}
 
-/* ═══════════════════════════════
-   STATS BAR
-═══════════════════════════════ */
-.stats-bar{
-  background:var(--ink); padding:28px 48px;
-  display:flex; justify-content:center; gap:0;
+/* Scroll hint */
+.hero-scroll{
+  position:absolute;bottom:28px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  color:rgba(255,255,255,.4);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;
+  z-index:2;
 }
+.hero-scroll-line{width:1px;height:36px;background:linear-gradient(to bottom,rgba(255,255,255,.4),transparent);}
+
+/* ─── Stats Bar ──────────────────────────── */
+.stats-bar{
+  background:linear-gradient(90deg, var(--ink) 0%, var(--ink2) 100%);
+  position:relative;overflow:hidden;
+}
+.stats-bar::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg, rgba(201,169,110,.04) 0, rgba(201,169,110,.04) 1px, transparent 1px, transparent 80px);
+}
+.stats-inner{
+  max-width:1200px;margin:0 auto;
+  padding:clamp(22px,3vw,32px) clamp(20px,5vw,52px);
+  display:flex;justify-content:center;gap:0;position:relative;
+  overflow-x:auto;scrollbar-width:none;
+}
+.stats-inner::-webkit-scrollbar{display:none;}
 .stat-item{
-  flex:1; max-width:220px; text-align:center;
-  padding:0 32px; position:relative;
+  flex:1;min-width:140px;max-width:220px;text-align:center;
+  padding:0 clamp(20px,3vw,36px);position:relative;
 }
 .stat-item:not(:last-child)::after{
-  content:''; position:absolute; right:0; top:15%; height:70%;
-  width:1px; background:rgba(255,255,255,.12);
+  content:'';position:absolute;right:0;top:15%;height:70%;
+  width:1px;background:rgba(255,255,255,.1);
 }
-.stat-num{ font-family:'Playfair Display',serif; font-size:2.2rem; color:var(--gold); font-weight:600; }
-.stat-lbl{ font-size:0.72rem; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:.1em; margin-top:4px; }
+.stat-num{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(1.7rem,3vw,2.3rem);
+  color:var(--gold);font-weight:700;line-height:1;
+}
+.stat-lbl{font-size:.7rem;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.1em;margin-top:6px;}
 
-/* ═══════════════════════════════
-   SECTION WRAPPER
-═══════════════════════════════ */
-.section{ max-width:1200px; margin:0 auto; padding:80px 48px; }
-.section-header{ text-align:center; margin-bottom:56px; }
-.section-badge{
-  display:inline-block; padding:5px 14px; border-radius:999px;
-  background:var(--gold-dim); border:1px solid rgba(201,169,110,.25);
-  font-size:0.68rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase;
-  color:var(--gold); margin-bottom:14px;
+/* ─── Section Base ───────────────────────── */
+.section-wrap{max-width:1200px;margin:0 auto;padding:clamp(60px,8vw,96px) clamp(20px,5vw,52px);}
+.section-head{text-align:center;margin-bottom:clamp(36px,5vw,60px);}
+.section-tag{
+  display:inline-block;padding:5px 14px;border-radius:999px;
+  background:var(--gold-dim);border:1px solid var(--gold-border);
+  font-size:.66rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:14px;
 }
-.section-title{ font-family:'Playfair Display',serif; font-style:italic; font-size:2.2rem; color:var(--ink); margin-bottom:12px; }
-.section-sub{ font-size:1rem; color:var(--muted); max-width:540px; margin:0 auto; line-height:1.8; }
-.section-line{ width:50px; height:3px; background:var(--gold); border-radius:2px; margin:16px auto 0; }
+.section-title{
+  font-family:'Playfair Display',serif;font-style:italic;
+  font-size:clamp(1.6rem,3.5vw,2.3rem);color:var(--ink);margin-bottom:12px;
+}
+.section-desc{font-size:.95rem;color:var(--muted);max-width:520px;margin:0 auto;line-height:1.85;}
+.section-rule{width:44px;height:3px;background:linear-gradient(90deg,var(--gold),rgba(201,169,110,.2));border-radius:3px;margin:16px auto 0;}
 
-/* ═══════════════════════════════
-   ABOUT SECTION
-═══════════════════════════════ */
-.about-section{ background:#fff; }
-.about-grid{ display:grid; grid-template-columns:1fr 1fr; gap:32px; }
-
-.about-main-card{
-  grid-column:1/-1; border-radius:20px; overflow:hidden;
-  background:var(--ink); position:relative;
-  display:grid; grid-template-columns:1fr 1.2fr; min-height:360px;
+/* ─── Services Section ───────────────────── */
+.services-section{background:var(--bg);}
+.services-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:clamp(14px,2vw,22px);
 }
-.about-main-text{
-  padding:48px 44px; display:flex; flex-direction:column; justify-content:center;
-  position:relative; z-index:1;
+.srv-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:clamp(22px,3vw,32px) 24px;
+  text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:clamp(10px,1.5vw,16px);
+  transition:all .28s;position:relative;overflow:hidden;
 }
-.about-main-text::before{
-  content:''; position:absolute; width:280px; height:280px; border-radius:50%;
-  background:radial-gradient(circle,rgba(201,169,110,.15) 0%,transparent 70%);
-  top:-80px; right:-60px;
+.srv-card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--gold),var(--gold-light));
+  transform:scaleX(0);transform-origin:left;transition:transform .3s;
 }
-.about-tag{ font-size:0.65rem; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); margin-bottom:14px; }
-.about-main-title{ font-family:'Playfair Display',serif; font-style:italic; font-size:1.9rem; color:#fff; line-height:1.3; margin-bottom:16px; }
-.about-main-desc{ font-size:0.9rem; color:rgba(255,255,255,.65); line-height:1.9; }
-.about-main-img{ position:relative; overflow:hidden; }
-.about-main-img img{ width:100%; height:100%; object-fit:cover; }
-
-.info-card{
-  background:var(--bg); border:1px solid var(--border);
-  border-radius:18px; padding:28px 24px;
-  transition:all .25s; position:relative; overflow:hidden;
+.srv-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg);border-color:var(--gold-border);}
+.srv-card:hover::after{transform:scaleX(1);}
+.srv-icon{
+  width:clamp(52px,6vw,66px);height:clamp(52px,6vw,66px);
+  border-radius:18px;
+  background:linear-gradient(135deg,var(--gold-dim),rgba(201,169,110,.04));
+  border:1.5px solid var(--gold-border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:clamp(1.4rem,2.5vw,1.8rem);
+  transition:all .28s;
 }
-.info-card::before{
-  content:''; position:absolute; top:0; left:0; right:0; height:3px;
-  background:linear-gradient(90deg, var(--gold), rgba(201,169,110,.3));
-  opacity:0; transition:opacity .25s;
-}
-.info-card:hover{ transform:translateY(-4px); box-shadow:var(--shadow); border-color:rgba(201,169,110,.3); }
-.info-card:hover::before{ opacity:1; }
-.info-card-icon{ font-size:1.8rem; margin-bottom:14px; }
-.info-card-img{ width:100%; height:180px; object-fit:cover; border-radius:12px; margin-bottom:16px; }
-.info-card h3{ font-size:1.05rem; font-weight:800; color:var(--ink); margin-bottom:10px; }
-.info-card p{ font-size:0.85rem; color:var(--muted); line-height:1.8; }
-
-/* ═══════════════════════════════
-   QUICK LINKS
-═══════════════════════════════ */
-.quick-section{ background:var(--bg); }
-.quick-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
-.quick-card{
-  background:#fff; border-radius:18px; padding:32px 24px;
-  border:1px solid var(--border); text-align:center;
-  transition:all .25s; display:flex; flex-direction:column; align-items:center; gap:14px;
-}
-.quick-card:hover{ transform:translateY(-5px); box-shadow:var(--shadow); border-color:var(--gold); }
-.quick-card-icon{
-  width:60px; height:60px; border-radius:16px;
-  background:var(--gold-dim); border:1.5px solid rgba(201,169,110,.25);
-  display:flex; align-items:center; justify-content:center; font-size:1.6rem;
-}
-.quick-card:hover .quick-card-icon{ background:var(--ink); border-color:var(--ink); }
-.quick-card h4{ font-size:0.95rem; font-weight:800; color:var(--ink); }
-.quick-card p{ font-size:0.78rem; color:var(--muted); line-height:1.6; }
-.quick-card-arrow{
-  display:inline-flex; align-items:center; gap:5px;
-  font-size:0.75rem; font-weight:700; color:var(--gold); margin-top:4px;
+.srv-card:hover .srv-icon{background:var(--ink);border-color:var(--ink);}
+.srv-title{font-size:clamp(.9rem,1.5vw,1rem);font-weight:800;color:var(--ink);}
+.srv-desc{font-size:clamp(.75rem,1.2vw,.82rem);color:var(--muted);line-height:1.7;}
+.srv-more{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:.76rem;font-weight:700;color:var(--gold);
+  margin-top:2px;
 }
 
-/* ═══════════════════════════════
-   NEWS SECTION
-═══════════════════════════════ */
-.news-section{ background:#fff; }
-.news-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
-.news-card{
-  border-radius:18px; overflow:hidden;
-  border:1px solid var(--border); background:var(--bg);
+/* ─── About Section ──────────────────────── */
+.about-section{background:#fff;}
+.about-flex{
+  display:grid;grid-template-columns:1.1fr 0.9fr;
+  gap:clamp(24px,4vw,48px);align-items:center;
+}
+.about-img-wrap{position:relative;border-radius:24px;overflow:hidden;}
+.about-img-wrap img{width:100%;height:clamp(280px,40vw,480px);object-fit:cover;display:block;}
+.about-img-badge{
+  position:absolute;bottom:20px;left:20px;right:20px;
+  background:rgba(26,26,46,.82);backdrop-filter:blur(12px);
+  border-radius:14px;padding:14px 18px;
+  display:flex;align-items:center;gap:14px;
+  border:1px solid rgba(201,169,110,.25);
+}
+.about-img-badge-icon{font-size:1.6rem;flex-shrink:0;}
+.about-img-badge-text .label{font-size:.68rem;color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
+.about-img-badge-text .val{font-size:.9rem;color:#fff;font-weight:700;margin-top:2px;}
+.about-content{}
+.about-tag{font-size:.66rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:14px;}
+.about-h{
+  font-family:'Playfair Display',serif;font-style:italic;
+  font-size:clamp(1.5rem,3vw,2.1rem);color:var(--ink);
+  line-height:1.25;margin-bottom:18px;
+}
+.about-p{font-size:.92rem;color:var(--muted);line-height:1.9;margin-bottom:28px;}
+.about-pills{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:30px;}
+.about-pill{
+  display:flex;align-items:center;gap:7px;
+  padding:8px 14px;border-radius:999px;
+  background:var(--bg);border:1px solid var(--border);
+  font-size:.8rem;font-weight:600;color:var(--ink);
+}
+.about-pill-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);flex-shrink:0;}
+.btn-about{
+  display:inline-flex;align-items:center;gap:9px;
+  padding:12px 26px;border-radius:999px;
+  background:var(--ink);color:#fff;
+  font-size:.85rem;font-weight:700;letter-spacing:.04em;
   transition:all .25s;
 }
-.news-card:hover{ transform:translateY(-4px); box-shadow:var(--shadow); }
-.news-card-img{ width:100%; height:200px; object-fit:cover; background:#ddd; display:block; }
-.news-card-img-placeholder{
-  width:100%; height:200px; background:linear-gradient(135deg,var(--ink),#2a2a4a);
-  display:flex; align-items:center; justify-content:center; font-size:2.5rem;
+.btn-about:hover{background:var(--ink2);transform:translateY(-1px);box-shadow:0 8px 22px rgba(26,26,46,.2);}
+
+/* Feature strip */
+.feature-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+  background:var(--border);border-radius:18px;overflow:hidden;
+  margin-top:clamp(40px,6vw,72px);
 }
-.news-card-body{ padding:20px; }
-.news-card-date{ font-size:0.72rem; color:var(--muted); margin-bottom:8px; }
-.news-card-title{ font-size:0.95rem; font-weight:700; color:var(--ink); line-height:1.5; }
+.feat-item{
+  background:#fff;padding:clamp(20px,3vw,32px) 24px;
+  text-align:center;transition:background .2s;
+}
+.feat-item:hover{background:var(--bg);}
+.feat-ico{font-size:1.6rem;margin-bottom:12px;}
+.feat-title{font-size:.88rem;font-weight:800;color:var(--ink);margin-bottom:6px;}
+.feat-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+
+/* ─── News Section ───────────────────────── */
+.news-section{background:var(--bg);}
+.news-layout{display:grid;grid-template-columns:1.4fr 1fr;gap:clamp(20px,3vw,36px);}
+.news-main{
+  border-radius:var(--r);overflow:hidden;background:var(--card);
+  border:1px solid var(--border);
+  display:flex;flex-direction:column;
+  transition:all .25s;
+}
+.news-main:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);}
+.news-main-img{
+  width:100%;height:clamp(200px,25vw,280px);
+  object-fit:cover;display:block;background:var(--ink);
+}
+.news-main-body{padding:clamp(18px,2.5vw,28px);}
+.news-main-date{font-size:.72rem;color:var(--gold);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;}
+.news-main-title{
+  font-size:clamp(1rem,1.8vw,1.2rem);font-weight:800;color:var(--ink);
+  line-height:1.4;margin-bottom:12px;
+}
+.news-main-excerpt{font-size:.84rem;color:var(--muted);line-height:1.8;}
+
+.news-side{display:flex;flex-direction:column;gap:14px;}
+.news-side-card{
+  background:var(--card);border-radius:var(--r-sm);
+  border:1px solid var(--border);
+  display:flex;gap:14px;padding:14px;
+  align-items:center;transition:all .22s;
+}
+.news-side-card:hover{transform:translateX(4px);box-shadow:var(--shadow-sm);border-color:var(--gold-border);}
+.news-side-img{
+  width:72px;height:72px;border-radius:10px;object-fit:cover;
+  background:var(--ink);flex-shrink:0;
+}
+.news-side-img-ph{
+  width:72px;height:72px;border-radius:10px;
+  background:linear-gradient(135deg,var(--ink),var(--ink2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;flex-shrink:0;
+}
+.news-side-body{}
+.news-side-date{font-size:.68rem;color:var(--muted);margin-bottom:5px;}
+.news-side-title{font-size:.85rem;font-weight:700;color:var(--ink);line-height:1.4;}
+
 .news-see-all{
-  display:inline-flex; align-items:center; gap:8px; margin-top:40px;
-  padding:12px 28px; border-radius:999px;
-  border:1.5px solid var(--border); color:var(--ink); font-weight:700; font-size:0.85rem;
+  display:inline-flex;align-items:center;gap:8px;
+  margin-top:clamp(24px,3vw,40px);
+  padding:11px 26px;border-radius:999px;
+  border:1.5px solid var(--border);color:var(--ink);
+  font-weight:700;font-size:.84rem;transition:all .2s;
+}
+.news-see-all:hover{border-color:var(--gold);color:var(--gold);background:var(--gold-dim);}
+
+/* ─── CTA Banner ─────────────────────────── */
+.cta-section{
+  background:linear-gradient(125deg,var(--ink) 0%,#1f1f3e 50%,var(--ink2) 100%);
+  position:relative;overflow:hidden;
+}
+.cta-section::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse at 80% 50%, rgba(201,169,110,.15) 0%, transparent 55%),
+    radial-gradient(ellipse at 10% 80%, rgba(201,169,110,.08) 0%, transparent 45%),
+    repeating-linear-gradient(90deg, rgba(201,169,110,.03) 0, rgba(201,169,110,.03) 1px, transparent 1px, transparent 72px);
+}
+.cta-inner{
+  max-width:1200px;margin:0 auto;
+  padding:clamp(56px,8vw,96px) clamp(20px,5vw,52px);
+  position:relative;z-index:1;
+  display:flex;align-items:center;justify-content:space-between;gap:32px;flex-wrap:wrap;
+}
+.cta-text{}
+.cta-tag{font-size:.66rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:14px;}
+.cta-title{
+  font-family:'Playfair Display',serif;font-style:italic;
+  font-size:clamp(1.6rem,3vw,2.4rem);color:#fff;line-height:1.25;
+}
+.cta-sub{font-size:.92rem;color:rgba(255,255,255,.55);margin-top:12px;line-height:1.7;max-width:480px;}
+.cta-btns{display:flex;gap:14px;flex-wrap:wrap;flex-shrink:0;}
+.cta-btn-primary{
+  display:inline-flex;align-items:center;gap:9px;
+  padding:14px 28px;border-radius:999px;
+  background:var(--gold);color:var(--ink);
+  font-size:.88rem;font-weight:700;letter-spacing:.04em;
+  transition:all .25s;
+}
+.cta-btn-primary:hover{background:var(--gold-light);transform:translateY(-2px);box-shadow:0 10px 30px rgba(201,169,110,.4);}
+.cta-btn-ghost{
+  display:inline-flex;align-items:center;gap:9px;
+  padding:13px 26px;border-radius:999px;
+  background:rgba(255,255,255,.1);color:#fff;
+  border:1.5px solid rgba(255,255,255,.25);
+  font-size:.88rem;font-weight:700;
+  transition:all .25s;
+}
+.cta-btn-ghost:hover{background:rgba(255,255,255,.18);transform:translateY(-2px);}
+
+/* ─── Footer ─────────────────────────────── */
+.footer{background:var(--ink);color:rgba(255,255,255,.55);}
+.footer-top{
+  max-width:1200px;margin:0 auto;
+  padding:clamp(48px,6vw,72px) clamp(20px,5vw,52px) clamp(36px,5vw,56px);
+  display:grid;grid-template-columns:1.7fr 1fr 1fr;
+  gap:clamp(28px,4vw,56px);
+}
+.footer-brand{}
+.footer-rule{width:32px;height:3px;background:var(--gold);border-radius:2px;margin-bottom:14px;}
+.footer-logo{
+  font-family:'Playfair Display',serif;font-style:italic;
+  font-size:1.5rem;color:#fff;margin-bottom:5px;
+}
+.footer-sub-brand{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-bottom:18px;}
+.footer-desc{font-size:.84rem;line-height:1.9;}
+.footer-socials{display:flex;gap:10px;margin-top:20px;}
+.footer-social{
+  width:36px;height:36px;border-radius:10px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
+  display:flex;align-items:center;justify-content:center;font-size:.95rem;
   transition:all .2s;
 }
-.news-see-all:hover{ border-color:var(--gold); color:var(--gold); }
-.news-center{ text-align:center; }
+.footer-social:hover{background:var(--gold-dim);border-color:var(--gold-border);}
 
-/* ═══════════════════════════════
-   FOOTER
-═══════════════════════════════ */
-.footer{ background:var(--ink); }
-.footer-top{
-  max-width:1200px; margin:0 auto; padding:64px 48px 48px;
-  display:grid; grid-template-columns:1.6fr 1fr 1fr; gap:48px;
+.footer-col h4{
+  font-size:.68rem;font-weight:700;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--gold);margin-bottom:18px;
 }
-.footer-brand-line{ width:32px; height:3px; background:var(--gold); border-radius:2px; margin-bottom:14px; }
-.footer-brand-name{ font-family:'Playfair Display',serif; font-style:italic; font-size:1.5rem; color:#fff; margin-bottom:6px; }
-.footer-brand-sub{ font-size:0.7rem; letter-spacing:.15em; text-transform:uppercase; color:rgba(255,255,255,.3); margin-bottom:18px; }
-.footer-desc{ font-size:0.85rem; color:rgba(255,255,255,.5); line-height:1.9; }
+.footer-links{list-style:none;display:flex;flex-direction:column;gap:11px;}
+.footer-links a{font-size:.84rem;color:rgba(255,255,255,.45);transition:color .18s;}
+.footer-links a:hover{color:#fff;}
 
-.footer-col h4{ font-size:0.72rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color:var(--gold); margin-bottom:18px; }
-.footer-links{ list-style:none; display:flex; flex-direction:column; gap:10px; }
-.footer-links a{ font-size:0.85rem; color:rgba(255,255,255,.5); transition:color .2s; }
-.footer-links a:hover{ color:#fff; }
-.footer-contact-item{ display:flex; align-items:flex-start; gap:10px; margin-bottom:12px; }
-.footer-contact-icon{ color:var(--gold); font-size:0.85rem; margin-top:2px; flex-shrink:0; }
-.footer-contact-text{ font-size:0.82rem; color:rgba(255,255,255,.5); line-height:1.6; }
+.footer-contact li{
+  display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;
+  font-size:.82rem;color:rgba(255,255,255,.45);list-style:none;
+}
+.footer-contact-icon{color:var(--gold);flex-shrink:0;margin-top:2px;}
 
 .footer-bottom{
+  max-width:1200px;margin:0 auto;
+  padding:18px clamp(20px,5vw,52px);
   border-top:1px solid rgba(255,255,255,.07);
-  padding:20px 48px; text-align:center;
-  font-size:0.75rem; color:rgba(255,255,255,.25);
-  max-width:1200px; margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  font-size:.74rem;color:rgba(255,255,255,.2);
 }
+.footer-bottom-links{display:flex;gap:20px;}
+.footer-bottom-links a{color:rgba(255,255,255,.2);transition:color .2s;}
+.footer-bottom-links a:hover{color:rgba(255,255,255,.5);}
 
-/* ═══════════════════════════════
-   RESPONSIVE
-═══════════════════════════════ */
+/* ─── Responsive ─────────────────────────── */
 @media(max-width:1024px){
-  .quick-grid{ grid-template-columns:repeat(2,1fr); }
-  .news-grid{ grid-template-columns:repeat(2,1fr); }
-  .news-grid .news-card:last-child{ display:none; }
-  .footer-top{ grid-template-columns:1fr 1fr; }
+  .services-grid{grid-template-columns:repeat(2,1fr);}
+  .news-layout{grid-template-columns:1fr;}
+  .news-side{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .footer-top{grid-template-columns:1fr 1fr;}
+  .feature-strip{grid-template-columns:repeat(2,1fr);}
+  .about-flex{grid-template-columns:1fr;}
+  .about-img-wrap{order:-1;}
 }
 @media(max-width:768px){
-  .navbar{ padding:0 20px; height:64px; }
-  .nav-brand img{ height:40px; }
-  .nav-brand-sub{ display:none; }
-  .nav-links{ display:none; }
-  .hero{ height:420px; }
-  .hero-content{ padding:0 24px; }
-  .section{ padding:56px 24px; }
-  .about-grid{ grid-template-columns:1fr; }
-  .about-main-card{ grid-template-columns:1fr; }
-  .about-main-img{ height:220px; }
-  .quick-grid{ grid-template-columns:repeat(2,1fr); }
-  .news-grid{ grid-template-columns:1fr; }
-  .stats-bar{ padding:20px 24px; gap:0; flex-wrap:wrap; }
-  .stat-item{ min-width:50%; padding:16px 0; }
-  .footer-top{ grid-template-columns:1fr; gap:32px; padding:40px 24px 32px; }
-  .footer-bottom{ padding:16px 24px; }
-  .user-name{ display:none; }
+  /* navbar */
+  .navbar{height:60px;padding:0 16px;}
+  .nav-center{display:none;}
+  .user-name{display:none;}
+  .nav-brand img{height:38px;}
+  .nav-brand-sub{display:none;}
+  .nav-ham{display:flex;}
+  .nav-drawer{display:block;}
+
+  /* hero */
+  .hero{height:clamp(400px,80vh,560px);}
+  .hero-scroll{display:none;}
+
+  /* stats */
+  .stats-inner{justify-content:flex-start;}
+  .stat-item{min-width:130px;}
+
+  /* services */
+  .services-grid{grid-template-columns:repeat(2,1fr);gap:12px;}
+
+  /* news */
+  .news-side{grid-template-columns:1fr;}
+
+  /* footer */
+  .footer-top{grid-template-columns:1fr;gap:28px;}
+  .footer-bottom{flex-direction:column;text-align:center;}
+  .feature-strip{grid-template-columns:repeat(2,1fr);}
+
+  /* cta */
+  .cta-inner{flex-direction:column;text-align:center;}
+  .cta-btns{justify-content:center;}
 }
 @media(max-width:480px){
-  .quick-grid{ grid-template-columns:1fr 1fr; }
-  .hero-actions{ flex-direction:column; }
-  .hero-btn{ justify-content:center; }
+  .services-grid{grid-template-columns:1fr 1fr;gap:10px;}
+  .srv-card{padding:18px 14px;}
+  .hero-cta{flex-direction:column;}
+  .hero-btn{justify-content:center;}
+  .feature-strip{grid-template-columns:1fr 1fr;}
+  .news-side{grid-template-columns:1fr;}
+  .stat-item{min-width:110px;}
 }
+
+/* ─── Animations ─────────────────────────── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+.fade-up{opacity:0;animation:fadeUp .7s cubic-bezier(.23,1,.32,1) forwards;}
+.fade-up-1{animation-delay:.1s;}
+.fade-up-2{animation-delay:.2s;}
+.fade-up-3{animation-delay:.3s;}
+.fade-up-4{animation-delay:.4s;}
 </style>
 </head>
 <body>
 
-<!-- ════════════════════════════════
-     NAVBAR
-════════════════════════════════ -->
-<nav class="navbar">
-  <div class="nav-brand">
-    <img src="Logo.png" alt="WRBRI Logo">
+<!-- ══════════ NAVBAR ══════════ -->
+<nav class="navbar" id="navbar">
+  <!-- Brand -->
+  <a href="index.php" class="nav-brand">
+    <img src="Logo.png" alt="WRBRI">
     <div class="nav-brand-text">
       <div class="nav-brand-name">สถาบันวิจัยวลัยรุกขเวช</div>
       <div class="nav-brand-sub">มหาวิทยาลัยมหาสารคาม</div>
     </div>
-  </div>
+  </a>
 
-  <div class="nav-links">
+  <!-- Desktop nav -->
+  <div class="nav-center">
     <a href="news.php"><span class="nav-icon">📰</span> ข่าวสาร</a>
     <a href="view_data.php"><span class="nav-icon">📋</span> ลงทะเบียน</a>
     <a href="https://docs.google.com/forms/d/e/1FAIpQLSdukofM-5EFzR1Zddip7uZJ-pnBmLnhXCNyABKIEY8cwUxzyQ/viewform?usp=dialog" target="_blank"><span class="nav-icon">📝</span> แบบประเมิน</a>
@@ -410,16 +651,14 @@ a{ text-decoration:none; }
     <a href="booking_room.php"><span class="nav-icon">🏨</span> จองห้องพัก</a>
   </div>
 
-  <div class="nav-actions">
+  <!-- Right actions -->
+  <div class="nav-right">
     <?php if ($isLoggedIn): ?>
       <div class="user-menu" id="userMenu">
         <div class="user-trigger" onclick="toggleMenu()">
           <div class="user-avatar">
-            <?php
-              $avatarRow = $conn->query("SELECT avatar FROM users WHERE id=".(int)$_SESSION['user_id'])->fetch_assoc();
-              if (!empty($avatarRow['avatar'])):
-            ?>
-              <img src="<?= htmlspecialchars($avatarRow['avatar']) ?>" alt="avatar">
+            <?php if (!empty($avatarRow['avatar'])): ?>
+              <img src="<?= htmlspecialchars($avatarRow['avatar']) ?>" alt="">
             <?php else: ?>
               <?= $avatarInitial ?>
             <?php endif; ?>
@@ -427,7 +666,6 @@ a{ text-decoration:none; }
           <span class="user-name"><?= htmlspecialchars($userName) ?></span>
           <span class="user-chevron">▾</span>
         </div>
-
         <div class="user-dropdown">
           <div class="dd-header">
             <div class="dd-name"><?= htmlspecialchars($userName) ?></div>
@@ -436,227 +674,306 @@ a{ text-decoration:none; }
               <?= $isAdmin ? '⚡ Administrator' : '👤 Member' ?>
             </span>
           </div>
-
-          <a href="profile.php" class="dd-item">
-            <div class="dd-icon">👤</div> โปรไฟล์ของฉัน
-          </a>
-          <a href="booking_status.php" class="dd-item">
-            <div class="dd-icon">🛎️</div> สถานะการจอง
-          </a>
+          <a href="profile.php" class="dd-item"><div class="dd-icon">👤</div> โปรไฟล์ของฉัน</a>
+          <a href="booking_status.php" class="dd-item"><div class="dd-icon">🛎️</div> สถานะการจอง</a>
           <?php if ($isAdmin): ?>
             <hr class="dd-divider">
-            <a href="admin_dashboard.php" class="dd-item">
-              <div class="dd-icon">📊</div> Admin Dashboard
-            </a>
+            <a href="admin_dashboard.php" class="dd-item"><div class="dd-icon">📊</div> Admin Dashboard</a>
           <?php endif; ?>
           <hr class="dd-divider">
-          <a href="logout.php" class="dd-item danger">
-            <div class="dd-icon">🚪</div> ออกจากระบบ
-          </a>
+          <a href="logout.php" class="dd-item danger"><div class="dd-icon">🚪</div> ออกจากระบบ</a>
         </div>
       </div>
     <?php else: ?>
-      <a href="login.php" class="btn-login">เข้าสู่ระบบ</a>
+      <a href="login.php" class="btn-nav-login">เข้าสู่ระบบ</a>
     <?php endif; ?>
+
+    <!-- Hamburger (mobile) -->
+    <div class="nav-ham" id="hamBtn" onclick="toggleDrawer()">
+      <span></span><span></span><span></span>
+    </div>
   </div>
 </nav>
 
-<!-- ════════════════════════════════
-     HERO
-════════════════════════════════ -->
+<!-- Mobile Drawer -->
+<div class="nav-drawer" id="navDrawer" onclick="closeDrawer(event)">
+  <div class="nav-drawer-inner">
+    <?php if ($isLoggedIn): ?>
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 14px 16px;border-bottom:1px solid var(--border);margin-bottom:8px;">
+      <div class="user-avatar" style="width:44px;height:44px;font-size:1rem;">
+        <?php if (!empty($avatarRow['avatar'])): ?>
+          <img src="<?= htmlspecialchars($avatarRow['avatar']) ?>" alt="">
+        <?php else: echo $avatarInitial; endif; ?>
+      </div>
+      <div>
+        <div style="font-size:.9rem;font-weight:700;"><?= htmlspecialchars($userName) ?></div>
+        <div style="font-size:.72rem;color:var(--muted);"><?= htmlspecialchars($_SESSION['user_email'] ?? '') ?></div>
+      </div>
+    </div>
+    <?php endif; ?>
+    <a href="index.php"><div class="nav-drawer-icon">🏠</div> หน้าแรก</a>
+    <a href="news.php"><div class="nav-drawer-icon">📰</div> ข่าวสาร</a>
+    <a href="booking_room.php"><div class="nav-drawer-icon">🏨</div> จองห้องพัก</a>
+    <a href="view_data.php"><div class="nav-drawer-icon">📋</div> ลงทะเบียนกิจกรรม</a>
+    <a href="calendar.php"><div class="nav-drawer-icon">📅</div> ปฏิทินกิจกรรม</a>
+    <a href="https://docs.google.com/forms/d/e/1FAIpQLSdukofM-5EFzR1Zddip7uZJ-pnBmLnhXCNyABKIEY8cwUxzyQ/viewform?usp=dialog" target="_blank"><div class="nav-drawer-icon">📝</div> แบบประเมิน</a>
+    <a href="about_us.php"><div class="nav-drawer-icon">🌿</div> เกี่ยวกับสถาบัน</a>
+    <div class="drawer-divider"></div>
+    <?php if ($isLoggedIn): ?>
+      <a href="profile.php"><div class="nav-drawer-icon">👤</div> โปรไฟล์ของฉัน</a>
+      <a href="booking_status.php"><div class="nav-drawer-icon">🛎️</div> สถานะการจอง</a>
+      <?php if ($isAdmin): ?><a href="admin_dashboard.php"><div class="nav-drawer-icon">📊</div> Admin Dashboard</a><?php endif; ?>
+      <a href="logout.php" style="color:#dc2626;"><div class="nav-drawer-icon" style="background:#fef2f2;">🚪</div> ออกจากระบบ</a>
+    <?php else: ?>
+      <a href="login.php" style="justify-content:center;background:var(--ink);color:#fff;border-radius:12px;padding:14px;">เข้าสู่ระบบ</a>
+      <a href="register.php" style="justify-content:center;border:1.5px solid var(--border);border-radius:12px;padding:14px;">สมัครสมาชิก</a>
+    <?php endif; ?>
+  </div>
+</div>
+
+<!-- ══════════ HERO ══════════ -->
 <section class="hero">
+  <div class="hero-bg" id="heroBg"></div>
   <div class="hero-overlay"></div>
-  <div class="hero-grid"></div>
+  <div class="hero-particles"></div>
   <div class="hero-content">
     <div class="hero-text">
-      <div class="hero-eyebrow">✦ สถาบันวิจัยวลัยรุกขเวช มมส</div>
-      <h1 class="hero-title">แหล่งเรียนรู้<br>ด้านธรรมชาติและ<br>ความหลากหลายทางชีวภาพ</h1>
-      <p class="hero-sub">มุ่งมั่นส่งเสริมการวิจัย การเรียนรู้ และการบริการวิชาการแก่ชุมชน เพื่อการพัฒนาที่ยั่งยืน</p>
-      <div class="hero-actions">
+      <div class="hero-badge fade-up fade-up-1">✦ สถาบันวิจัยวลัยรุกขเวช มมส</div>
+      <h1 class="hero-title fade-up fade-up-2">
+        แหล่งเรียนรู้<br>
+        <span>ด้านธรรมชาติ</span><br>
+        และความหลากหลาย
+      </h1>
+      <p class="hero-sub fade-up fade-up-3">
+        มุ่งมั่นส่งเสริมการวิจัย การเรียนรู้ และการบริการวิชาการแก่ชุมชน
+        เพื่อการพัฒนาที่ยั่งยืนและการสร้างองค์ความรู้
+      </p>
+      <div class="hero-cta fade-up fade-up-4">
         <a href="booking_room.php" class="hero-btn hero-btn-primary">🏨 จองห้องพัก</a>
         <a href="view_data.php" class="hero-btn hero-btn-ghost">📋 ลงทะเบียนกิจกรรม</a>
       </div>
     </div>
   </div>
+  <div class="hero-scroll">
+    <span>เลื่อนลง</span>
+    <div class="hero-scroll-line"></div>
+  </div>
 </section>
 
-<!-- ════════════════════════════════
-     STATS BAR
-════════════════════════════════ -->
+<!-- ══════════ STATS BAR ══════════ -->
 <div class="stats-bar">
-  <div class="stat-item">
-    <div class="stat-num">30+</div>
-    <div class="stat-lbl">ปีแห่งการวิจัย</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-num">500+</div>
-    <div class="stat-lbl">งานวิจัยที่ตีพิมพ์</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-num">10,000+</div>
-    <div class="stat-lbl">ผู้เข้าชมต่อปี</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-num">50+</div>
-    <div class="stat-lbl">นักวิจัยและบุคลากร</div>
+  <div class="stats-inner">
+    <div class="stat-item">
+      <div class="stat-num">30+</div>
+      <div class="stat-lbl">ปีแห่งการวิจัย</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">500+</div>
+      <div class="stat-lbl">งานวิจัยที่ตีพิมพ์</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">10,000+</div>
+      <div class="stat-lbl">ผู้เข้าชมต่อปี</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">50+</div>
+      <div class="stat-lbl">นักวิจัยและบุคลากร</div>
+    </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════
-     ABOUT SECTION
-════════════════════════════════ -->
-<section class="about-section">
-  <div class="section">
-    <div class="section-header">
-      <div class="section-badge">เกี่ยวกับเรา</div>
-      <h2 class="section-title">สถาบันวิจัยวลัยรุกขเวช</h2>
-      <p class="section-sub">หน่วยงานที่มุ่งเน้นการส่งเสริมการเรียนรู้ การวิจัย และการบริการวิชาการแก่ชุมชน</p>
-      <div class="section-line"></div>
-    </div>
-
-    <div class="about-grid">
-      <!-- Main card -->
-      <div class="about-main-card">
-        <div class="about-main-text">
-          <div class="about-tag">Our Mission</div>
-          <h3 class="about-main-title">เรียนรู้จากธรรมชาติ<br>เพื่อชุมชนที่ยั่งยืน</h3>
-          <p class="about-main-desc">
-            สถาบันวิจัยวลัยรุกขเวช มหาวิทยาลัยมหาสารคาม เป็นหน่วยงานที่มุ่งเน้นการส่งเสริมการเรียนรู้
-            การวิจัย และการบริการวิชาการแก่ชุมชน โดยเฉพาะในด้านทรัพยากรธรรมชาติ ความหลากหลายทางชีวภาพ
-            และภูมิปัญญาท้องถิ่น เพื่อสร้างองค์ความรู้ที่เป็นประโยชน์ต่อสังคมและการพัฒนาท้องถิ่นอย่างยั่งยืน
-          </p>
-        </div>
-        <div class="about-main-img">
-          <img src="ka0.jpg" alt="สถาบันวิจัยวลัยรุกขเวช">
-        </div>
-      </div>
-
-      <!-- 4 info cards -->
-      <div class="info-card">
-        <div class="info-card-icon">📢</div>
-        <img src="ka1.jpg" class="info-card-img" alt="กิจกรรม">
-        <h3>งานประชาสัมพันธ์และกิจกรรม</h3>
-        <p>เผยแพร่ข่าวสาร กิจกรรม การอบรม สัมมนา และโครงการต่างๆ ของสถาบัน เพื่อให้บุคลากร นักศึกษา และประชาชนเข้าถึงข้อมูลได้อย่างสะดวก</p>
-      </div>
-
-      <div class="info-card">
-        <div class="info-card-icon">🔬</div>
-        <img src="ka2.jpg" class="info-card-img" alt="วิจัย">
-        <h3>งานวิจัยและองค์ความรู้</h3>
-        <p>สนับสนุนและเผยแพร่งานวิจัยด้านธรรมชาติ พืชสมุนไพร สิ่งแวดล้อม และความหลากหลายทางชีวภาพ เพื่อสร้างคุณค่าเชิงวิชาการ</p>
-      </div>
-
-      <div class="info-card">
-        <div class="info-card-icon">🤝</div>
-        <img src="ka3.jpg" class="info-card-img" alt="บริการวิชาการ">
-        <h3>การบริการวิชาการแก่สังคม</h3>
-        <p>นำองค์ความรู้จากงานวิจัยไปต่อยอดสู่การบริการวิชาการ และกิจกรรมที่เชื่อมโยงกับชุมชน โรงเรียน และหน่วยงานภาครัฐ</p>
-      </div>
-
-      <div class="info-card">
-        <div class="info-card-icon">🏛️</div>
-        <img src="ka4.jpg" class="info-card-img" alt="ภาพลักษณ์">
-        <h3>การสร้างภาพลักษณ์องค์กร</h3>
-        <p>นำเสนอผลงาน ความร่วมมือ และกิจกรรมสำคัญของสถาบัน เพื่อสะท้อนบทบาทของศูนย์กลางด้านการวิจัย</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ════════════════════════════════
-     QUICK LINKS
-════════════════════════════════ -->
-<section class="quick-section">
-  <div class="section">
-    <div class="section-header">
-      <div class="section-badge">บริการ</div>
+<!-- ══════════ SERVICES ══════════ -->
+<section class="services-section">
+  <div class="section-wrap">
+    <div class="section-head">
+      <div class="section-tag">บริการ</div>
       <h2 class="section-title">บริการของเรา</h2>
-      <p class="section-sub">เข้าถึงบริการและข้อมูลต่างๆ ของสถาบันได้อย่างสะดวก</p>
-      <div class="section-line"></div>
+      <p class="section-desc">เข้าถึงบริการและข้อมูลต่างๆ ของสถาบันได้อย่างสะดวกรวดเร็ว</p>
+      <div class="section-rule"></div>
     </div>
-
-    <div class="quick-grid">
-      <a href="booking_room.php" class="quick-card">
-        <div class="quick-card-icon">🏨</div>
-        <h4>จองห้องพัก</h4>
-        <p>ตรวจสอบและจองห้องพักภายในสถาบัน รองรับทั้งบุคลากรและผู้เยี่ยมชม</p>
-        <div class="quick-card-arrow">ดูห้องพัก →</div>
+    <div class="services-grid">
+      <a href="booking_room.php" class="srv-card">
+        <div class="srv-icon">🏨</div>
+        <div class="srv-title">จองห้องพัก</div>
+        <div class="srv-desc">ตรวจสอบและจองห้องพักภายในสถาบัน รองรับทั้งบุคลากรและผู้เยี่ยมชม</div>
+        <div class="srv-more">ดูห้องพัก →</div>
       </a>
-
-      <a href="news.php" class="quick-card">
-        <div class="quick-card-icon">📰</div>
-        <h4>ข่าวสารและกิจกรรม</h4>
-        <p>ติดตามข่าวสาร กิจกรรม และประกาศล่าสุดจากสถาบัน</p>
-        <div class="quick-card-arrow">อ่านข่าวสาร →</div>
+      <a href="news.php" class="srv-card">
+        <div class="srv-icon">📰</div>
+        <div class="srv-title">ข่าวสารและกิจกรรม</div>
+        <div class="srv-desc">ติดตามข่าวสาร กิจกรรม และประกาศล่าสุดจากสถาบัน</div>
+        <div class="srv-more">อ่านข่าวสาร →</div>
       </a>
-
-      <a href="view_data.php" class="quick-card">
-        <div class="quick-card-icon">📋</div>
-        <h4>ลงทะเบียนกิจกรรม</h4>
-        <p>ลงทะเบียนเข้าร่วมกิจกรรม ทัศนศึกษา และการอบรมต่างๆ</p>
-        <div class="quick-card-arrow">ลงทะเบียน →</div>
+      <a href="view_data.php" class="srv-card">
+        <div class="srv-icon">📋</div>
+        <div class="srv-title">ลงทะเบียนกิจกรรม</div>
+        <div class="srv-desc">ลงทะเบียนเข้าร่วมกิจกรรม ทัศนศึกษา และการอบรมต่างๆ</div>
+        <div class="srv-more">ลงทะเบียน →</div>
       </a>
-
-      <a href="calendar.php" class="quick-card">
-        <div class="quick-card-icon">📅</div>
-        <h4>ปฏิทินกิจกรรม</h4>
-        <p>ดูสถิติและรายละเอียดผู้เข้าชมรายวัน รายเดือน</p>
-        <div class="quick-card-arrow">ดูปฏิทิน →</div>
+      <a href="calendar.php" class="srv-card">
+        <div class="srv-icon">📅</div>
+        <div class="srv-title">ปฏิทินกิจกรรม</div>
+        <div class="srv-desc">ดูตารางกิจกรรม สัมมนา และงานสำคัญรายวัน รายเดือน</div>
+        <div class="srv-more">ดูปฏิทิน →</div>
       </a>
     </div>
   </div>
 </section>
 
-<!-- ════════════════════════════════
-     NEWS SECTION
-════════════════════════════════ -->
+<!-- ══════════ ABOUT ══════════ -->
+<section class="about-section">
+  <div class="section-wrap">
+    <div class="about-flex">
+      <div class="about-img-wrap">
+        <img src="ka0.jpg" alt="สถาบันวิจัยวลัยรุกขเวช">
+        <div class="about-img-badge">
+          <div class="about-img-badge-icon">🌿</div>
+          <div class="about-img-badge-text">
+            <div class="label">ก่อตั้งมา</div>
+            <div class="val">กว่า 30 ปี แห่งการวิจัย</div>
+          </div>
+        </div>
+      </div>
+      <div class="about-content">
+        <div class="about-tag">เกี่ยวกับเรา</div>
+        <h2 class="about-h">เรียนรู้จากธรรมชาติ<br>เพื่อชุมชนที่ยั่งยืน</h2>
+        <p class="about-p">
+          สถาบันวิจัยวลัยรุกขเวช มหาวิทยาลัยมหาสารคาม มุ่งเน้นการส่งเสริมการเรียนรู้
+          การวิจัย และการบริการวิชาการแก่ชุมชน โดยเฉพาะในด้านทรัพยากรธรรมชาติ
+          ความหลากหลายทางชีวภาพ และภูมิปัญญาท้องถิ่น
+        </p>
+        <div class="about-pills">
+          <div class="about-pill"><div class="about-pill-dot"></div> การวิจัยธรรมชาติ</div>
+          <div class="about-pill"><div class="about-pill-dot"></div> พืชสมุนไพร</div>
+          <div class="about-pill"><div class="about-pill-dot"></div> ความหลากหลายชีวภาพ</div>
+          <div class="about-pill"><div class="about-pill-dot"></div> บริการวิชาการ</div>
+        </div>
+        <a href="about_us.php" class="btn-about">🌿 อ่านเพิ่มเติม</a>
+      </div>
+    </div>
+
+    <!-- Feature strip -->
+    <div class="feature-strip">
+      <div class="feat-item">
+        <div class="feat-ico">📢</div>
+        <div class="feat-title">ประชาสัมพันธ์</div>
+        <div class="feat-desc">เผยแพร่ข่าวสาร กิจกรรม และประกาศสำคัญของสถาบัน</div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-ico">🔬</div>
+        <div class="feat-title">งานวิจัย</div>
+        <div class="feat-desc">สนับสนุนและเผยแพร่งานวิจัยด้านธรรมชาติและสิ่งแวดล้อม</div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-ico">🤝</div>
+        <div class="feat-title">บริการวิชาการ</div>
+        <div class="feat-desc">เชื่อมโยงความรู้สู่ชุมชน โรงเรียน และหน่วยงานภาครัฐ</div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-ico">🏛️</div>
+        <div class="feat-title">ภาพลักษณ์องค์กร</div>
+        <div class="feat-desc">นำเสนอผลงานและความร่วมมือในระดับชาติและนานาชาติ</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ NEWS ══════════ -->
 <?php if (!empty($newsRows)): ?>
 <section class="news-section">
-  <div class="section">
-    <div class="section-header">
-      <div class="section-badge">ข่าวสาร</div>
+  <div class="section-wrap">
+    <div class="section-head">
+      <div class="section-tag">ข่าวสาร</div>
       <h2 class="section-title">ข่าวสารล่าสุด</h2>
-      <p class="section-sub">ติดตามความเคลื่อนไหวและกิจกรรมล่าสุดของสถาบัน</p>
-      <div class="section-line"></div>
+      <p class="section-desc">ติดตามความเคลื่อนไหวและกิจกรรมล่าสุดของสถาบัน</p>
+      <div class="section-rule"></div>
     </div>
 
-    <div class="news-grid">
-      <?php foreach ($newsRows as $nr): ?>
-      <a href="news.php" class="news-card">
-        <?php if (!empty($nr['image'])): ?>
-          <img src="uploads/<?= htmlspecialchars($nr['image']) ?>" class="news-card-img" alt="">
+    <?php
+      $mainNews = $newsRows[0] ?? null;
+      $sideNews = array_slice($newsRows, 1);
+    ?>
+    <div class="news-layout">
+      <!-- Main news card -->
+      <?php if ($mainNews): ?>
+      <a href="news.php" class="news-main">
+        <?php if (!empty($mainNews['image'])): ?>
+          <img src="uploads/<?= htmlspecialchars($mainNews['image']) ?>" class="news-main-img" alt="">
         <?php else: ?>
-          <div class="news-card-img-placeholder">📰</div>
+          <div class="news-main-img" style="display:flex;align-items:center;justify-content:center;font-size:3rem;">📰</div>
         <?php endif; ?>
-        <div class="news-card-body">
-          <div class="news-card-date"><?= date('d M Y', strtotime($nr['created_at'])) ?></div>
-          <div class="news-card-title"><?= htmlspecialchars($nr['title']) ?></div>
+        <div class="news-main-body">
+          <div class="news-main-date"><?= date('d M Y', strtotime($mainNews['created_at'])) ?></div>
+          <div class="news-main-title"><?= htmlspecialchars($mainNews['title']) ?></div>
+          <div class="news-main-excerpt">คลิกเพื่ออ่านข่าวสารและกิจกรรมจากสถาบัน →</div>
         </div>
       </a>
-      <?php endforeach; ?>
+      <?php endif; ?>
+
+      <!-- Side news -->
+      <div class="news-side">
+        <?php foreach ($sideNews as $sn): ?>
+        <a href="news.php" class="news-side-card">
+          <?php if (!empty($sn['image'])): ?>
+            <img src="uploads/<?= htmlspecialchars($sn['image']) ?>" class="news-side-img" alt="">
+          <?php else: ?>
+            <div class="news-side-img-ph">📰</div>
+          <?php endif; ?>
+          <div class="news-side-body">
+            <div class="news-side-date"><?= date('d M Y', strtotime($sn['created_at'])) ?></div>
+            <div class="news-side-title"><?= htmlspecialchars($sn['title']) ?></div>
+          </div>
+        </a>
+        <?php endforeach; ?>
+
+        <!-- Filler CTA card if less than 2 side news -->
+        <?php if (count($sideNews) < 2): ?>
+        <a href="news.php" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:20px;background:var(--gold-dim);border:1.5px dashed var(--gold-border);border-radius:var(--r-sm);color:var(--gold);font-weight:700;font-size:.85rem;text-align:center;">
+          📰 ดูข่าวสารทั้งหมด →
+        </a>
+        <?php endif; ?>
+      </div>
     </div>
 
-    <div class="news-center">
+    <div style="text-align:center;">
       <a href="news.php" class="news-see-all">ดูข่าวสารทั้งหมด →</a>
     </div>
   </div>
 </section>
 <?php endif; ?>
 
-<!-- ════════════════════════════════
-     FOOTER
-════════════════════════════════ -->
+<!-- ══════════ CTA BANNER ══════════ -->
+<section class="cta-section">
+  <div class="cta-inner">
+    <div class="cta-text">
+      <div class="cta-tag">พร้อมเริ่มต้นแล้วหรือยัง?</div>
+      <h2 class="cta-title">จองห้องพักและลงทะเบียน<br>กิจกรรมได้เลยวันนี้</h2>
+      <p class="cta-sub">สะดวก รวดเร็ว ง่ายดาย เพียงไม่กี่ขั้นตอน ก็พร้อมเข้าร่วมกิจกรรมของสถาบัน</p>
+    </div>
+    <div class="cta-btns">
+      <a href="booking_room.php" class="cta-btn-primary">🏨 จองห้องพักเลย</a>
+      <a href="view_data.php" class="cta-btn-ghost">📋 ลงทะเบียนกิจกรรม</a>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ FOOTER ══════════ -->
 <footer class="footer">
   <div class="footer-top">
-    <div>
-      <div class="footer-brand-line"></div>
-      <div class="footer-brand-name">WRBRI</div>
-      <div class="footer-brand-sub">สถาบันวิจัยวลัยรุกขเวช</div>
+    <div class="footer-brand">
+      <div class="footer-rule"></div>
+      <div class="footer-logo">WRBRI</div>
+      <div class="footer-sub-brand">สถาบันวิจัยวลัยรุกขเวช</div>
       <p class="footer-desc">
         มุ่งมั่นส่งเสริมการเรียนรู้ การวิจัย และการจัดกิจกรรม
         เพื่อพัฒนาศักยภาพด้านวิทยาศาสตร์ เทคโนโลยี
         และการบริการวิชาการแก่ชุมชนและสังคม
       </p>
+      <div class="footer-socials">
+        <a class="footer-social" href="#" title="Facebook">📘</a>
+        <a class="footer-social" href="#" title="Line">💬</a>
+        <a class="footer-social" href="#" title="Email">✉️</a>
+      </div>
     </div>
 
     <div class="footer-col">
@@ -672,36 +989,83 @@ a{ text-decoration:none; }
 
     <div class="footer-col">
       <h4>ติดต่อเรา</h4>
-      <div class="footer-contact-item">
-        <span class="footer-contact-icon">✉</span>
-        <span class="footer-contact-text">walairukhavej@msu.ac.th</span>
-      </div>
-      <div class="footer-contact-item">
-        <span class="footer-contact-icon">📞</span>
-        <span class="footer-contact-text">043 719 816</span>
-      </div>
-      <div class="footer-contact-item">
-        <span class="footer-contact-icon">📍</span>
-        <span class="footer-contact-text">Kantharawichai, Maha Sarakham 44150</span>
-      </div>
+      <ul class="footer-contact">
+        <li><span class="footer-contact-icon">✉</span> walairukhavej@msu.ac.th</li>
+        <li><span class="footer-contact-icon">📞</span> 043 719 816</li>
+        <li><span class="footer-contact-icon">📍</span> Kantharawichai,<br>Maha Sarakham 44150</li>
+      </ul>
     </div>
   </div>
 
   <div class="footer-bottom">
-    © <?= date('Y') ?> สถาบันวิจัยวลัยรุกขเวช มหาวิทยาลัยมหาสารคาม — All Rights Reserved
+    <span>© <?= date('Y') ?> สถาบันวิจัยวลัยรุกขเวช มหาวิทยาลัยมหาสารคาม</span>
+    <div class="footer-bottom-links">
+      <a href="about_us.php">เกี่ยวกับ</a>
+      <a href="news.php">ข่าวสาร</a>
+      <a href="booking_room.php">จองห้องพัก</a>
+    </div>
   </div>
 </footer>
 
 <script>
+/* ── User dropdown ── */
 function toggleMenu() {
-  document.getElementById('userMenu').classList.toggle('open');
+  document.getElementById('userMenu')?.classList.toggle('open');
 }
 document.addEventListener('click', function(e) {
-  const menu = document.getElementById('userMenu');
-  if (menu && !menu.contains(e.target)) menu.classList.remove('open');
+  const m = document.getElementById('userMenu');
+  if (m && !m.contains(e.target)) m.classList.remove('open');
 });
-</script>
 
+/* ── Mobile drawer ── */
+function toggleDrawer() {
+  const drawer = document.getElementById('navDrawer');
+  const ham = document.getElementById('hamBtn');
+  drawer.classList.toggle('open');
+  ham.classList.toggle('open');
+  document.body.style.overflow = drawer.classList.contains('open') ? 'hidden' : '';
+}
+function closeDrawer(e) {
+  if (e.target === document.getElementById('navDrawer')) {
+    document.getElementById('navDrawer').classList.remove('open');
+    document.getElementById('hamBtn').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+}
+
+/* ── Scroll: navbar shadow ── */
+window.addEventListener('scroll', function() {
+  const nav = document.getElementById('navbar');
+  nav.style.boxShadow = window.scrollY > 10
+    ? '0 4px 24px rgba(26,26,46,.12)'
+    : 'none';
+});
+
+/* ── Intersection observer for fade-up elements ── */
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.opacity = '1';
+      obs.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.12 });
+document.querySelectorAll('.srv-card, .feat-item, .news-main, .news-side-card').forEach(el => {
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(20px)';
+  el.style.transition = 'opacity .6s ease, transform .6s ease';
+  obs.observe(el);
+});
+const obsReady = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.opacity = '1';
+      entry.target.style.transform = 'translateY(0)';
+      obsReady.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.12 });
+document.querySelectorAll('.srv-card, .feat-item, .news-main, .news-side-card').forEach(el => obsReady.observe(el));
+</script>
 </body>
 </html>
-<?php $conn->close(); ?>

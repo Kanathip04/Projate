@@ -237,6 +237,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// ── Bookings ──
+$userEmail = $conn->real_escape_string($user['email'] ?? '');
+$bookings_result = $userEmail ? $conn->query("SELECT id, room_type, guests, checkin_date, checkout_date, status, booking_status, archived, created_at FROM room_bookings WHERE email='$userEmail' ORDER BY id DESC") : null;
+
+function getBookingStatus($row) {
+    if (isset($row['archived']) && (int)$row['archived'] === 1) return 'unavailable';
+    if (!empty($row['booking_status'])) return $row['booking_status'];
+    if (!empty($row['status'])) return $row['status'];
+    return 'pending';
+}
+function bsText($s) {
+    $map = ['approved'=>'อนุมัติแล้ว','pending'=>'รออนุมัติ','rejected'=>'ไม่อนุมัติ','cancelled'=>'ยกเลิกแล้ว','completed'=>'เสร็จสิ้น','unavailable'=>'ไม่พร้อมใช้งาน'];
+    return $map[$s] ?? 'ไม่ทราบสถานะ';
+}
+function bsClass($s) {
+    $map = ['approved'=>'bs-approved','pending'=>'bs-pending','rejected'=>'bs-rejected','cancelled'=>'bs-cancelled','completed'=>'bs-completed','unavailable'=>'bs-unavailable'];
+    return $map[$s] ?? 'bs-unknown';
+}
+
 $pageTitle = "โปรไฟล์ผู้ใช้งาน";
 $activeMenu = "users";
 include 'admin_layout_top.php';

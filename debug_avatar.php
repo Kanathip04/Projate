@@ -1,7 +1,4 @@
 <?php
-session_start();
-if (empty($_SESSION['user_id'])) die("Not logged in");
-
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 

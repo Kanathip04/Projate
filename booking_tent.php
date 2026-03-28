@@ -77,11 +77,17 @@ $result = $conn->query("SELECT * FROM tents WHERE status='show' ORDER BY id DESC
 body{font-family:'Sarabun','Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);}
 a{text-decoration:none;}
 .hero{
-    background:linear-gradient(135deg,rgba(26,26,46,.97) 0%,rgba(26,26,46,.88) 100%),
-    url('a1.jpg') center/cover no-repeat;
+    background:
+        radial-gradient(ellipse at 20% 50%, rgba(21,128,61,.25) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 20%, rgba(201,169,110,.12) 0%, transparent 50%),
+        linear-gradient(145deg,#0d1f0d 0%,#1a2e1a 35%,#1a1a2e 70%,#0f0f1e 100%);
     color:#fff;padding:70px 20px 120px;position:relative;overflow:hidden;
 }
-.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(255,255,255,0) 65%,var(--bg) 100%);}
+.hero::before{content:"";position:absolute;inset:0;
+    background-image:radial-gradient(circle at 15% 85%,rgba(21,128,61,.18) 0%,transparent 40%),
+    radial-gradient(circle at 85% 15%,rgba(201,169,110,.08) 0%,transparent 40%);
+    pointer-events:none;}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(255,255,255,0) 65%,var(--bg) 100%);pointer-events:none;}
 .hero-inner{width:min(1180px,92%);margin:0 auto;position:relative;z-index:2;}
 .top-nav{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px;}
 .nav-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;color:#fff;background:rgba(201,169,110,0.18);border:1px solid rgba(201,169,110,0.45);backdrop-filter:blur(8px);transition:.25s ease;}

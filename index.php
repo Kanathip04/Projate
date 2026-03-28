@@ -717,27 +717,6 @@ img{display:block;}
   </div>
 </section>
 
-<!-- ══════════ STATS BAR ══════════ -->
-<div class="stats-bar">
-  <div class="stats-inner">
-    <div class="stat-item">
-      <div class="stat-num">30+</div>
-      <div class="stat-lbl">ปีแห่งการวิจัย</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num">500+</div>
-      <div class="stat-lbl">งานวิจัยที่ตีพิมพ์</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num">10,000+</div>
-      <div class="stat-lbl">ผู้เข้าชมต่อปี</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num">50+</div>
-      <div class="stat-lbl">นักวิจัยและบุคลากร</div>
-    </div>
-  </div>
-</div>
 
 <!-- ══════════ SERVICES ══════════ -->
 <section class="services-section">
@@ -783,13 +762,6 @@ img{display:block;}
     <div class="about-flex">
       <div class="about-img-wrap">
         <img src="ka0.jpg" alt="สถาบันวิจัยวลัยรุกขเวช">
-        <div class="about-img-badge">
-          <div class="about-img-badge-icon">🌿</div>
-          <div class="about-img-badge-text">
-            <div class="label">ก่อตั้งมา</div>
-            <div class="val">กว่า 30 ปี แห่งการวิจัย</div>
-          </div>
-        </div>
       </div>
       <div class="about-content">
         <div class="about-tag">เกี่ยวกับเรา</div>

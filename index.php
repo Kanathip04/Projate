@@ -645,6 +645,198 @@ img{display:block;}
 .fade-up-2{animation-delay:.2s;}
 .fade-up-3{animation-delay:.3s;}
 .fade-up-4{animation-delay:.4s;}
+
+/* ─── Nav Booking Dropdown ────────────────── */
+.nav-book-wrap{position:relative;display:flex;align-items:center;}
+.nav-book-trigger{
+  display:flex;align-items:center;gap:5px;
+  padding:7px 13px;border-radius:999px;
+  font-size:.84rem;font-weight:700;color:var(--ink);
+  background:linear-gradient(135deg,rgba(201,169,110,.18),rgba(201,169,110,.08));
+  border:1.5px solid var(--gold-border);
+  cursor:pointer;transition:all .22s;white-space:nowrap;user-select:none;
+}
+.nav-book-trigger:hover,.nav-book-wrap:hover .nav-book-trigger{
+  background:linear-gradient(135deg,var(--gold),#e8c98a);
+  color:var(--ink);border-color:var(--gold);
+  box-shadow:0 4px 16px rgba(201,169,110,.35);
+}
+.nav-book-arrow{font-size:.62rem;transition:transform .22s;margin-left:2px;}
+.nav-book-wrap:hover .nav-book-arrow{transform:rotate(180deg);}
+.nav-book-drop{
+  position:absolute;top:calc(100% + 10px);left:50%;transform:translateX(-50%);
+  opacity:0;visibility:hidden;transform:translateX(-50%) translateY(-6px);
+  transition:all .22s;z-index:700;pointer-events:none;
+}
+.nav-book-wrap:hover .nav-book-drop{
+  opacity:1;visibility:visible;
+  transform:translateX(-50%) translateY(0);
+  pointer-events:auto;
+}
+.nav-book-drop-inner{
+  background:#fff;border-radius:20px;
+  box-shadow:0 20px 60px rgba(26,26,46,.16),0 4px 12px rgba(26,26,46,.08);
+  border:1px solid var(--border);
+  min-width:320px;padding:10px;
+  overflow:hidden;
+}
+.nav-book-drop-inner::before{
+  content:'';display:block;height:3px;
+  background:linear-gradient(90deg,var(--gold),#1d6fad,#16a34a);
+  border-radius:3px 3px 0 0;margin:-10px -10px 10px;
+}
+.nav-book-item{
+  display:flex;align-items:center;gap:14px;
+  padding:12px 14px;border-radius:12px;
+  text-decoration:none;transition:background .18s;
+  color:var(--ink);
+}
+.nav-book-item:hover{background:var(--bg);}
+.nav-book-ico{
+  width:46px;height:46px;border-radius:13px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;flex-shrink:0;
+  transition:transform .2s;
+}
+.nav-book-item:hover .nav-book-ico{transform:scale(1.1);}
+.nav-book-ico-room{background:rgba(29,111,173,.1);border:1.5px solid rgba(29,111,173,.2);}
+.nav-book-ico-tent{background:rgba(21,128,61,.1);border:1.5px solid rgba(21,128,61,.2);}
+.nav-book-ico-boat{background:rgba(201,169,110,.15);border:1.5px solid rgba(201,169,110,.35);}
+.nav-book-label{font-size:.88rem;font-weight:700;color:var(--ink);margin-bottom:2px;}
+.nav-book-sub{font-size:.73rem;color:var(--muted);}
+.nav-book-footer{
+  margin-top:6px;padding:10px 14px 6px;
+  border-top:1px solid var(--border);
+}
+.nav-book-status{
+  display:flex;align-items:center;justify-content:center;
+  padding:8px;border-radius:10px;font-size:.78rem;font-weight:600;color:var(--muted);
+  text-decoration:none;transition:all .18s;gap:6px;
+}
+.nav-book-status:hover{background:var(--gold-dim);color:var(--ink);}
+
+/* ─── Mobile drawer booking group ─────────── */
+.drawer-book-group{
+  background:linear-gradient(135deg,rgba(201,169,110,.08),rgba(201,169,110,.04));
+  border:1.5px solid var(--gold-border);
+  border-radius:14px;padding:8px;margin:4px 0;
+}
+.drawer-book-label{
+  font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--gold);padding:4px 8px 8px;display:block;
+}
+.drawer-book-group a{border-radius:10px;}
+
+/* ─── Booking Hero Section ────────────────── */
+.booking-hero-section{
+  background:linear-gradient(145deg,#0a1628 0%,#0d2344 40%,#1a3a5c 70%,#0d2344 100%);
+  position:relative;overflow:hidden;
+}
+.booking-hero-section::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse at 10% 50%,rgba(29,111,173,.3) 0%,transparent 50%),
+    radial-gradient(ellipse at 90% 20%,rgba(201,169,110,.12) 0%,transparent 40%),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.02) 0,rgba(255,255,255,.02) 1px,transparent 1px,transparent 80px),
+    repeating-linear-gradient(0deg,rgba(255,255,255,.01) 0,rgba(255,255,255,.01) 1px,transparent 1px,transparent 80px);
+}
+.bk-tag{background:rgba(201,169,110,.18);border-color:rgba(201,169,110,.35);color:var(--gold);}
+.bk-cards{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:clamp(14px,2vw,24px);
+  position:relative;z-index:1;
+}
+.bk-card{
+  background:rgba(255,255,255,.06);
+  border:1.5px solid rgba(255,255,255,.12);
+  border-radius:24px;padding:28px 24px;
+  text-decoration:none;color:#fff;
+  position:relative;overflow:hidden;
+  display:flex;flex-direction:column;gap:0;
+  transition:all .3s cubic-bezier(.23,1,.32,1);
+  backdrop-filter:blur(8px);
+}
+.bk-card:hover{
+  transform:translateY(-8px);
+  border-color:rgba(255,255,255,.28);
+  box-shadow:0 28px 60px rgba(0,0,0,.3),0 8px 20px rgba(0,0,0,.15);
+}
+.bk-card-featured{
+  background:linear-gradient(145deg,rgba(201,169,110,.2),rgba(201,169,110,.06));
+  border-color:rgba(201,169,110,.45);
+}
+.bk-card-featured:hover{border-color:rgba(201,169,110,.8);}
+.bk-card-room:hover{border-color:rgba(29,111,173,.6);}
+.bk-card-tent:hover{border-color:rgba(21,128,61,.5);}
+.bk-card-glow{
+  position:absolute;inset:0;pointer-events:none;opacity:0;
+  transition:opacity .3s;border-radius:24px;
+}
+.bk-card-room .bk-card-glow{background:radial-gradient(ellipse at 50% 0%,rgba(29,111,173,.2) 0%,transparent 60%);}
+.bk-card-tent .bk-card-glow{background:radial-gradient(ellipse at 50% 0%,rgba(21,128,61,.2) 0%,transparent 60%);}
+.bk-card-featured .bk-card-glow{background:radial-gradient(ellipse at 50% 0%,rgba(201,169,110,.25) 0%,transparent 60%);}
+.bk-card:hover .bk-card-glow{opacity:1;}
+.bk-badge-new{
+  position:absolute;top:16px;right:16px;
+  padding:3px 12px;border-radius:999px;
+  font-size:.64rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  background:rgba(255,255,255,.15);color:rgba(255,255,255,.8);
+  border:1px solid rgba(255,255,255,.2);
+}
+.bk-badge-hot{background:rgba(201,169,110,.25);color:var(--gold);border-color:rgba(201,169,110,.45);}
+.bk-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+.bk-icon{
+  width:clamp(54px,6vw,68px);height:clamp(54px,6vw,68px);
+  border-radius:18px;background:rgba(255,255,255,.1);
+  border:1.5px solid rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:clamp(1.6rem,3vw,2rem);
+  transition:all .3s;
+}
+.bk-card:hover .bk-icon{background:rgba(255,255,255,.18);transform:scale(1.06) rotate(-3deg);}
+.bk-avail-dot{
+  width:10px;height:10px;border-radius:50%;
+  background:#4ade80;
+  box-shadow:0 0 0 0 rgba(74,222,128,.5);
+  animation:avail-pulse 2s ease-in-out infinite;
+}
+@keyframes avail-pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.5);}
+  50%{box-shadow:0 0 0 7px rgba(74,222,128,0);}
+}
+.bk-card-body{flex:1;margin-bottom:18px;}
+.bk-title{font-size:clamp(1.1rem,1.8vw,1.25rem);font-weight:800;color:#fff;margin-bottom:8px;}
+.bk-desc{font-size:clamp(.78rem,1.2vw,.86rem);color:rgba(255,255,255,.65);line-height:1.75;margin-bottom:12px;}
+.bk-features{display:flex;flex-direction:column;gap:4px;}
+.bk-features span{font-size:.76rem;color:rgba(255,255,255,.55);display:flex;align-items:center;gap:6px;}
+.bk-card-footer{border-top:1px solid rgba(255,255,255,.1);padding-top:16px;}
+.bk-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 20px;border-radius:999px;
+  background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.2);
+  font-size:.82rem;font-weight:700;color:#fff;
+  transition:all .25s;letter-spacing:.03em;
+}
+.bk-card:hover .bk-btn{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.4);}
+.bk-btn-gold{background:rgba(201,169,110,.2);border-color:rgba(201,169,110,.5);color:var(--gold);}
+.bk-card-featured:hover .bk-btn-gold{background:var(--gold);color:var(--ink);border-color:var(--gold);}
+.bk-status-bar{
+  display:flex;align-items:center;gap:clamp(8px,2vw,20px);flex-wrap:wrap;justify-content:center;
+  margin-top:clamp(20px,3vw,32px);
+  padding:14px 20px;border-radius:14px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  position:relative;z-index:1;
+}
+.bk-status-bar span{font-size:.82rem;color:rgba(255,255,255,.55);}
+.bk-status-bar a{
+  font-size:.82rem;font-weight:600;color:rgba(255,255,255,.7);
+  text-decoration:none;padding:4px 10px;border-radius:8px;
+  transition:all .18s;
+}
+.bk-status-bar a:hover{background:rgba(255,255,255,.1);color:#fff;}
+@media(max-width:900px){.bk-cards{grid-template-columns:1fr;gap:14px;}}
+@media(max-width:600px){.bk-status-bar{flex-direction:column;gap:8px;text-align:center;}}
 </style>
 </head>
 <body>
@@ -668,7 +860,30 @@ img{display:block;}
     <a href="calendar.php"><span class="nav-icon">📅</span> ปฏิทิน</a>
     <a href="about_us.php"><span class="nav-icon">🌿</span> เกี่ยวกับ</a>
     <a href="kengcamp.php"><span class="nav-icon">⛺</span> เก็งแคมป์</a>
-    <a href="booking_room.php"><span class="nav-icon">🏨</span> จองห้องพัก</a>
+    <div class="nav-book-wrap">
+      <div class="nav-book-trigger">
+        <span class="nav-icon">🗓️</span> จอง <span class="nav-book-arrow">▾</span>
+      </div>
+      <div class="nav-book-drop">
+        <div class="nav-book-drop-inner">
+          <a href="booking_room.php" class="nav-book-item">
+            <span class="nav-book-ico nav-book-ico-room">🏨</span>
+            <div><div class="nav-book-label">จองห้องพัก</div><div class="nav-book-sub">ห้องพักรายคืนภายในสถาบัน</div></div>
+          </a>
+          <a href="booking_tent.php" class="nav-book-item">
+            <span class="nav-book-ico nav-book-ico-tent">⛺</span>
+            <div><div class="nav-book-label">จองเต็นท์</div><div class="nav-book-sub">แคมป์ปิ้งสัมผัสธรรมชาติ</div></div>
+          </a>
+          <a href="booking_boat.php" class="nav-book-item">
+            <span class="nav-book-ico nav-book-ico-boat">🚣</span>
+            <div><div class="nav-book-label">จองคิวพายเรือ</div><div class="nav-book-sub">เลือกรอบ เลือกเรือได้เลย</div></div>
+          </a>
+          <div class="nav-book-footer">
+            <a href="booking_status.php" class="nav-book-status">📋 ติดตามสถานะการจอง</a>
+          </div>
+        </div>
+      </div>
+    </div>
     <?php if ($isLoggedIn): ?><a href="chat.php"><span class="nav-icon">💬</span> แชทโลก</a><?php endif; ?>
   </div>
 
@@ -736,7 +951,12 @@ img{display:block;}
     <a href="index.php"><div class="nav-drawer-icon">🏠</div> หน้าแรก</a>
     <a href="news.php"><div class="nav-drawer-icon">📰</div> ข่าวสาร</a>
     <a href="kengcamp.php"><div class="nav-drawer-icon">⛺</div> เก็งแคมป์</a>
-    <a href="booking_room.php"><div class="nav-drawer-icon">🏨</div> จองห้องพัก</a>
+    <div class="drawer-book-group">
+      <div class="drawer-book-label">🗓️ จองบริการ</div>
+      <a href="booking_room.php"><div class="nav-drawer-icon" style="background:rgba(29,111,173,.1);">🏨</div> จองห้องพัก</a>
+      <a href="booking_tent.php"><div class="nav-drawer-icon" style="background:rgba(21,128,61,.1);">⛺</div> จองเต็นท์</a>
+      <a href="booking_boat.php"><div class="nav-drawer-icon" style="background:rgba(201,169,110,.15);">🚣</div> จองคิวพายเรือ</a>
+    </div>
     <a href="view_data.php"><div class="nav-drawer-icon">📋</div> ลงทะเบียนกิจกรรม</a>
     <a href="calendar.php"><div class="nav-drawer-icon">📅</div> ปฏิทินกิจกรรม</a>
     <a href="survey.php"><div class="nav-drawer-icon">📝</div> แบบประเมิน</a>
@@ -773,7 +993,7 @@ img{display:block;}
         เพื่อการพัฒนาที่ยั่งยืนและการสร้างองค์ความรู้
       </p>
       <div class="hero-cta fade-up fade-up-4">
-        <a href="booking_room.php" class="hero-btn hero-btn-primary">🏨 จองห้องพัก</a>
+        <a href="#booking-section" class="hero-btn hero-btn-primary">🗓️ จองบริการ</a>
         <a href="view_data.php" class="hero-btn hero-btn-register"><span class="reg-dot"></span> ลงทะเบียนกิจกรรม</a>
       </div>
     </div>
@@ -785,6 +1005,87 @@ img{display:block;}
 </section>
 
 
+<!-- ══════════ BOOKING SECTION ══════════ -->
+<section id="booking-section" class="booking-hero-section">
+  <div class="section-wrap">
+    <div class="section-head">
+      <div class="section-tag bk-tag">จองบริการ</div>
+      <h2 class="section-title" style="color:#fff;">จองบริการ<span style="color:var(--gold);font-style:italic;"> ทุกอย่าง</span>ที่นี่</h2>
+      <p class="section-desc" style="color:rgba(255,255,255,.7);">เลือกประเภทการจองที่ต้องการ ระบบรองรับการจองแบบ real-time</p>
+      <div class="section-rule"></div>
+    </div>
+    <div class="bk-cards">
+
+      <a href="booking_room.php" class="bk-card bk-card-room">
+        <div class="bk-card-glow"></div>
+        <div class="bk-badge-new">พร้อมใช้งาน</div>
+        <div class="bk-card-top">
+          <div class="bk-icon">🏨</div>
+          <div class="bk-avail-dot"></div>
+        </div>
+        <div class="bk-card-body">
+          <h3 class="bk-title">จองห้องพัก</h3>
+          <p class="bk-desc">ห้องพักสะอาด สะดวกสบาย ภายในสถาบัน รองรับบุคลากรและผู้เยี่ยมชม</p>
+          <div class="bk-features">
+            <span>✓ เช็กอิน-เอาท์ยืดหยุ่น</span>
+            <span>✓ หลายขนาดห้อง</span>
+          </div>
+        </div>
+        <div class="bk-card-footer">
+          <span class="bk-btn">จองเลย →</span>
+        </div>
+      </a>
+
+      <a href="booking_tent.php" class="bk-card bk-card-tent">
+        <div class="bk-card-glow"></div>
+        <div class="bk-badge-new">แคมป์ปิ้ง</div>
+        <div class="bk-card-top">
+          <div class="bk-icon">⛺</div>
+          <div class="bk-avail-dot"></div>
+        </div>
+        <div class="bk-card-body">
+          <h3 class="bk-title">จองเต็นท์</h3>
+          <p class="bk-desc">กางเต็นท์สัมผัสธรรมชาติ บรรยากาศแคมป์ปิ้งกลางป่า อากาศบริสุทธิ์</p>
+          <div class="bk-features">
+            <span>✓ หลายขนาด</span>
+            <span>✓ อุปกรณ์ครบ</span>
+          </div>
+        </div>
+        <div class="bk-card-footer">
+          <span class="bk-btn">จองเลย →</span>
+        </div>
+      </a>
+
+      <a href="booking_boat.php" class="bk-card bk-card-boat bk-card-featured">
+        <div class="bk-card-glow"></div>
+        <div class="bk-badge-new bk-badge-hot">🔥 ใหม่!</div>
+        <div class="bk-card-top">
+          <div class="bk-icon">🚣</div>
+          <div class="bk-avail-dot"></div>
+        </div>
+        <div class="bk-card-body">
+          <h3 class="bk-title">จองคิวพายเรือ</h3>
+          <p class="bk-desc">เลือกรอบ เลือกหมายเลขเรือที่ต้องการ ระบบแสดงเรือว่าง real-time</p>
+          <div class="bk-features">
+            <span>✓ เลือกหมายเลขเรือได้</span>
+            <span>✓ หลายรอบต่อวัน</span>
+          </div>
+        </div>
+        <div class="bk-card-footer">
+          <span class="bk-btn bk-btn-gold">จองเลย →</span>
+        </div>
+      </a>
+
+    </div>
+    <div class="bk-status-bar">
+      <span>📋 มีการจองอยู่แล้ว?</span>
+      <a href="booking_status.php">ติดตามสถานะห้องพัก →</a>
+      <a href="booking_tent_status.php">ติดตามสถานะเต็นท์ →</a>
+      <a href="booking_boat_status.php">ติดตามสถานะเรือ →</a>
+    </div>
+  </div>
+</section>
+
 <!-- ══════════ SERVICES ══════════ -->
 <section class="services-section">
   <div class="section-wrap">
@@ -795,12 +1096,6 @@ img{display:block;}
       <div class="section-rule"></div>
     </div>
     <div class="services-grid">
-      <a href="booking_room.php" class="srv-card">
-        <div class="srv-icon">🏨</div>
-        <div class="srv-title">จองห้องพัก</div>
-        <div class="srv-desc">ตรวจสอบและจองห้องพักภายในสถาบัน รองรับทั้งบุคลากรและผู้เยี่ยมชม</div>
-        <div class="srv-more">ดูห้องพัก →</div>
-      </a>
       <a href="news.php" class="srv-card">
         <div class="srv-icon">📰</div>
         <div class="srv-title">ข่าวสารและกิจกรรม</div>
@@ -967,7 +1262,10 @@ img{display:block;}
         <li><a href="view_data.php">ลงทะเบียน</a></li>
         <li><a href="calendar.php">ปฏิทิน</a></li>
         <li><a href="about_us.php">เกี่ยวกับสถาบัน</a></li>
-        <li><a href="booking_room.php">จองห้องพัก</a></li>
+        <li><a href="#booking-section">🗓️ จองบริการ</a></li>
+        <li><a href="booking_room.php">↳ จองห้องพัก</a></li>
+        <li><a href="booking_tent.php">↳ จองเต็นท์</a></li>
+        <li><a href="booking_boat.php">↳ จองคิวพายเรือ</a></li>
       </ul>
     </div>
 
@@ -986,7 +1284,7 @@ img{display:block;}
     <div class="footer-bottom-links">
       <a href="about_us.php">เกี่ยวกับ</a>
       <a href="news.php">ข่าวสาร</a>
-      <a href="booking_room.php">จองห้องพัก</a>
+      <a href="#booking-section">จองบริการ</a>
     </div>
   </div>
 </footer>
@@ -1050,6 +1348,34 @@ const obsReady = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0.12 });
 document.querySelectorAll('.srv-card, .feat-item, .news-main, .news-side-card').forEach(el => obsReady.observe(el));
+
+/* ── Booking cards stagger animation ── */
+const obsBk = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }, i * 80);
+      obsBk.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.bk-card').forEach((el, i) => {
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(28px)';
+  el.style.transition = `opacity .55s ease ${i*0.08}s, transform .55s cubic-bezier(.23,1,.32,1) ${i*0.08}s`;
+  obsBk.observe(el);
+});
+
+/* ── Nav booking dropdown keyboard close ── */
+document.addEventListener('click', e => {
+  if (!e.target.closest('.nav-book-wrap')) {
+    document.querySelectorAll('.nav-book-drop').forEach(d => {
+      d.style.opacity=''; d.style.visibility='';
+    });
+  }
+});
 </script>
 </body>
 </html>

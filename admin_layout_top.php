@@ -348,6 +348,12 @@ body::before {
   <a href="manage_tents.php" class="menu-item <?= $activeMenu==='tent_manage'?'active':'' ?>">
     <span class="icon">🏕️</span><span class="text">จัดการเต็นท์</span>
   </a>
+  <a href="admin_boat_bookings.php" class="menu-item <?= $activeMenu==='boat_booking'?'active':'' ?>">
+    <span class="icon">🚣</span><span class="text">การจองพายเรือ</span>
+  </a>
+  <a href="admin_boat_queues.php" class="menu-item <?= $activeMenu==='boat_queue'?'active':'' ?>">
+    <span class="icon">🛶</span><span class="text">จัดการคิวพายเรือ</span>
+  </a>
 </div>
 
 <div class="menu-section">

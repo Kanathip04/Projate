@@ -73,7 +73,7 @@ if (!$booking) {
 
 // บันทึก webhook payload
 $conn->query(
-    "UPDATE boat_bookings SET webhook_payload = " . $conn->quote($rawBody ?? '') .
+    "UPDATE boat_bookings SET webhook_payload = '" . $conn->real_escape_string($rawBody ?? '') . "'" .
     " WHERE booking_ref = '" . $conn->real_escape_string($booking_ref) . "'"
 );
 

@@ -512,7 +512,7 @@ textarea{min-height:90px;resize:vertical;}
         <div class="pay-title">ชำระเงินผ่าน QR Code</div>
         <div class="payment-grid">
           <div style="text-align:center;">
-            <img id="qrPreview" src="uploads/qr_payment.jpg" alt="QR Payment" class="qr-img" onerror="this.src='uploads/no-image.png'">
+            <img id="qrPreview" src="uploads/QRcode.jpg" alt="QR Payment" class="qr-img" onerror="this.src='uploads/no-image.png'">
             <div style="font-size:12px;color:#666;margin-top:8px;">สแกนเพื่อชำระเงิน</div>
           </div>
           <div>

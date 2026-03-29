@@ -147,7 +147,6 @@ a{text-decoration:none;}
             <a href="booking_room.php" class="nav-btn">จองห้องพัก</a>
             <a href="booking_tent.php" class="nav-btn">จองเต็นท์</a>
         </div>
-        <div class="hero-badge">🚣 ระบบจองคิวพายเรือ</div>
         <h1>จองคิว<span>พายเรือ</span></h1>
         <p>เลือกรอบเวลาที่ต้องการ ระบบแสดงจำนวนเรือว่างแบบ real-time พร้อมเลือกหมายเลขเรือได้เลย</p>
     </div>

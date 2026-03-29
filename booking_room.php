@@ -528,8 +528,8 @@ a{
             <div class="top-nav">
                 <a href="index.php" class="nav-btn">← กลับหน้าหลัก</a>
                 <a href="booking_status.php" class="nav-btn">ติดตามสถานะการจอง</a>
-                <a href="booking_tent.php" class="nav-btn">⛺ จองเต็นท์</a>
-                <a href="booking_boat.php" class="nav-btn">🚣 จองคิวพายเรือ</a>
+                <a href="booking_tent.php" class="nav-btn">จองเต็นท์</a>
+                <a href="booking_boat.php" class="nav-btn">จองคิวพายเรือ</a>
             </div>
             <h1>ระบบจองห้องพักและที่พักภายในสถาบัน</h1>
             <p>

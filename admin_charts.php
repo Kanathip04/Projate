@@ -15,6 +15,8 @@ $thisYear  = (int)date('Y');
 
 if ($view === 'daily') {
     $dateParam  = $_GET['date']  ?? $today;
+    $dateParam  = date('Y-m-d', strtotime($dateParam));
+
     // build 7-day window ending on dateParam
     $winEnd   = $dateParam;
     $winStart = date('Y-m-d', strtotime('-6 days', strtotime($dateParam)));
@@ -26,6 +28,8 @@ if ($view === 'daily') {
     $subLabel    = '7 วันล่าสุด ณ วันนี้';
 } elseif ($view === 'monthly') {
     $monthParam = $_GET['month'] ?? $thisMonth;
+    $monthParam = date('Y-m', strtotime($monthParam . '-01'));
+
     $winStart   = $monthParam . '-01';
     $winEnd     = date('Y-m-t', strtotime($winStart));
     $prevUrl    = '?view=monthly&month=' . date('Y-m', strtotime('-1 month', strtotime($winStart)));
@@ -36,6 +40,9 @@ if ($view === 'daily') {
     $subLabel    = 'รายวันในเดือนนี้';
 } else {
     $yearParam  = (int)($_GET['year'] ?? $thisYear);
+    if ($yearParam < 2020) $yearParam = 2020;
+    if ($yearParam > 2100) $yearParam = 2100;
+
     $winStart   = $yearParam . '-01-01';
     $winEnd     = $yearParam . '-12-31';
     $prevUrl    = '?view=yearly&year=' . ($yearParam - 1);
@@ -146,7 +153,7 @@ $jsRevenue = implode(',', $tlRevenue);
 /* ── Period nav ── */
 .pnav{background:#fff;border-radius:14px;padding:14px 20px;
   box-shadow:0 2px 12px rgba(26,26,46,.07);display:flex;align-items:center;
-  gap:14px;margin-bottom:16px;}
+  gap:14px;margin-bottom:14px;}
 .pnav-arr{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--border);
   background:#fafaf8;display:flex;align-items:center;justify-content:center;
   font-size:1.1rem;text-decoration:none;color:var(--ink);transition:.15s;flex-shrink:0;}
@@ -158,6 +165,51 @@ $jsRevenue = implode(',', $tlRevenue);
   background:#fffbf5;color:var(--accent);font-family:'Sarabun',sans-serif;
   font-size:.78rem;font-weight:700;text-decoration:none;transition:.15s;}
 .pnav-back:hover{background:var(--accent);color:var(--ink);}
+
+/* ── Picker box ── */
+.picker-box{
+  background:#fff;border-radius:14px;padding:14px 18px;
+  box-shadow:0 2px 12px rgba(26,26,46,.07);margin-bottom:16px;
+}
+.picker-form{
+  display:flex;align-items:end;gap:12px;flex-wrap:wrap;
+}
+.picker-group{
+  display:flex;flex-direction:column;gap:6px;min-width:180px;
+}
+.picker-label{
+  font-size:.75rem;font-weight:700;color:var(--muted);
+}
+.picker-input, .picker-select{
+  height:42px;border:1.5px solid #e5e7eb;border-radius:10px;
+  padding:0 12px;font-family:'Sarabun',sans-serif;font-size:.92rem;
+  color:var(--ink);background:#fff;outline:none;transition:.15s;
+}
+.picker-input:focus, .picker-select:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(201,169,110,.12);
+}
+.picker-actions{
+  display:flex;gap:10px;flex-wrap:wrap;
+}
+.picker-btn{
+  height:42px;padding:0 18px;border:none;border-radius:10px;
+  font-family:'Sarabun',sans-serif;font-size:.88rem;font-weight:700;
+  cursor:pointer;transition:.15s;text-decoration:none;display:inline-flex;
+  align-items:center;justify-content:center;
+}
+.picker-btn.primary{
+  background:var(--ink);color:#fff;
+}
+.picker-btn.primary:hover{
+  opacity:.92;
+}
+.picker-btn.soft{
+  background:#f8f6f1;color:var(--ink);border:1px solid #ece7dc;
+}
+.picker-btn.soft:hover{
+  background:#f1ece2;
+}
 
 /* ── KPI row ── */
 .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:16px;}
@@ -209,9 +261,11 @@ $jsRevenue = implode(',', $tlRevenue);
 @media(max-width:900px){
   .charts-top,.charts-bot{grid-template-columns:1fr;}
   .donut-wrap{flex-direction:column;}
+  .picker-form{flex-direction:column;align-items:stretch;}
+  .picker-group{min-width:unset;width:100%;}
 }
 @media print{
-  .view-tabs,.pnav,.no-print{display:none!important;}
+  .view-tabs,.pnav,.picker-box,.no-print{display:none!important;}
   .main{margin-left:0!important;width:100%!important;}
   .chart-card{box-shadow:none;border:1px solid #e0e0e0;}
 }
@@ -219,12 +273,12 @@ $jsRevenue = implode(',', $tlRevenue);
 
 <!-- Tab bar -->
 <div class="view-tabs no-print">
-  <a href="?view=daily<?= $view==='daily'  ? '&date='.urlencode($dateParam??$today) : '' ?>"
-     class="vtab<?= $view==='daily'  ?' active':'' ?>">📅 รายวัน</a>
-  <a href="?view=monthly<?= $view==='monthly' ? '&month='.urlencode($monthParam??$thisMonth) : '' ?>"
-     class="vtab<?= $view==='monthly'?' active':'' ?>">📆 รายเดือน</a>
-  <a href="?view=yearly<?= $view==='yearly'  ? '&year='.urlencode($yearParam??$thisYear) : '' ?>"
-     class="vtab<?= $view==='yearly' ?' active':'' ?>">🗓 รายปี</a>
+  <a href="?view=daily<?= $view==='daily'  ? '&date='.urlencode($dateParam ?? $today) : '' ?>"
+     class="vtab<?= $view==='daily'  ? ' active' : '' ?>">📅 รายวัน</a>
+  <a href="?view=monthly<?= $view==='monthly' ? '&month='.urlencode($monthParam ?? $thisMonth) : '' ?>"
+     class="vtab<?= $view==='monthly' ? ' active' : '' ?>">📆 รายเดือน</a>
+  <a href="?view=yearly<?= $view==='yearly'  ? '&year='.urlencode($yearParam ?? $thisYear) : '' ?>"
+     class="vtab<?= $view==='yearly' ? ' active' : '' ?>">🗓 รายปี</a>
 </div>
 
 <!-- Period navigator -->
@@ -235,9 +289,51 @@ $jsRevenue = implode(',', $tlRevenue);
     <div class="pnav-hint"><?= $subLabel ?></div>
   </div>
   <?php if (!$isCurrent): ?>
-  <a href="<?= htmlspecialchars($todayUrl) ?>" class="pnav-back">↩ ปัจจุบัน</a>
+    <a href="<?= htmlspecialchars($todayUrl) ?>" class="pnav-back">↩ ปัจจุบัน</a>
   <?php endif; ?>
   <a href="<?= htmlspecialchars($nextUrl) ?>" class="pnav-arr" title="ถัดไป">&#8250;</a>
+</div>
+
+<!-- Date / Month / Year Picker -->
+<div class="picker-box no-print">
+  <form method="GET" class="picker-form">
+    <input type="hidden" name="view" value="<?= htmlspecialchars($view) ?>">
+
+    <?php if ($view === 'daily'): ?>
+      <div class="picker-group">
+        <label class="picker-label">เลือกวัน</label>
+        <input type="date" name="date" class="picker-input" value="<?= htmlspecialchars($dateParam) ?>">
+      </div>
+    <?php elseif ($view === 'monthly'): ?>
+      <div class="picker-group">
+        <label class="picker-label">เลือกเดือน</label>
+        <input type="month" name="month" class="picker-input" value="<?= htmlspecialchars($monthParam) ?>">
+      </div>
+    <?php else: ?>
+      <div class="picker-group">
+        <label class="picker-label">เลือกปี</label>
+        <select name="year" class="picker-select">
+          <?php for ($y = $thisYear + 2; $y >= 2020; $y--): ?>
+            <option value="<?= $y ?>" <?= $y == $yearParam ? 'selected' : '' ?>>
+              <?= $y + 543 ?>
+            </option>
+          <?php endfor; ?>
+        </select>
+      </div>
+    <?php endif; ?>
+
+    <div class="picker-actions">
+      <button type="submit" class="picker-btn primary">แสดงรายงาน</button>
+
+      <?php if ($view === 'daily'): ?>
+        <a href="?view=daily&date=<?= $today ?>" class="picker-btn soft">วันนี้</a>
+      <?php elseif ($view === 'monthly'): ?>
+        <a href="?view=monthly&month=<?= $thisMonth ?>" class="picker-btn soft">เดือนปัจจุบัน</a>
+      <?php else: ?>
+        <a href="?view=yearly&year=<?= $thisYear ?>" class="picker-btn soft">ปีปัจจุบัน</a>
+      <?php endif; ?>
+    </div>
+  </form>
 </div>
 
 <!-- KPI row -->

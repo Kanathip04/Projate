@@ -36,9 +36,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (in_array($action, ['add', 'edit'])) {
         $queue_name    = trim($_POST['queue_name']    ?? '');
         $queue_date    = trim($_POST['queue_date']    ?? '');
-        $time_start    = trim($_POST['time_start']    ?? '');
-        $time_end      = trim($_POST['time_end']      ?? '');
-        $total_boats   = max(1, (int)($_POST['total_boats']   ?? 5));
+        $time_start    = '00:00:00';
+        $time_end      = '00:00:00';
+        $total_boats   = 5;
         $price_per_boat= max(0, (float)($_POST['price_per_boat'] ?? 0));
         $description   = trim($_POST['description']  ?? '');
         $boat_types    = trim($_POST['boat_types']   ?? 'เรือพาย,เรือคายัค,เรือบด');
@@ -188,18 +188,6 @@ include 'admin_layout_top.php';
                     <input type="date" name="queue_date" required value="<?= h($editQueue['queue_date'] ?? date('Y-m-d')) ?>">
                 </div>
                 <div class="fg">
-                    <label>เวลาเริ่ม *</label>
-                    <input type="time" name="time_start" required value="<?= h($editQueue['time_start'] ?? '08:00') ?>">
-                </div>
-                <div class="fg">
-                    <label>เวลาสิ้นสุด *</label>
-                    <input type="time" name="time_end" required value="<?= h($editQueue['time_end'] ?? '10:00') ?>">
-                </div>
-                <div class="fg">
-                    <label>จำนวนเรือ (ลำ)</label>
-                    <input type="number" name="total_boats" min="1" value="<?= (int)($editQueue['total_boats'] ?? 5) ?>">
-                </div>
-                <div class="fg">
                     <label>ราคา / ลำ (บาท, 0=ฟรี)</label>
                     <input type="number" name="price_per_boat" min="0" step="0.01" value="<?= (float)($editQueue['price_per_boat'] ?? 0) ?>">
                 </div>
@@ -261,8 +249,6 @@ include 'admin_layout_top.php';
                     <th>รูป</th>
                     <th>ชื่อคิว</th>
                     <th>วันที่</th>
-                    <th>เวลา</th>
-                    <th>เรือ</th>
                     <th>ราคา/ลำ</th>
                     <th>การจอง</th>
                     <th>สถานะ</th>
@@ -271,7 +257,7 @@ include 'admin_layout_top.php';
             </thead>
             <tbody>
             <?php if ($result->num_rows === 0): ?>
-                <tr><td class="empty-row" colspan="10">ยังไม่มีคิวพายเรือ กรุณาเพิ่มคิวใหม่</td></tr>
+                <tr><td class="empty-row" colspan="8">ยังไม่มีคิวพายเรือ กรุณาเพิ่มคิวใหม่</td></tr>
             <?php endif; ?>
             <?php while ($row = $result->fetch_assoc()): ?>
                 <tr>
@@ -285,8 +271,6 @@ include 'admin_layout_top.php';
                     </td>
                     <td><strong><?= h($row['queue_name']) ?></strong></td>
                     <td><?= date('d/m/Y', strtotime($row['queue_date'])) ?></td>
-                    <td style="font-size:.82rem;"><?= substr($row['time_start'],0,5) ?>–<?= substr($row['time_end'],0,5) ?></td>
-                    <td><?= (int)$row['total_boats'] ?> ลำ</td>
                     <td><?= (float)$row['price_per_boat'] > 0 ? '฿'.number_format((float)$row['price_per_boat']) : '<span style="color:var(--success)">ฟรี</span>' ?></td>
                     <td><?= (int)$row['booking_count'] ?> รายการ</td>
                     <td>

@@ -656,22 +656,27 @@ img{display:block;}
   border:1.5px solid var(--gold-border);
   cursor:pointer;transition:all .22s;white-space:nowrap;user-select:none;
 }
-.nav-book-trigger:hover,.nav-book-wrap:hover .nav-book-trigger{
+.nav-book-trigger:hover,.nav-book-wrap.open .nav-book-trigger{
   background:linear-gradient(135deg,var(--gold),#e8c98a);
   color:var(--ink);border-color:var(--gold);
   box-shadow:0 4px 16px rgba(201,169,110,.35);
 }
 .nav-book-arrow{font-size:.62rem;transition:transform .22s;margin-left:2px;}
-.nav-book-wrap:hover .nav-book-arrow{transform:rotate(180deg);}
+.nav-book-wrap.open .nav-book-arrow{transform:rotate(180deg);}
 .nav-book-drop{
-  position:absolute;top:calc(100% + 10px);left:50%;transform:translateX(-50%);
+  position:absolute;top:calc(100% + 6px);left:50%;
   opacity:0;visibility:hidden;transform:translateX(-50%) translateY(-6px);
-  transition:all .22s;z-index:700;pointer-events:none;
+  transition:opacity .22s,transform .22s,visibility .22s;
+  z-index:700;pointer-events:none;
 }
-.nav-book-wrap:hover .nav-book-drop{
+.nav-book-wrap.open .nav-book-drop{
   opacity:1;visibility:visible;
   transform:translateX(-50%) translateY(0);
   pointer-events:auto;
+}
+/* bridge ป้องกัน gap ระหว่าง trigger กับ dropdown */
+.nav-book-drop::before{
+  content:'';position:absolute;top:-10px;left:0;right:0;height:12px;
 }
 .nav-book-drop-inner{
   background:#fff;border-radius:20px;
@@ -1368,13 +1373,22 @@ document.querySelectorAll('.bk-card').forEach((el, i) => {
   obsBk.observe(el);
 });
 
-/* ── Nav booking dropdown keyboard close ── */
+/* ── Nav booking dropdown — click toggle ── */
+const navBookWrap = document.querySelector('.nav-book-wrap');
+const navBookTrigger = navBookWrap?.querySelector('.nav-book-trigger');
+navBookTrigger?.addEventListener('click', e => {
+  e.stopPropagation();
+  navBookWrap.classList.toggle('open');
+  document.getElementById('userMenu')?.classList.remove('open');
+});
 document.addEventListener('click', e => {
   if (!e.target.closest('.nav-book-wrap')) {
-    document.querySelectorAll('.nav-book-drop').forEach(d => {
-      d.style.opacity=''; d.style.visibility='';
-    });
+    navBookWrap?.classList.remove('open');
   }
+});
+/* ปิด dropdown เมื่อคลิกลิงก์ข้างใน */
+navBookWrap?.querySelectorAll('.nav-book-item, .nav-book-status').forEach(a => {
+  a.addEventListener('click', () => navBookWrap.classList.remove('open'));
 });
 </script>
 </body>

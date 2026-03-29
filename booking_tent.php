@@ -165,7 +165,8 @@ a{text-decoration:none;}
         <div class="top-nav">
             <a href="index.php" class="nav-btn">← กลับหน้าหลัก</a>
             <a href="booking_tent_status.php" class="nav-btn">ติดตามสถานะการจอง</a>
-            <a href="booking_room.php" class="nav-btn">จองห้องพัก</a>
+            <a href="booking_room.php" class="nav-btn">🏨 จองห้องพัก</a>
+            <a href="booking_boat.php" class="nav-btn">🚣 จองคิวพายเรือ</a>
         </div>
         <div class="hero-badge">⛺ ระบบจองเต็นท์</div>
         <h1>จองเต็นท์<span>กลางแจ้ง</span></h1>

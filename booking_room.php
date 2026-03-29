@@ -509,40 +509,14 @@ a{
         width:100%;
     }
 }
-.top-action-btn{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    padding:12px 22px;
-    border-radius:999px;
-    text-decoration:none;
-    font-weight:700;
-    font-size:15px;
-    color:#fff;
-    background:rgba(201,169,110,0.18);
-    border:1px solid rgba(201,169,110,0.40);
-    backdrop-filter:blur(8px);
-    -webkit-backdrop-filter:blur(8px);
-    transition:all .25s ease;
-    box-shadow:0 8px 20px rgba(0,0,0,.12);
-    font-family:'Sarabun', sans-serif;
+.top-nav{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px;}
+.nav-btn{
+    display:inline-flex;align-items:center;padding:10px 18px;
+    border-radius:999px;font-size:14px;font-weight:600;color:#fff;
+    background:rgba(201,169,110,0.18);border:1px solid rgba(201,169,110,0.45);
+    backdrop-filter:blur(8px);transition:.25s ease;text-decoration:none;
 }
-
-.top-action-btn:hover{
-    transform:translateY(-2px);
-    background:rgba(201,169,110,0.30);
-    color:var(--gold);
-}
-
-.top-action-btn.secondary{
-    background:rgba(26,26,46,.55);
-    border:1px solid rgba(201,169,110,0.25);
-}
-
-.top-action-btn.secondary:hover{
-    background:rgba(26,26,46,.80);
-    color:var(--gold);
-}
+.nav-btn:hover{background:rgba(201,169,110,0.35);color:var(--gold);}
 </style>
 </head>
 <body>
@@ -551,8 +525,12 @@ a{
 
     <section class="hero">
         <div class="hero-inner">
-            <a href="index.php" class="back-home-btn">← กลับหน้าหลัก</a>
-            <a href="booking_status.php" class="top-action-btn secondary">ติดตามสถานะการจอง</a>
+            <div class="top-nav">
+                <a href="index.php" class="nav-btn">← กลับหน้าหลัก</a>
+                <a href="booking_status.php" class="nav-btn">ติดตามสถานะการจอง</a>
+                <a href="booking_tent.php" class="nav-btn">⛺ จองเต็นท์</a>
+                <a href="booking_boat.php" class="nav-btn">🚣 จองคิวพายเรือ</a>
+            </div>
             <h1>ระบบจองห้องพักและที่พักภายในสถาบัน</h1>
             <p>
                 เลือกห้องพักที่ต้องการจากรายการด้านล่างได้เลย

@@ -139,7 +139,7 @@ $n8nSent      = false;
 $n8nResponse  = null;
 $n8nHttpCode  = null;
 $n8nCurlError = null;
-
+file_put_contents(__DIR__ . '/check_secret_log.txt', json_encode($payload, JSON_UNESCAPED_UNICODE));
 if (function_exists('curl_init')) {
     $ch = curl_init($webhookUrl);
     curl_setopt($ch, CURLOPT_POST, true);

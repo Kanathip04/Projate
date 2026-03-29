@@ -90,7 +90,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['slip'])) {
             ]);
             curl_exec($ch);
             curl_close($ch);
-            $uploadSuccess = true;
+            // Redirect เพื่อป้องกัน browser re-submit form ซ้ำ
+            header("Location: payment_slip.php?ref=" . urlencode($booking_ref));
+            exit;
         } else {
             $uploadError = 'อัปโหลดไม่สำเร็จ กรุณาลองใหม่';
         }

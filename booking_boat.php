@@ -137,44 +137,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ajax'])) {
 
     $temp_booking_ref = 'TMP' . time() . rand(100, 999);
 
-    $stmt = $conn->prepare("
-        INSERT INTO boat_bookings
-        (
-            booking_ref,
-            queue_id,
-            full_name,
-            phone,
-            email,
-            queue_name,
-            guests,
-            boat_date,
-            boat_type,
-            price_per_boat,
-            total_amount,
-            daily_queue_no,
-            note,
-            booking_status,
-            payment_status
-        )
-        VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'unpaid')
-    ");
+    /* param count: s(booking_ref) i(queue_id) s(full_name) s(phone) s(email) s(queue_name) i(guests) s(boat_date) s(boat_type) d(price_per_boat) d(total_amount) i(daily_queue_no) s(note) = 13 params */
+    $stmt = $conn->prepare(
+        "INSERT INTO boat_bookings
+         (booking_ref, queue_id, full_name, phone, email, queue_name, guests, boat_date, boat_type, price_per_boat, total_amount, daily_queue_no, note, booking_status, payment_status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'unpaid')"
+    );
 
-    $stmt->bind_param(
-        "sissssissddis",
-        $temp_booking_ref,
-        $queue_id,
-        $customer_name,
-        $phone,
-        $email,
-        $queue_name,
-        $guests,
-        $boat_date,
-        $boat_type,
-        $price_per_boat,
-        $total_amount,
-        $daily_queue_no,
-        $note
+    if (!$stmt) {
+        echo json_encode(['ok' => false, 'errors' => ['SQL prepare error: ' . $conn->error]]);
+        $conn->close(); exit;
+    }
+
+    // types: s i s s s s i s s d  d  i  s  (13 params)
+    $stmt->bind_param("sissssissddis",
+        $temp_booking_ref,  // 1  s
+        $queue_id,          // 2  i
+        $customer_name,     // 3  s
+        $phone,             // 4  s
+        $email,             // 5  s
+        $queue_name,        // 6  s
+        $guests,            // 7  i
+        $boat_date,         // 8  s
+        $boat_type,         // 9  s
+        $price_per_boat,    // 10 d
+        $total_amount,      // 11 d
+        $daily_queue_no,    // 12 i
+        $note               // 13 s
     );
 
     if (!$stmt->execute()) {
@@ -195,16 +184,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ajax'])) {
     $ustmt->close();
 
     echo json_encode([
-        'ok'            => true,
-        'queue_no'      => str_pad($daily_queue_no, 4, '0', STR_PAD_LEFT),
-        'booking_ref'   => $booking_ref,
-        'customer_name' => $customer_name,
-        'boat_type'     => $boat_type,
-        'queue_name'    => $queue_name,
-        'boat_date'     => date('d/m/Y', strtotime($boat_date)),
-        'guests'        => $guests,
-        'total_amount'  => number_format($total_amount, 2),
-        'created_at'    => date('d/m/Y H:i'),
+        'ok'           => true,
+        'booking_ref'  => $booking_ref,
+        'total_amount' => $total_amount,
+        'redirect'     => 'payment_slip.php?ref=' . urlencode($booking_ref),
     ]);
     exit;
 }
@@ -612,7 +595,9 @@ textarea{min-height:90px;resize:vertical;}
       const json = await res.json();
 
       if (json.ok) {
-        showTicket(json);
+        // redirect ไปหน้าชำระเงิน
+        window.location.href = json.redirect;
+        return;
       } else {
         errEl.textContent = (json.errors || ['เกิดข้อผิดพลาด']).join(' / ');
         errEl.style.display = 'block';

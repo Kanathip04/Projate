@@ -12,22 +12,29 @@ $currentDate = date('Y-m-d');
 $currentTime = date('H:i');
 
 /* ── ดึงข้อมูลโปรไฟล์ถ้า login แล้ว ── */
-$profileName  = '';
-$profileEmail = '';
-$profilePhone = '';
-$isLoggedIn   = !empty($_SESSION['user_id']);
+$profileName   = '';
+$profileEmail  = '';
+$profilePhone  = '';
+$profileGender = '';
+$profileAge    = '';
+$isLoggedIn    = !empty($_SESSION['user_id']);
 
 if ($isLoggedIn) {
-    $uid  = (int)$_SESSION['user_id'];
-    $pStmt = $conn->prepare("SELECT fullname, email, phone FROM users WHERE id = ? LIMIT 1");
+    $uid   = (int)$_SESSION['user_id'];
+    $pStmt = $conn->prepare("SELECT fullname, email, phone, gender, birth_date FROM users WHERE id = ? LIMIT 1");
     $pStmt->bind_param("i", $uid);
     $pStmt->execute();
     $pRow = $pStmt->get_result()->fetch_assoc();
     $pStmt->close();
     if ($pRow) {
-        $profileName  = $pRow['fullname'] ?? ($_SESSION['user_name'] ?? '');
-        $profileEmail = $pRow['email']    ?? ($_SESSION['user_email'] ?? '');
-        $profilePhone = $pRow['phone']    ?? '';
+        $profileName   = $pRow['fullname']   ?? ($_SESSION['user_name'] ?? '');
+        $profileEmail  = $pRow['email']      ?? ($_SESSION['user_email'] ?? '');
+        $profilePhone  = $pRow['phone']      ?? '';
+        $profileGender = $pRow['gender']     ?? '';
+        if (!empty($pRow['birth_date'])) {
+            $bd = new DateTime($pRow['birth_date']);
+            $profileAge = (int)(new DateTime())->diff($bd)->y;
+        }
     }
 }
 ?>
@@ -752,18 +759,21 @@ input.prefilled {
 
           <!-- เพศ -->
           <div class="form-group full">
-            <label>เพศ <span class="req">*</span></label>
+            <label>
+              เพศ <span class="req">*</span>
+              <?php if ($profileGender): ?><span class="prefilled-tag">จากโปรไฟล์</span><?php endif; ?>
+            </label>
             <div class="gender-pills">
               <label class="gender-pill">
-                <input type="radio" name="gender" value="ชาย" required>
+                <input type="radio" name="gender" value="ชาย" required <?= $profileGender==='ชาย' ? 'checked' : '' ?>>
                 <span class="gender-pill-label">👨 ชาย</span>
               </label>
               <label class="gender-pill">
-                <input type="radio" name="gender" value="หญิง">
+                <input type="radio" name="gender" value="หญิง" <?= $profileGender==='หญิง' ? 'checked' : '' ?>>
                 <span class="gender-pill-label">👩 หญิง</span>
               </label>
               <label class="gender-pill">
-                <input type="radio" name="gender" value="อื่นๆ">
+                <input type="radio" name="gender" value="อื่นๆ" <?= $profileGender==='อื่นๆ' ? 'checked' : '' ?>>
                 <span class="gender-pill-label">🧑 อื่นๆ</span>
               </label>
             </div>
@@ -771,10 +781,15 @@ input.prefilled {
 
           <!-- อายุ -->
           <div class="form-group">
-            <label for="age">อายุ (ปี)</label>
+            <label for="age">
+              อายุ (ปี)
+              <?php if ($profileAge): ?><span class="prefilled-tag">จากโปรไฟล์</span><?php endif; ?>
+            </label>
             <div class="input-wrap">
               <span class="input-icon">🎂</span>
-              <input type="number" id="age" name="age" min="1" max="120" placeholder="ระบุอายุ">
+              <input type="number" id="age" name="age" min="1" max="120" placeholder="ระบุอายุ"
+                     value="<?= htmlspecialchars($profileAge) ?>"
+                     <?= $profileAge ? 'class="prefilled"' : '' ?>>
             </div>
           </div>
 

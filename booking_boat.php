@@ -98,11 +98,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ajax'])) {
 
     $stmt = $conn->prepare(
         "INSERT INTO boat_bookings (queue_id, full_name, phone, email, queue_name, guests, boat_date, boat_type, daily_queue_no, note, booking_status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')"
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')"
     );
-    $stmt->bind_param("issssississs",
-        $queue_id, $customer_name, $phone, $email, $queue_name,
-        $guests, $boat_date, $boat_type, $daily_queue_no, $note
+
+    $stmt->bind_param(
+        "issssissis",
+        $queue_id,
+        $customer_name,
+        $phone,
+        $email,
+        $queue_name,
+        $guests,
+        $boat_date,
+        $boat_type,
+        $daily_queue_no,
+        $note
     );
 
     if (!$stmt->execute()) {

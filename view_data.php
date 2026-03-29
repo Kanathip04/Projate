@@ -724,8 +724,6 @@ input.prefilled {
           <div class="profile-banner logged-in">
             <span class="pb-icon">✅</span>
             <div>
-              ดึงข้อมูลจากโปรไฟล์ของคุณอัตโนมัติ &nbsp;·&nbsp; แก้ไขได้ก่อนยืนยัน &nbsp;·&nbsp;
-              <a href="profile.php">จัดการโปรไฟล์</a>
             </div>
           </div>
           <?php elseif (!$isLoggedIn): ?>
@@ -746,7 +744,6 @@ input.prefilled {
           <div class="form-group full">
             <label for="nickname">
               ชื่อ-นามสกุล / ชื่อเล่น <span class="req">*</span>
-              <?php if ($profileName): ?><span class="prefilled-tag">จากโปรไฟล์</span><?php endif; ?>
             </label>
             <div class="input-wrap">
               <span class="input-icon">👤</span>
@@ -761,7 +758,6 @@ input.prefilled {
           <div class="form-group full">
             <label>
               เพศ <span class="req">*</span>
-              <?php if ($profileGender): ?><span class="prefilled-tag">จากโปรไฟล์</span><?php endif; ?>
             </label>
             <div class="gender-pills">
               <label class="gender-pill">
@@ -783,7 +779,6 @@ input.prefilled {
           <div class="form-group">
             <label for="age">
               อายุ (ปี)
-              <?php if ($profileAge): ?><span class="prefilled-tag">จากโปรไฟล์</span><?php endif; ?>
             </label>
             <div class="input-wrap">
               <span class="input-icon">🎂</span>

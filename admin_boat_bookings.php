@@ -18,19 +18,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($id > 0) {
         if ($action === 'approve_payment') {
+            // คำนวณเลขคิววันนี้
+            $today  = date('Y-m-d');
+            $cntRes = $conn->query("SELECT COUNT(*) AS cnt FROM boat_bookings WHERE DATE(approved_at) = '$today' AND booking_status = 'approved'");
+            $qno    = (int)($cntRes->fetch_assoc()['cnt'] ?? 0) + 1;
+
             $st = $conn->prepare("
                 UPDATE boat_bookings
-                SET payment_status='paid',
-                    booking_status='approved',
-                    paid_at = IFNULL(paid_at, NOW()),
-                    approved_at = NOW()
-                WHERE id=?
+                SET payment_status  = 'paid',
+                    booking_status  = 'approved',
+                    daily_queue_no  = ?,
+                    paid_at         = IFNULL(paid_at, NOW()),
+                    approved_at     = NOW()
+                WHERE id = ?
             ");
-            $st->bind_param("i", $id);
+            $st->bind_param("ii", $qno, $id);
             $st->execute();
             $st->close();
 
-            header("Location: {$currentPage}?tab=approved&msg=" . urlencode("อนุมัติการชำระเงินเรียบร้อยแล้ว") . "&type=success");
+            header("Location: {$currentPage}?tab=approved&msg=" . urlencode("อนุมัติการชำระเงินเรียบร้อยแล้ว (คิว Q" . str_pad($qno,4,'0',STR_PAD_LEFT) . ")") . "&type=success");
             exit;
         }
 

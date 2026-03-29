@@ -201,15 +201,76 @@ $jsRoom     = implode(',', $chartRoom);
 $jsTent     = implode(',', $chartTent);
 $jsVisit    = implode(',', $chartVisit);
 $jsRevenue  = implode(',', $chartRevenue);
+
+// ── Period navigation URLs ──
+$yesterday = date('Y-m-d', strtotime('-1 day'));
+if ($reportType === 'daily') {
+    $prevNavUrl  = '?type=daily&date=' . date('Y-m-d', strtotime('-1 day', strtotime($dateParam)));
+    $nextNavUrl  = '?type=daily&date=' . date('Y-m-d', strtotime('+1 day', strtotime($dateParam)));
+    $todayNavUrl = '?type=daily&date=' . $today;
+    $isCurrentPeriod = ($dateParam === $today);
+} elseif ($reportType === 'monthly') {
+    $prevNavUrl  = '?type=monthly&month=' . date('Y-m', strtotime('-1 month', strtotime(($monthParam ?? $thisMonth) . '-01')));
+    $nextNavUrl  = '?type=monthly&month=' . date('Y-m', strtotime('+1 month', strtotime(($monthParam ?? $thisMonth) . '-01')));
+    $todayNavUrl = '?type=monthly&month=' . $thisMonth;
+    $isCurrentPeriod = (($monthParam ?? $thisMonth) === $thisMonth);
+} else {
+    $yp = (int)($yearParam ?? $thisYear);
+    $prevNavUrl  = '?type=yearly&year=' . ($yp - 1);
+    $nextNavUrl  = '?type=yearly&year=' . ($yp + 1);
+    $todayNavUrl = '?type=yearly&year=' . $thisYear;
+    $isCurrentPeriod = ($yp === (int)$thisYear);
+}
+
+// Quick nav shortcuts
+$qnavLinks = [
+    ['วันนี้',        '?type=daily&date='    . $today,                                        $reportType==='daily'   && ($dateParam??$today)===$today],
+    ['เมื่อวาน',     '?type=daily&date='    . $yesterday,                                     $reportType==='daily'   && ($dateParam??$today)===$yesterday],
+    ['เดือนนี้',     '?type=monthly&month=' . $thisMonth,                                    $reportType==='monthly' && ($monthParam??$thisMonth)===$thisMonth],
+    ['เดือนที่แล้ว', '?type=monthly&month=' . date('Y-m', strtotime('-1 month')),            $reportType==='monthly' && ($monthParam??$thisMonth)===date('Y-m', strtotime('-1 month'))],
+    ['ปีนี้',         '?type=yearly&year='   . $thisYear,                                    $reportType==='yearly'  && (int)($yearParam??$thisYear)===(int)$thisYear],
+    ['ปีที่แล้ว',    '?type=yearly&year='   . ((int)$thisYear - 1),                          $reportType==='yearly'  && (int)($yearParam??$thisYear)===(int)$thisYear - 1],
+];
 ?>
 
 <style>
-.rpt-filter{background:#fff;border-radius:12px;padding:20px 24px;margin-bottom:20px;
-  box-shadow:0 2px 12px rgba(26,26,46,.06);display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
-.rpt-filter label{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;
-  letter-spacing:.08em;display:block;margin-bottom:4px;}
-.rpt-filter select,.rpt-filter input{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;
-  font-family:'Sarabun',sans-serif;font-size:.85rem;color:var(--ink);background:#fafaf8;outline:none;
+/* ── Quick nav bar ── */
+.qnav{background:#fff;border-radius:12px;padding:14px 18px;margin-bottom:14px;
+  box-shadow:0 2px 12px rgba(26,26,46,.06);display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+.qnav-label{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.1em;margin-right:4px;}
+.qnav-btns{display:flex;flex-wrap:wrap;gap:6px;}
+.qbtn{padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);
+  background:#fafaf8;color:var(--muted);font-family:'Sarabun',sans-serif;
+  font-size:.78rem;font-weight:600;cursor:pointer;text-decoration:none;
+  transition:.15s;white-space:nowrap;}
+.qbtn:hover{border-color:var(--accent);color:var(--accent);background:#fffbf5;}
+.qbtn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+.qnav-sep{width:1px;height:24px;background:var(--border);margin:0 4px;}
+
+/* ── Period navigator ── */
+.period-nav{background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:14px;
+  box-shadow:0 2px 12px rgba(26,26,46,.06);display:flex;align-items:center;gap:14px;}
+.pnav-arrow{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);
+  background:#fafaf8;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:1rem;text-decoration:none;color:var(--ink);
+  transition:.15s;flex-shrink:0;}
+.pnav-arrow:hover{border-color:var(--accent);color:var(--accent);}
+.pnav-center{flex:1;text-align:center;}
+.pnav-main{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:600;color:var(--ink);}
+.pnav-sub{font-size:.72rem;color:var(--muted);margin-top:2px;}
+.pnav-today{padding:6px 16px;border-radius:20px;border:1.5px solid var(--accent);
+  background:#fffbf5;color:var(--accent);font-family:'Sarabun',sans-serif;
+  font-size:.78rem;font-weight:700;cursor:pointer;text-decoration:none;transition:.15s;}
+.pnav-today:hover{background:var(--accent);color:var(--ink);}
+
+/* ── Filter (collapsed) ── */
+.rpt-filter{background:#fff;border-radius:12px;padding:14px 18px;margin-bottom:14px;
+  box-shadow:0 2px 12px rgba(26,26,46,.06);display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;}
+.rpt-filter label{font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.08em;display:block;margin-bottom:3px;}
+.rpt-filter select,.rpt-filter input{padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;
+  font-family:'Sarabun',sans-serif;font-size:.82rem;color:var(--ink);background:#fafaf8;outline:none;
   transition:.2s;}
 .rpt-filter select:focus,.rpt-filter input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(201,169,110,.12);}
 .rpt-filter .btn-group{display:flex;gap:8px;}
@@ -289,6 +350,39 @@ $jsRevenue  = implode(',', $chartRevenue);
   <button onclick="window.print()" class="btn btn-accent"><span>🖨</span> พิมพ์รายงาน</button>
   <button onclick="exportCSV()" class="btn btn-ghost"><span>📥</span> ดาวน์โหลด CSV</button>
   <span style="font-size:.78rem;color:var(--muted);align-self:center;">รายงาน<?= $labelRange ?> · ออกเมื่อ <?= date('d/m/Y H:i') ?> น.</span>
+</div>
+
+<!-- Quick navigation shortcuts -->
+<div class="qnav no-print">
+  <span class="qnav-label">ดูรายงาน</span>
+  <div class="qnav-btns">
+    <?php foreach ($qnavLinks as [$qlabel, $qurl, $qactive]): ?>
+    <a href="<?= htmlspecialchars($qurl) ?>" class="qbtn<?= $qactive ? ' active' : '' ?>"><?= $qlabel ?></a>
+    <?php endforeach; ?>
+  </div>
+  <div class="qnav-sep"></div>
+  <div class="qnav-btns">
+    <a href="?type=daily"   class="qbtn<?= $reportType==='daily'  ?' active':'' ?>">รายวัน</a>
+    <a href="?type=monthly" class="qbtn<?= $reportType==='monthly'?' active':'' ?>">รายเดือน</a>
+    <a href="?type=yearly"  class="qbtn<?= $reportType==='yearly' ?' active':'' ?>">รายปี</a>
+  </div>
+</div>
+
+<!-- Period navigator -->
+<div class="period-nav no-print">
+  <a href="<?= htmlspecialchars($prevNavUrl) ?>" class="pnav-arrow" title="ก่อนหน้า">&#8249;</a>
+  <div class="pnav-center">
+    <div class="pnav-main"><?= $labelRange ?></div>
+    <div class="pnav-sub">
+      <?php if ($reportType==='daily'): ?>กดลูกศรเพื่อเปลี่ยนวัน
+      <?php elseif ($reportType==='monthly'): ?>กดลูกศรเพื่อเปลี่ยนเดือน
+      <?php else: ?>กดลูกศรเพื่อเปลี่ยนปี<?php endif; ?>
+    </div>
+  </div>
+  <?php if (!$isCurrentPeriod): ?>
+  <a href="<?= htmlspecialchars($todayNavUrl) ?>" class="pnav-today">↩ ปัจจุบัน</a>
+  <?php endif; ?>
+  <a href="<?= htmlspecialchars($nextNavUrl) ?>" class="pnav-arrow" title="ถัดไป">&#8250;</a>
 </div>
 
 <!-- Filter -->

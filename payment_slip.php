@@ -147,9 +147,7 @@ function promptpayPayload(string $target, float $amount): string
     return $body . strtoupper(str_pad(dechex($crc), 4, '0', STR_PAD_LEFT));
 }
 
-$ppPayload = promptpayPayload(PROMPTPAY_ID, (float)$booking['total_amount']);
-// ใช้ api.qrserver.com render payload เป็นรูป (ไม่ผ่านบุคคลที่สาม — payload สร้างเองทั้งหมด)
-$qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=12&data=' . urlencode($ppPayload);
+$qrUrl = 'uploads/QRcode.jpg';
 ?>
 <!DOCTYPE html>
 <html lang="th">

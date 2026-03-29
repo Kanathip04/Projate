@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['slip'])) {
             $updStmt->close();
 
             // ยิง webhook ไป n8n
-            $webhookUrl = getenv('N8N_WEBHOOK_URL') ?: 'http://localhost:5678/webhook/boat-slip';
+            $webhookUrl = 'https://kanayhip.app.n8n.cloud/webhook-test/boat-slip';
             $payload = json_encode([
                 'booking_ref'   => $booking_ref,
                 'booking_id'    => $booking['id'],

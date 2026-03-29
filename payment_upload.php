@@ -2,7 +2,13 @@
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 
-require_once 'config.php'; // ต้องมี $conn = new mysqli(...)
+$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
+$conn->set_charset("utf8mb4");
+
+if ($conn->connect_error) {
+    echo json_encode(['ok' => false, 'message' => 'เชื่อมต่อฐานข้อมูลไม่สำเร็จ']);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['ok' => false, 'message' => 'Method not allowed']);
@@ -31,8 +37,7 @@ if (!is_dir($uploadDir)) {
 $originalName = $_FILES['payment_slip']['name'];
 $tmpName      = $_FILES['payment_slip']['tmp_name'];
 $fileSize     = $_FILES['payment_slip']['size'];
-
-$ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+$ext          = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
 
 if (!in_array($ext, $allowedExt, true)) {
     echo json_encode(['ok' => false, 'message' => 'อนุญาตเฉพาะไฟล์ jpg, jpeg, png, webp']);
@@ -44,11 +49,11 @@ if ($fileSize > 5 * 1024 * 1024) {
     exit;
 }
 
-$stmt = $conn->prepare("SELECT id, booking_ref, payment_status FROM boat_bookings WHERE booking_ref = ? LIMIT 1");
+$stmt = $conn->prepare("SELECT id, payment_status FROM boat_bookings WHERE booking_ref = ? LIMIT 1");
 $stmt->bind_param("s", $booking_ref);
 $stmt->execute();
-$result = $stmt->get_result();
-$booking = $result->fetch_assoc();
+$res = $stmt->get_result();
+$booking = $res->fetch_assoc();
 $stmt->close();
 
 if (!$booking) {
@@ -56,7 +61,7 @@ if (!$booking) {
     exit;
 }
 
-$newFileName = 'slip_' . $booking_ref . '_' . time() . '.' . $ext;
+$newFileName = 'slip_' . preg_replace('/[^A-Za-z0-9_-]/', '', $booking_ref) . '_' . time() . '.' . $ext;
 $targetPath  = $uploadDir . $newFileName;
 $dbPath      = 'uploads/payment_slips/' . $newFileName;
 
@@ -77,8 +82,8 @@ $update = $conn->prepare("
 $update->bind_param("ss", $dbPath, $booking_ref);
 
 if (!$update->execute()) {
+    echo json_encode(['ok' => false, 'message' => 'บันทึกสลิปไม่สำเร็จ: ' . $update->error]);
     $update->close();
-    echo json_encode(['ok' => false, 'message' => 'บันทึกข้อมูลสลิปไม่สำเร็จ: ' . $conn->error]);
     exit;
 }
 $update->close();

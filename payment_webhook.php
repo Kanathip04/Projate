@@ -1,18 +1,13 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-require_once 'config.php';
 
-/*
-ตัวอย่าง payload ที่คาดหวัง:
-{
-  "event": "payment.success",
-  "booking_ref": "BK202603290001",
-  "transaction_id": "TXN123456789",
-  "amount": 200.00,
-  "status": "successful",
-  "provider": "your_provider_name"
+$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
+$conn->set_charset("utf8mb4");
+
+if ($conn->connect_error) {
+    echo json_encode(['ok' => false, 'message' => 'DB connection failed']);
+    exit;
 }
-*/
 
 $raw = file_get_contents('php://input');
 if (!$raw) {
@@ -26,19 +21,11 @@ if (!is_array($data)) {
     exit;
 }
 
-/*
-ส่วนนี้ต้องเพิ่มจริงเมื่อใช้ provider จริง:
-1) ตรวจ signature
-2) ตรวจ source IP / secret
-3) เช็ก event type
-*/
-
 $booking_ref    = trim($data['booking_ref'] ?? '');
 $transaction_id = trim($data['transaction_id'] ?? '');
 $amount         = (float)($data['amount'] ?? 0);
 $status         = strtolower(trim($data['status'] ?? ''));
 $provider       = trim($data['provider'] ?? 'custom');
-$event          = trim($data['event'] ?? '');
 
 if ($booking_ref === '' || $transaction_id === '' || $status === '') {
     echo json_encode(['ok' => false, 'message' => 'Missing required fields']);
@@ -46,7 +33,7 @@ if ($booking_ref === '' || $transaction_id === '' || $status === '') {
 }
 
 $stmt = $conn->prepare("
-    SELECT id, booking_ref, total_amount, payment_status, booking_status, provider_txn_id
+    SELECT id, total_amount, provider_txn_id
     FROM boat_bookings
     WHERE booking_ref = ?
     LIMIT 1
@@ -68,7 +55,6 @@ if (!empty($booking['provider_txn_id']) && $booking['provider_txn_id'] === $tran
 }
 
 if ((float)$booking['total_amount'] > 0 && abs((float)$booking['total_amount'] - $amount) > 0.01) {
-    $payloadText = $raw;
     $fail = $conn->prepare("
         UPDATE boat_bookings
         SET payment_status = 'failed',
@@ -77,7 +63,7 @@ if ((float)$booking['total_amount'] > 0 && abs((float)$booking['total_amount'] -
             webhook_payload = ?
         WHERE booking_ref = ?
     ");
-    $fail->bind_param("ssss", $provider, $transaction_id, $payloadText, $booking_ref);
+    $fail->bind_param("ssss", $provider, $transaction_id, $raw, $booking_ref);
     $fail->execute();
     $fail->close();
 
@@ -85,13 +71,11 @@ if ((float)$booking['total_amount'] > 0 && abs((float)$booking['total_amount'] -
     exit;
 }
 
-$payloadText = $raw;
-
-if ($status === 'successful' || $status === 'success' || $status === 'paid') {
+if (in_array($status, ['successful', 'success', 'paid'], true)) {
     $upd = $conn->prepare("
         UPDATE boat_bookings
         SET payment_status = 'paid',
-            booking_status = 'confirmed',
+            booking_status = 'approved',
             payment_provider = ?,
             provider_txn_id = ?,
             paid_at = NOW(),
@@ -99,7 +83,7 @@ if ($status === 'successful' || $status === 'success' || $status === 'paid') {
             webhook_payload = ?
         WHERE booking_ref = ?
     ");
-    $upd->bind_param("ssss", $provider, $transaction_id, $payloadText, $booking_ref);
+    $upd->bind_param("ssss", $provider, $transaction_id, $raw, $booking_ref);
     $upd->execute();
     $upd->close();
 
@@ -116,7 +100,7 @@ if ($status === 'pending') {
             webhook_payload = ?
         WHERE booking_ref = ?
     ");
-    $upd->bind_param("ssss", $provider, $transaction_id, $payloadText, $booking_ref);
+    $upd->bind_param("ssss", $provider, $transaction_id, $raw, $booking_ref);
     $upd->execute();
     $upd->close();
 
@@ -132,7 +116,7 @@ $upd = $conn->prepare("
         webhook_payload = ?
     WHERE booking_ref = ?
 ");
-$upd->bind_param("ssss", $provider, $transaction_id, $payloadText, $booking_ref);
+$upd->bind_param("ssss", $provider, $transaction_id, $raw, $booking_ref);
 $upd->execute();
 $upd->close();
 

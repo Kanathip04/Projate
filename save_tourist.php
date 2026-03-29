@@ -35,7 +35,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $stmt->bind_param("ssisss", $nickname, $gender, $age, $u_type, $visit_date, $visit_time);
 
     if ($stmt->execute()) {
-        echo "<script>alert('บันทึกข้อมูลเรียบร้อย'); window.location.href='view_data.php';</script>";
+        header("Location: index.php");
+        exit;
     } else {
         echo "เกิดข้อผิดพลาดในการบันทึกข้อมูล: " . $stmt->error;
     }

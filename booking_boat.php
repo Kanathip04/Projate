@@ -21,9 +21,12 @@ $conn->query("CREATE TABLE IF NOT EXISTS `boat_queues` (
     `price_per_boat` DECIMAL(10,2) DEFAULT 0,
     `description` TEXT,
     `image_path` VARCHAR(500) DEFAULT '',
+    `boat_types` VARCHAR(500) DEFAULT 'เรือพาย,เรือคายัค,เรือบด',
     `status` ENUM('show','hide') DEFAULT 'show',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+$conn->query("ALTER TABLE boat_queues ADD COLUMN IF NOT EXISTS `boat_types` VARCHAR(500) DEFAULT 'เรือพาย,เรือคายัค,เรือบด' AFTER `image_path`");
 
 /* === สร้างตาราง boat_bookings ถ้ายังไม่มี === */
 $conn->query("CREATE TABLE IF NOT EXISTS `boat_bookings` (
@@ -38,11 +41,15 @@ $conn->query("CREATE TABLE IF NOT EXISTS `boat_bookings` (
     `time_start` TIME DEFAULT NULL,
     `time_end` TIME DEFAULT NULL,
     `boat_units` TEXT DEFAULT NULL,
+    `boat_type` VARCHAR(100) DEFAULT '',
+    `daily_queue_no` INT UNSIGNED DEFAULT 0,
     `note` TEXT,
     `booking_status` ENUM('pending','approved','rejected','cancelled') DEFAULT 'pending',
     `archived` TINYINT(1) DEFAULT 0,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS `boat_type` VARCHAR(100) DEFAULT '' AFTER `boat_units`");
+$conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS `daily_queue_no` INT UNSIGNED DEFAULT 0 AFTER `boat_type`");
 
 /* === นับเรือที่จองแล้ว (approved) ต่อคิว === */
 $approvedMap = [];

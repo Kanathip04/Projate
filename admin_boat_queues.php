@@ -19,9 +19,11 @@ $conn->query("CREATE TABLE IF NOT EXISTS `boat_queues` (
     `price_per_boat` DECIMAL(10,2) DEFAULT 0,
     `description` TEXT,
     `image_path` VARCHAR(500) DEFAULT '',
+    `boat_types` VARCHAR(500) DEFAULT 'เรือพาย,เรือคายัค,เรือบด',
     `status` ENUM('show','hide') DEFAULT 'show',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$conn->query("ALTER TABLE boat_queues ADD COLUMN IF NOT EXISTS `boat_types` VARCHAR(500) DEFAULT 'เรือพาย,เรือคายัค,เรือบด' AFTER `image_path`");
 
 $currentPage = basename($_SERVER['PHP_SELF']);
 $message = ''; $message_type = 'success';
@@ -39,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $total_boats   = max(1, (int)($_POST['total_boats']   ?? 5));
         $price_per_boat= max(0, (float)($_POST['price_per_boat'] ?? 0));
         $description   = trim($_POST['description']  ?? '');
+        $boat_types    = trim($_POST['boat_types']   ?? 'เรือพาย,เรือคายัค,เรือบด');
         $status        = in_array($_POST['status'] ?? '', ['show','hide']) ? $_POST['status'] : 'show';
         $image_path    = trim($_POST['image_path_current'] ?? '');
 
@@ -57,14 +60,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($action === 'add') {
-            $st = $conn->prepare("INSERT INTO boat_queues (queue_name,queue_date,time_start,time_end,total_boats,price_per_boat,description,image_path,status) VALUES (?,?,?,?,?,?,?,?,?)");
-            $st->bind_param("ssssiidss", $queue_name,$queue_date,$time_start,$time_end,$total_boats,$price_per_boat,$description,$image_path,$status);
+            $st = $conn->prepare("INSERT INTO boat_queues (queue_name,queue_date,time_start,time_end,total_boats,price_per_boat,description,boat_types,image_path,status) VALUES (?,?,?,?,?,?,?,?,?,?)");
+            $st->bind_param("ssssiidsss", $queue_name,$queue_date,$time_start,$time_end,$total_boats,$price_per_boat,$description,$boat_types,$image_path,$status);
             $st->execute(); $st->close();
             $message = "เพิ่มคิวพายเรือเรียบร้อยแล้ว";
         } else {
             $id = (int)($_POST['id'] ?? 0);
-            $st = $conn->prepare("UPDATE boat_queues SET queue_name=?,queue_date=?,time_start=?,time_end=?,total_boats=?,price_per_boat=?,description=?,image_path=?,status=? WHERE id=?");
-            $st->bind_param("ssssiidssi", $queue_name,$queue_date,$time_start,$time_end,$total_boats,$price_per_boat,$description,$image_path,$status,$id);
+            $st = $conn->prepare("UPDATE boat_queues SET queue_name=?,queue_date=?,time_start=?,time_end=?,total_boats=?,price_per_boat=?,description=?,boat_types=?,image_path=?,status=? WHERE id=?");
+            $st->bind_param("ssssiidsssi", $queue_name,$queue_date,$time_start,$time_end,$total_boats,$price_per_boat,$description,$boat_types,$image_path,$status,$id);
             $st->execute(); $st->close();
             $message = "แก้ไขคิวพายเรือเรียบร้อยแล้ว";
         }
@@ -210,6 +213,13 @@ include 'admin_layout_top.php';
                 <div class="fg full">
                     <label>คำอธิบาย</label>
                     <textarea name="description" placeholder="รายละเอียดเพิ่มเติม..."><?= h($editQueue['description'] ?? '') ?></textarea>
+                </div>
+                <div class="fg full">
+                    <label>ประเภทเรือ (คั่นด้วยเครื่องหมายจุลภาค)</label>
+                    <input type="text" name="boat_types"
+                           value="<?= h($editQueue['boat_types'] ?? 'เรือพาย,เรือคายัค,เรือบด') ?>"
+                           placeholder="เช่น เรือพาย,เรือคายัค,เรือบด">
+                    <span style="font-size:.75rem;color:var(--muted);margin-top:4px;">ลูกค้าจะเห็นตัวเลือกประเภทเรือตามที่กำหนดนี้</span>
                 </div>
                 <div class="fg full">
                     <label>รูปภาพ (jpg/png/webp)</label>

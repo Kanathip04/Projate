@@ -22,18 +22,29 @@ $queue = $result->fetch_assoc();
 $stmt->close();
 
 /* ── ดึงข้อมูล user จาก session + DB ── */
+$user_id    = (int)($_SESSION['user_id'] ?? 0);
 $user_name  = $_SESSION['user_name']  ?? '';
 $user_email = $_SESSION['user_email'] ?? '';
 $user_phone = '';
-if (!empty($_SESSION['user_id'])) {
-    $uid   = (int)$_SESSION['user_id'];
-    $uStmt = $conn->prepare("SELECT phone FROM users WHERE id = ? LIMIT 1");
-    $uStmt->bind_param("i", $uid);
+
+if ($user_id > 0) {
+    $uStmt = $conn->prepare("SELECT phone, name, email FROM users WHERE id = ? LIMIT 1");
+    $uStmt->bind_param("i", $user_id);
     $uStmt->execute();
     $uRow = $uStmt->get_result()->fetch_assoc();
     $uStmt->close();
-    $user_phone = $uRow['phone'] ?? '';
+    if ($uRow) {
+        if (empty($user_name)  && !empty($uRow['name']))  $user_name  = $uRow['name'];
+        if (empty($user_email) && !empty($uRow['email'])) $user_email = $uRow['email'];
+        $user_phone = $uRow['phone'] ?? '';
+    }
 }
+
+/* ── ประเภทเรือที่แอดมินกำหนด ── */
+$boatTypesRaw = trim($queue['boat_types'] ?? '');
+$boatTypeList = $boatTypesRaw !== ''
+    ? array_filter(array_map('trim', explode(',', $boatTypesRaw)))
+    : ['เรือพาย', 'เรือคายัค', 'เรือบด'];
 
 /* ── ดึงเรือที่ถูกจองแล้ว ── */
 $total_boats = max(1, (int)($queue['total_boats'] ?? 1));
@@ -81,19 +92,41 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);min-
 .header p{font-size:14px;font-weight:300;opacity:.8;position:relative;}
 .content{padding:32px 36px;}
 
-/* ── Queue Info Box ── */
+/* Queue Info */
 .queue-box{background:var(--blue-light);border:1px solid #b8d8f5;border-radius:14px;padding:20px 24px;margin-bottom:28px;display:flex;gap:16px;align-items:flex-start;}
 .queue-box-icon{font-size:32px;flex-shrink:0;}
 .queue-box h3{font-size:18px;font-weight:700;color:var(--ink);margin-bottom:8px;}
 .queue-box p{font-size:14px;color:var(--ink);margin-bottom:4px;opacity:.85;}
-.queue-box p strong{opacity:1;}
 .time-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:var(--blue);color:#fff;font-size:13px;font-weight:700;margin-top:6px;}
 
-/* ── Section Title ── */
+/* Section Label */
 .section-label{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
 .section-label::before{content:'';display:inline-block;width:3px;height:14px;background:var(--blue);border-radius:2px;}
 
-/* ── Boat Selection Grid ── */
+/* Profile prefill banner */
+.profile-banner{background:var(--success-bg);border:1px solid #d1fadf;border-radius:12px;padding:10px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--success);font-weight:600;}
+
+/* Boat Type Selection */
+.boat-type-section{margin-bottom:28px;}
+.boat-type-grid{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:8px;}
+.boat-type-card{
+    position:relative;cursor:pointer;
+    border:2px solid var(--border);background:#f8fbff;
+    border-radius:14px;padding:14px 20px;
+    display:flex;align-items:center;gap:10px;
+    transition:all .2s;user-select:none;min-width:140px;
+}
+.boat-type-card:hover{border-color:var(--blue);background:var(--blue-light);}
+.boat-type-card input[type=radio]{display:none;}
+.boat-type-card.selected{background:var(--ink);border-color:var(--ink);color:#fff;}
+.boat-type-card.selected .bt-lbl{color:#fff;}
+.boat-type-card.selected .bt-sub{color:rgba(255,255,255,.65);}
+.boat-type-card.selected::after{content:'✓';position:absolute;top:6px;right:10px;font-size:12px;font-weight:800;color:#7ec8f4;}
+.bt-ico{font-size:22px;flex-shrink:0;}
+.bt-lbl{font-size:15px;font-weight:700;color:var(--ink);}
+.bt-sub{font-size:12px;color:var(--muted);margin-top:1px;}
+
+/* Boat Grid */
 .boat-section{margin-bottom:28px;}
 .boat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:10px;margin-bottom:10px;}
 .boat-card{
@@ -124,7 +157,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);min-
 .boat-summary{margin-top:10px;padding:10px 16px;border-radius:10px;background:var(--success-bg);border:1px solid #d1fadf;color:var(--success);font-size:13px;font-weight:700;display:none;}
 .boat-summary.show{display:block;}
 
-/* ── Form ── */
+/* Form */
 .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
 .form-group{display:flex;flex-direction:column;}
 .form-group.full{grid-column:1/-1;}
@@ -132,6 +165,7 @@ label{font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;letter
 .prefilled-badge{font-size:10px;font-weight:700;color:var(--success);background:var(--success-bg);padding:2px 7px;border-radius:999px;margin-left:6px;text-transform:none;letter-spacing:0;border:1px solid #d1fadf;}
 input,textarea,select{font-family:'Sarabun',sans-serif;font-size:15px;color:var(--ink);background:#f8fbff;border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;outline:none;transition:border-color .2s,box-shadow .2s;}
 input:focus,textarea:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(29,111,173,.14);background:#fff;}
+input[readonly]{background:#f0f5ff;color:var(--ink);opacity:.9;cursor:default;}
 textarea{min-height:100px;resize:vertical;}
 .divider{height:1px;background:var(--border);margin:24px 0;}
 .btn-submit{margin-top:28px;width:100%;padding:15px;border:none;border-radius:12px;background:var(--ink);color:#fff;font-family:'Sarabun',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:background .2s,transform .15s;}
@@ -140,6 +174,7 @@ textarea{min-height:100px;resize:vertical;}
     .header{padding:24px 20px;}.content{padding:24px 20px;}
     .form-grid{grid-template-columns:1fr;}
     .boat-grid{grid-template-columns:repeat(auto-fill,minmax(76px,1fr));}
+    .boat-type-grid{flex-direction:column;}
 }
 </style>
 </head>
@@ -150,7 +185,7 @@ textarea{min-height:100px;resize:vertical;}
     <div class="card">
         <div class="header">
             <h1>🚣 กรอกข้อมูลจองคิวพายเรือ</h1>
-            <p>กรุณาเลือกหมายเลขเรือและกรอกข้อมูลให้ครบถ้วน</p>
+            <p>เลือกประเภทเรือ หมายเลขเรือ และกรอกข้อมูลให้ครบถ้วน</p>
         </div>
 
         <div class="content">
@@ -170,38 +205,12 @@ textarea{min-height:100px;resize:vertical;}
                 </div>
             </div>
 
-            <!-- Boat Selection -->
-            <div class="boat-section">
-                <div class="section-label">เลือกหมายเลขเรือที่ต้องการ</div>
-                <div class="boat-grid" id="boatGrid">
-                    <?php for ($b = 1; $b <= $total_boats; $b++):
-                        $isTaken   = isset($takenBoats[$b]);
-                        $bStatus   = $takenBoats[$b] ?? '';
-                        $cardClass = 'boat-card';
-                        $lbl       = 'ว่าง';
-                        if ($isTaken && $bStatus === 'pending')  { $cardClass .= ' boat-taken boat-pending'; $lbl = 'รออนุมัติ'; }
-                        if ($isTaken && $bStatus === 'approved') { $cardClass .= ' boat-taken boat-approved'; $lbl = 'จองแล้ว'; }
-                    ?>
-                        <div class="<?= $cardClass ?>" data-boat="<?= $b ?>">
-                            <?php if (!$isTaken): ?><input type="checkbox" value="<?= $b ?>"><?php endif; ?>
-                            <span class="boat-emoji">🚣</span>
-                            <div class="boat-num"><?= $b ?></div>
-                            <div class="boat-lbl"><?= $lbl ?></div>
-                        </div>
-                    <?php endfor; ?>
-                </div>
-                <div class="boat-legend">
-                    <div class="legend-item"><span class="legend-dot d-avail"></span>ว่าง</div>
-                    <div class="legend-item"><span class="legend-dot d-sel"></span>เลือกแล้ว</div>
-                    <div class="legend-item"><span class="legend-dot d-pend"></span>รออนุมัติ</div>
-                    <div class="legend-item"><span class="legend-dot d-book"></span>จองแล้ว</div>
-                </div>
-                <div class="boat-summary" id="boatSummary"></div>
+            <?php if ($user_name || $user_email || $user_phone): ?>
+            <div class="profile-banner">
+                <span>✓</span> ดึงข้อมูลจากโปรไฟล์ของคุณอัตโนมัติ — ตรวจสอบและแก้ไขได้ก่อนยืนยัน
             </div>
+            <?php endif; ?>
 
-            <div class="divider"></div>
-
-            <!-- Booking Form -->
             <form action="save_boat_booking.php" method="POST" id="bookingForm">
                 <input type="hidden" name="queue_id"    value="<?= (int)$queue['id'] ?>">
                 <input type="hidden" name="queue_name"  value="<?= htmlspecialchars($queue['queue_name']) ?>">
@@ -210,20 +219,74 @@ textarea{min-height:100px;resize:vertical;}
                 <input type="hidden" name="time_end"    value="<?= htmlspecialchars($queue['time_end']) ?>">
                 <div id="boatHiddenContainer"></div>
 
+                <!-- ── ประเภทเรือ ── -->
+                <div class="boat-type-section">
+                    <div class="section-label">เลือกประเภทเรือ</div>
+                    <div class="boat-type-grid" id="boatTypeGrid">
+                        <?php
+                        $typeIcons = ['เรือพาย'=>'🚣','เรือคายัค'=>'🛶','เรือบด'=>'⛵','เรือแคนู'=>'🛻','เรือยาง'=>'🔵'];
+                        foreach ($boatTypeList as $i => $bt):
+                            $ico = $typeIcons[$bt] ?? '🚤';
+                        ?>
+                        <label class="boat-type-card <?= $i===0?'selected':'' ?>" data-type="<?= htmlspecialchars($bt) ?>">
+                            <input type="radio" name="boat_type" value="<?= htmlspecialchars($bt) ?>" <?= $i===0?'checked':'' ?> required>
+                            <span class="bt-ico"><?= $ico ?></span>
+                            <div>
+                                <div class="bt-lbl"><?= htmlspecialchars($bt) ?></div>
+                            </div>
+                        </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- ── เลือกหมายเลขเรือ ── -->
+                <div class="boat-section">
+                    <div class="section-label">เลือกหมายเลขเรือที่ต้องการ</div>
+                    <div class="boat-grid" id="boatGrid">
+                        <?php for ($b = 1; $b <= $total_boats; $b++):
+                            $isTaken   = isset($takenBoats[$b]);
+                            $bStatus   = $takenBoats[$b] ?? '';
+                            $cardClass = 'boat-card';
+                            $lbl       = 'ว่าง';
+                            if ($isTaken && $bStatus === 'pending')  { $cardClass .= ' boat-taken boat-pending'; $lbl = 'รออนุมัติ'; }
+                            if ($isTaken && $bStatus === 'approved') { $cardClass .= ' boat-taken boat-approved'; $lbl = 'จองแล้ว'; }
+                        ?>
+                            <div class="<?= $cardClass ?>" data-boat="<?= $b ?>">
+                                <?php if (!$isTaken): ?><input type="checkbox" value="<?= $b ?>"><?php endif; ?>
+                                <span class="boat-emoji">🚣</span>
+                                <div class="boat-num"><?= $b ?></div>
+                                <div class="boat-lbl"><?= $lbl ?></div>
+                            </div>
+                        <?php endfor; ?>
+                    </div>
+                    <div class="boat-legend">
+                        <div class="legend-item"><span class="legend-dot d-avail"></span>ว่าง</div>
+                        <div class="legend-item"><span class="legend-dot d-sel"></span>เลือกแล้ว</div>
+                        <div class="legend-item"><span class="legend-dot d-pend"></span>รออนุมัติ</div>
+                        <div class="legend-item"><span class="legend-dot d-book"></span>จองแล้ว</div>
+                    </div>
+                    <div class="boat-summary" id="boatSummary"></div>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- ── ข้อมูลผู้จอง ── -->
                 <div class="section-label">ข้อมูลผู้จอง</div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>ชื่อผู้จอง<?php if ($user_name): ?><span class="prefilled-badge">ดึงจากโปรไฟล์</span><?php endif; ?></label>
+                        <label>ชื่อผู้จอง<?php if ($user_name): ?><span class="prefilled-badge">จากโปรไฟล์</span><?php endif; ?></label>
                         <input type="text" name="customer_name" placeholder="ชื่อ-นามสกุล"
                                value="<?= htmlspecialchars($user_name) ?>" required>
                     </div>
                     <div class="form-group">
-                        <label>เบอร์โทร<?php if ($user_phone): ?><span class="prefilled-badge">ดึงจากโปรไฟล์</span><?php endif; ?></label>
+                        <label>เบอร์โทร<?php if ($user_phone): ?><span class="prefilled-badge">จากโปรไฟล์</span><?php endif; ?></label>
                         <input type="text" name="phone" placeholder="0XX-XXX-XXXX"
                                value="<?= htmlspecialchars($user_phone) ?>" required>
                     </div>
                     <div class="form-group">
-                        <label>อีเมล<?php if ($user_email): ?><span class="prefilled-badge">ดึงจากโปรไฟล์</span><?php endif; ?></label>
+                        <label>อีเมล<?php if ($user_email): ?><span class="prefilled-badge">จากโปรไฟล์</span><?php endif; ?></label>
                         <input type="email" name="email" placeholder="example@email.com"
                                value="<?= htmlspecialchars($user_email) ?>">
                     </div>
@@ -236,7 +299,7 @@ textarea{min-height:100px;resize:vertical;}
                         <textarea name="note" placeholder="ข้อมูลเพิ่มเติม หรือความต้องการพิเศษ..."></textarea>
                     </div>
                 </div>
-                <button type="submit" class="btn-submit">🚣 ยืนยันการจองคิวพายเรือ</button>
+                <button type="submit" class="btn-submit">🚣 ยืนยันการจองและรับใบคิว</button>
             </form>
         </div>
     </div>
@@ -244,6 +307,16 @@ textarea{min-height:100px;resize:vertical;}
 
 <script>
 (function(){
+    /* ── ประเภทเรือ ── */
+    document.querySelectorAll('.boat-type-card').forEach(card => {
+        card.addEventListener('click', () => {
+            document.querySelectorAll('.boat-type-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            card.querySelector('input[type=radio]').checked = true;
+        });
+    });
+
+    /* ── เลือกหมายเลขเรือ ── */
     const cards   = document.querySelectorAll('.boat-card:not(.boat-taken)');
     const summary = document.getElementById('boatSummary');
     const hidden  = document.getElementById('boatHiddenContainer');

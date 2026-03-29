@@ -462,7 +462,7 @@ input.prefilled { background: #f0fdf4; border-color: #a7f3d0; }
     <a href="index.php" class="back-btn">← กลับหน้าหลัก</a>
     <div class="hero-eyebrow">Activity Registration</div>
     <h1>ลงทะเบียนเข้าร่วมกิจกรรม</h1>
-    <p class="hero-sub">   </p>
+    <p class="hero-sub">กรอกข้อมูลเพื่อลงทะเบียนเข้าร่วมกิจกรรม</p>
   </div>
 </div>
 

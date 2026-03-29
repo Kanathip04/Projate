@@ -1,5 +1,6 @@
 <?php
 date_default_timezone_set('Asia/Bangkok');
+session_start();
 
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
@@ -9,6 +10,26 @@ if ($conn->connect_error) {
 
 $currentDate = date('Y-m-d');
 $currentTime = date('H:i');
+
+/* ── ดึงข้อมูลโปรไฟล์ถ้า login แล้ว ── */
+$profileName  = '';
+$profileEmail = '';
+$profilePhone = '';
+$isLoggedIn   = !empty($_SESSION['user_id']);
+
+if ($isLoggedIn) {
+    $uid  = (int)$_SESSION['user_id'];
+    $pStmt = $conn->prepare("SELECT fullname, email, phone FROM users WHERE id = ? LIMIT 1");
+    $pStmt->bind_param("i", $uid);
+    $pStmt->execute();
+    $pRow = $pStmt->get_result()->fetch_assoc();
+    $pStmt->close();
+    if ($pRow) {
+        $profileName  = $pRow['fullname'] ?? ($_SESSION['user_name'] ?? '');
+        $profileEmail = $pRow['email']    ?? ($_SESSION['user_email'] ?? '');
+        $profilePhone = $pRow['phone']    ?? '';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -397,6 +418,25 @@ input:focus, select:focus {
 /* Required star */
 .req { color: var(--gold); margin-left: 2px; }
 
+/* Profile prefill banner */
+.profile-banner {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: 12px;
+  background: #ecfdf5; border: 1.5px solid #a7f3d0;
+  border-radius: 12px; padding: 12px 16px;
+  margin-bottom: 4px;
+  font-size: 0.82rem; color: #065f46; font-weight: 600;
+}
+.profile-banner .pb-icon { font-size: 1.1rem; flex-shrink: 0; }
+.profile-banner a { color: #059669; font-weight: 700; text-decoration: underline; }
+.prefilled-tag {
+  display: inline-block; font-size: 0.6rem; font-weight: 700;
+  background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0;
+  border-radius: 999px; padding: 1px 7px; margin-left: 6px;
+  text-transform: none; letter-spacing: 0; vertical-align: middle;
+}
+input.prefilled { background: #f0fdf4; border-color: #a7f3d0; }
+
 /* ── Responsive ── */
 @media (max-width: 960px) {
   .main-card { grid-template-columns: 1fr; }
@@ -469,12 +509,38 @@ input:focus, select:focus {
       <form action="save_tourist.php" method="POST">
         <div class="form-grid">
 
-          <!-- ชื่อเล่น -->
+          <?php if ($isLoggedIn && $profileName): ?>
+          <!-- Profile banner -->
+          <div class="profile-banner">
+            <span class="pb-icon">✅</span>
+            <div>
+              ดึงข้อมูลจากโปรไฟล์ของคุณอัตโนมัติ
+              &nbsp;·&nbsp; แก้ไขได้ก่อนยืนยัน
+              &nbsp;·&nbsp; <a href="profile.php">จัดการโปรไฟล์</a>
+            </div>
+          </div>
+          <?php elseif (!$isLoggedIn): ?>
+          <div class="profile-banner" style="background:#fffbeb;border-color:#fde68a;color:#92400e;">
+            <span class="pb-icon">💡</span>
+            <div>
+              <a href="login.php" style="color:#b45309;">เข้าสู่ระบบ</a>
+              เพื่อดึงข้อมูลโปรไฟล์มากรอกอัตโนมัติ
+            </div>
+          </div>
+          <?php endif; ?>
+
+          <!-- ชื่อ-นามสกุล -->
           <div class="form-group full">
-            <label for="nickname">ชื่อเล่น <span class="req">*</span></label>
+            <label for="nickname">
+              ชื่อ-นามสกุล / ชื่อเล่น <span class="req">*</span>
+              <?php if ($profileName): ?><span class="prefilled-tag">จากโปรไฟล์</span><?php endif; ?>
+            </label>
             <div class="input-wrap">
               <span class="input-icon">👤</span>
-              <input type="text" id="nickname" name="nickname" placeholder="กรอกชื่อเล่นของคุณ" required>
+              <input type="text" id="nickname" name="nickname"
+                     placeholder="กรอกชื่อของคุณ" required
+                     value="<?= htmlspecialchars($profileName) ?>"
+                     <?= $profileName ? 'class="prefilled"' : '' ?>>
             </div>
           </div>
 

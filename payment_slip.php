@@ -27,6 +27,19 @@ if (in_array($booking['payment_status'], ['paid'])) {
     exit;
 }
 
+// ── ตรวจสอบ timer 3 นาที ──
+define('PAY_TIMEOUT_SEC', 180); // 3 นาที
+$createdAt    = strtotime($booking['created_at']);
+$deadline     = $createdAt + PAY_TIMEOUT_SEC;
+$nowTs        = time();
+$secondsLeft  = max(0, $deadline - $nowTs);
+$isExpired    = ($secondsLeft === 0 && !in_array($booking['payment_status'], ['paid','waiting_verify']));
+
+if ($isExpired) {
+    // ยกเลิกการจองที่หมดเวลา
+    $conn->query("UPDATE boat_bookings SET payment_status='expired', booking_status='cancelled' WHERE id=" . (int)$booking['id']);
+}
+
 if ((float)$booking['total_amount'] <= 0) {
     $today = date('Y-m-d');
     $cntRes = $conn->query("SELECT COUNT(*) AS cnt FROM boat_bookings WHERE DATE(created_at) = '$today' AND booking_status = 'approved'");
@@ -271,6 +284,28 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);min-
   color:#fff;border-radius:13px;font-family:'Kanit',sans-serif;
   font-size:1rem;font-weight:800;text-decoration:none;transition:.2s;}
 .ticket-btn:hover{filter:brightness(1.1);}
+
+/* ── Timer ── */
+.timer-bar{display:flex;align-items:center;justify-content:space-between;
+  background:var(--white);border-radius:12px;padding:10px 16px;
+  margin-bottom:14px;border:1px solid var(--border);}
+.timer-bar.urgent{border-color:#fca5a5;background:#fff5f5;}
+.timer-label{font-size:.78rem;color:var(--muted);font-weight:600;}
+.timer-count{font-family:'Kanit',sans-serif;font-size:1.1rem;font-weight:900;color:var(--blue);}
+.timer-count.urgent{color:var(--red);}
+.timer-track{height:4px;background:var(--border);border-radius:4px;margin-top:6px;overflow:hidden;}
+.timer-fill{height:100%;background:var(--blue);border-radius:4px;transition:width 1s linear;}
+.timer-fill.urgent{background:var(--red);}
+
+/* ── Expired ── */
+.expired-box{padding:32px 20px;text-align:center;}
+.exp-icon{font-size:3rem;margin-bottom:12px;}
+.exp-title{font-family:'Kanit',sans-serif;font-size:1.1rem;font-weight:900;margin-bottom:6px;color:var(--red);}
+.exp-sub{font-size:.82rem;color:var(--muted);margin-bottom:20px;line-height:1.7;}
+.rebook-btn{display:inline-flex;align-items:center;gap:8px;padding:13px 28px;
+  background:linear-gradient(135deg,var(--ink),#1a3a5c);
+  color:#fff;border-radius:13px;font-family:'Kanit',sans-serif;
+  font-size:1rem;font-weight:800;text-decoration:none;}
 </style>
 </head>
 <body>
@@ -362,7 +397,29 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);min-
   </div>
   <script>setTimeout(() => location.reload(), 5000);</script>
 
+  <?php elseif ($isExpired || $booking['payment_status'] === 'expired'): ?>
+  <!-- ── หมดเวลา ── -->
+  <div class="card">
+    <div class="expired-box">
+      <div class="exp-icon">⏰</div>
+      <div class="exp-title">หมดเวลาชำระเงินแล้ว</div>
+      <div class="exp-sub">การจองนี้หมดอายุแล้ว เนื่องจากไม่ได้ชำระเงินภายใน 3 นาที<br>กรุณาจองใหม่อีกครั้ง</div>
+      <a href="booking_boat.php" class="rebook-btn">🚣 จองใหม่อีกครั้ง</a>
+    </div>
+  </div>
+
   <?php else: ?>
+  <!-- ── Timer ── -->
+  <div class="timer-bar" id="timerBar">
+    <div>
+      <div class="timer-label">⏱ เวลาชำระเงิน</div>
+      <div class="timer-track" style="width:200px;">
+        <div class="timer-fill" id="timerFill" style="width:100%"></div>
+      </div>
+    </div>
+    <div class="timer-count" id="timerCount">3:00</div>
+  </div>
+
   <!-- ── QR + Upload ── -->
   <div class="card">
     <div class="qr-wrap">
@@ -399,6 +456,33 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);min-
 </div>
 
 <script>
+// ── Countdown timer ──
+(function(){
+  const total = <?= PAY_TIMEOUT_SEC ?>;
+  let left  = <?= $secondsLeft ?>;
+  const countEl = document.getElementById('timerCount');
+  const fillEl  = document.getElementById('timerFill');
+  const barEl   = document.getElementById('timerBar');
+  if (!countEl) return;
+
+  function update() {
+    if (left <= 0) { location.reload(); return; }
+    const m = Math.floor(left / 60);
+    const s = left % 60;
+    countEl.textContent = m + ':' + String(s).padStart(2,'0');
+    const pct = (left / total) * 100;
+    fillEl.style.width = pct + '%';
+    if (left <= 60) {
+      countEl.classList.add('urgent');
+      fillEl.classList.add('urgent');
+      barEl.classList.add('urgent');
+    }
+    left--;
+  }
+  update();
+  setInterval(update, 1000);
+})();
+
 const input   = document.getElementById('slipInput');
 const preview = document.getElementById('previewImg');
 const zone    = document.getElementById('uploadZone');

@@ -353,7 +353,7 @@ img{display:block;}
 .services-section{background:var(--bg);}
 .services-grid{
   display:grid;
-  grid-template-columns:repeat(4,1fr);
+  grid-template-columns:repeat(3,1fr);
   gap:clamp(14px,2vw,22px);
 }
 .srv-card{
@@ -864,7 +864,6 @@ img{display:block;}
     <a href="survey.php"><span class="nav-icon">📝</span> แบบประเมิน</a>
     <a href="calendar.php"><span class="nav-icon">📅</span> ปฏิทิน</a>
     <a href="about_us.php"><span class="nav-icon">🌿</span> เกี่ยวกับ</a>
-    <a href="kengcamp.php"><span class="nav-icon">⛺</span> เก็งแคมป์</a>
     <div class="nav-book-wrap">
       <div class="nav-book-trigger">
         <span class="nav-icon">🗓️</span> จอง <span class="nav-book-arrow">▾</span>
@@ -955,7 +954,6 @@ img{display:block;}
     <?php endif; ?>
     <a href="index.php"><div class="nav-drawer-icon">🏠</div> หน้าแรก</a>
     <a href="news.php"><div class="nav-drawer-icon">📰</div> ข่าวสาร</a>
-    <a href="kengcamp.php"><div class="nav-drawer-icon">⛺</div> เก็งแคมป์</a>
     <div class="drawer-book-group">
       <div class="drawer-book-label">🗓️ จองบริการ</div>
       <a href="booking_room.php"><div class="nav-drawer-icon" style="background:rgba(29,111,173,.1);">🏨</div> จองห้องพัก</a>
@@ -1113,12 +1111,6 @@ img{display:block;}
         <div class="srv-title">ลงทะเบียนกิจกรรม</div>
         <div class="srv-desc">ลงทะเบียนเข้าร่วมกิจกรรม ทัศนศึกษา และการอบรมต่างๆ</div>
         <div class="srv-more">ลงทะเบียนเลย →</div>
-      </a>
-      <a href="kengcamp.php" class="srv-card">
-        <div class="srv-icon">⛺</div>
-        <div class="srv-title">เก็งแคมป์</div>
-        <div class="srv-desc">กางเต็นท์สัมผัสธรรมชาติ พายเรือคายัค เส้นทางเดินป่าศึกษาธรรมชาติ</div>
-        <div class="srv-more">ดูรายละเอียด →</div>
       </a>
       <a href="calendar.php" class="srv-card">
         <div class="srv-icon">📅</div>

@@ -97,12 +97,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['slip'])) {
     $stmt2->close();
 }
 
-// PromptPay QR config — ใส่เบอร์/เลขประจำตัวจริง
-define('PROMPTPAY_ID', '0622301236'); // เบอร์หรือเลขนิติบุคคล
-$amount = number_format((float)$booking['total_amount'], 2, '.', '');
+// ─── PromptPay config ───────────────────────────────────────────
+// ใส่เบอร์ 10 หลัก (0XXXXXXXXX) หรือเลขนิติบุคคล 13 หลัก
+define('PROMPTPAY_ID', '0622301236');
 
-// QR PromptPay ผ่าน promptpay.io (public API)
-$qrUrl = "https://promptpay.io/" . PROMPTPAY_ID . "/" . $amount;
+/**
+ * สร้าง PromptPay EMV payload ตามมาตรฐาน BOT/EMVCo
+ * รองรับทุก mobile banking ของไทย
+ */
+function promptpayPayload(string $target, float $amount): string
+{
+    // Normalize phone: 0XXXXXXXXX → 66XXXXXXXXX
+    $target = preg_replace('/\D/', '', $target);
+    if (strlen($target) === 10 && $target[0] === '0') {
+        $target = '66' . substr($target, 1); // 11 digits
+    }
+    // National ID = 13 digits (no transform needed)
+
+    $isPhone   = strlen($target) === 11;
+    $subTag    = $isPhone ? '01' : '02'; // 01=mobile, 02=national-id
+    $subLen    = str_pad(strlen($target), 2, '0', STR_PAD_LEFT);
+
+    $guid      = 'A000000677010111';
+    $guidTLV   = '00' . str_pad(strlen($guid), 2, '0', STR_PAD_LEFT) . $guid;  // 0016A000000677010111
+    $phoneTLV  = $subTag . $subLen . $target;
+    $merchant  = $guidTLV . $phoneTLV;
+    $tag29     = '29' . str_pad(strlen($merchant), 2, '0', STR_PAD_LEFT) . $merchant;
+
+    $amountStr = number_format($amount, 2, '.', '');
+    $amtTLV    = '54' . str_pad(strlen($amountStr), 2, '0', STR_PAD_LEFT) . $amountStr;
+
+    $body = '000201'   // Payload format indicator
+          . '010212'   // Point of initiation: 12 = multiple-use
+          . $tag29     // Merchant account info (PromptPay)
+          . '5303764'  // Currency: THB = 764
+          . $amtTLV    // Amount
+          . '5802TH'   // Country code
+          . '6304';    // CRC placeholder (value appended below)
+
+    // CRC-16/CCITT-FALSE
+    $crc  = 0xFFFF;
+    for ($i = 0; $i < strlen($body); $i++) {
+        $crc ^= ord($body[$i]) << 8;
+        for ($j = 0; $j < 8; $j++) {
+            $crc = ($crc & 0x8000) ? (($crc << 1) ^ 0x1021) : ($crc << 1);
+            $crc &= 0xFFFF;
+        }
+    }
+    return $body . strtoupper(str_pad(dechex($crc), 4, '0', STR_PAD_LEFT));
+}
+
+$ppPayload = promptpayPayload(PROMPTPAY_ID, (float)$booking['total_amount']);
+// ใช้ api.qrserver.com render payload เป็นรูป (ไม่ผ่านบุคคลที่สาม — payload สร้างเองทั้งหมด)
+$qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=12&data=' . urlencode($ppPayload);
 ?>
 <!DOCTYPE html>
 <html lang="th">

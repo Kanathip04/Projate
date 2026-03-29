@@ -126,13 +126,13 @@ $callback_url = $baseUrl . '/payment_callback.php';
    ส่งข้อมูลไปหา n8n
 ========================= */
 $payload = [
-    'booking_ref'   => $booking_ref,
-    'booking_id'    => $booking_id,
-    'total_amount'  => $total_amount,
-    'slip_path'     => $dbPath,
-    'slip_url'      => $slip_url,
-    'callback_url'  => $callback_url,
-    'secret'        => 'wrbri_n8n_secret_2026'
+    'booking_ref'=> $booking_ref,
+    'booking_id'=> $booking_id,
+    'total_amount'=> $total_amount,
+    'slip_path'=> $dbPath,
+    'slip_url'=> $slip_url,
+    'callback_url'=> $callback_url,
+    'secret'=> 'wrbri_n8n_secret_2026'
 ];
 
 $n8nSent      = false;

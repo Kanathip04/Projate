@@ -1,6 +1,6 @@
 <?php
 $pageTitle  = "กราฟรายงาน";
-$activeMenu = "report";
+$activeMenu = "charts";
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 require_once 'admin_layout_top.php';

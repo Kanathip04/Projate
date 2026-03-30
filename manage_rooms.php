@@ -277,6 +277,16 @@ include 'admin_layout_top.php';
 
         <div class="rm-section-label">ความจุ</div>
 
+<?php
+  // Parse bed counts from stored string e.g. "เตียงคู่:2|เตียงเดี่ยว:1"
+  $bedDouble = 0; $bedSingle = 0;
+  if (!empty($editData['bed_type'])) {
+    if (preg_match('/เตียงคู่:(\d+)/', $editData['bed_type'], $m))   $bedDouble = (int)$m[1];
+    if (preg_match('/เตียงเดี่ยว:(\d+)/', $editData['bed_type'], $m)) $bedSingle = (int)$m[1];
+  }
+?>
+        <input type="hidden" name="bed_type" id="bed_type_hidden" value="<?= htmlspecialchars($editData['bed_type'] ?? '') ?>">
+
         <div class="rm-row3">
           <div class="rm-fg">
             <label>จำนวนห้อง</label>
@@ -288,10 +298,19 @@ include 'admin_layout_top.php';
             <input type="number" name="max_guests" min="1" required
                    value="<?= htmlspecialchars($editData['max_guests'] ?? '2') ?>">
           </div>
+        </div>
+
+        <div class="rm-section-label">จำนวนเตียง</div>
+        <div class="rm-row2">
           <div class="rm-fg">
-            <label>ประเภทเตียง</label>
-            <input type="text" name="bed_type" placeholder="เช่น เตียงคู่"
-                   value="<?= htmlspecialchars($editData['bed_type'] ?? '') ?>">
+            <label>🛏️ เตียงคู่</label>
+            <input type="number" id="bed_double" min="0" placeholder="0"
+                   value="<?= $bedDouble ?>">
+          </div>
+          <div class="rm-fg">
+            <label>🛌 เตียงเดี่ยว</label>
+            <input type="number" id="bed_single" min="0" placeholder="0"
+                   value="<?= $bedSingle ?>">
           </div>
         </div>
 
@@ -358,9 +377,17 @@ include 'admin_layout_top.php';
             <span class="room-meta-chip chip-price">฿<?= number_format((float)($row['price'] ?? 0), 0) ?>/คืน</span>
             <span class="room-meta-chip">🏠 <?= (int)($row['total_rooms'] ?? 0) ?> ห้อง</span>
             <span class="room-meta-chip">👥 สูงสุด <?= (int)($row['max_guests'] ?? 0) ?> คน</span>
-            <?php if (!empty($row['bed_type'])): ?>
-            <span class="room-meta-chip">🛏️ <?= htmlspecialchars($row['bed_type']) ?></span>
-            <?php endif; ?>
+<?php
+              // แสดง chip แยกตาม bed count
+              $bt = $row['bed_type'] ?? '';
+              $bchips = [];
+              if (preg_match('/เตียงคู่:(\d+)/', $bt, $m)   && (int)$m[1] > 0) $bchips[] = '🛏️ เตียงคู่ '.$m[1].' หลัง';
+              if (preg_match('/เตียงเดี่ยว:(\d+)/', $bt, $m) && (int)$m[1] > 0) $bchips[] = '🛌 เตียงเดี่ยว '.$m[1].' หลัง';
+              if (empty($bchips) && $bt !== '') $bchips[] = '🛏️ '.$bt;
+              foreach ($bchips as $chip):
+            ?>
+            <span class="room-meta-chip"><?= htmlspecialchars($chip) ?></span>
+            <?php endforeach; ?>
           </div>
         </div>
         <div class="room-card-foot">
@@ -401,6 +428,16 @@ function previewImg(input) {
       '<b style="color:var(--gold);">' + input.files[0].name + '</b>';
   }
 }
+
+// รวม bed counts → bed_type string ก่อน submit
+document.querySelector('form').addEventListener('submit', () => {
+  const d = parseInt(document.getElementById('bed_double').value) || 0;
+  const s = parseInt(document.getElementById('bed_single').value) || 0;
+  const parts = [];
+  if (d > 0) parts.push('เตียงคู่:' + d);
+  if (s > 0) parts.push('เตียงเดี่ยว:' + s);
+  document.getElementById('bed_type_hidden').value = parts.join('|') || '';
+});
 </script>
 
 <?php include 'admin_layout_bottom.php'; ?>

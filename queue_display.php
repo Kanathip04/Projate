@@ -20,7 +20,12 @@ $result = $conn->query("
 ");
 
 $queues = [];
-while ($r = $result->fetch_assoc()) $queues[] = $r;
+$dbError = '';
+if ($result === false) {
+    $dbError = $conn->error;
+} else {
+    while ($r = $result->fetch_assoc()) $queues[] = $r;
+}
 $conn->close();
 ?>
 <!DOCTYPE html>
@@ -78,7 +83,12 @@ header{display:flex;align-items:flex-start;justify-content:space-between;flex-wr
   <a href="index.php" class="back-btn">← กลับหน้าหลัก</a>
 </header>
 
-<?php if (empty($queues)): ?>
+<?php if ($dbError): ?>
+  <div class="empty">
+    <div class="big">⚠️</div>
+    DB Error: <?= htmlspecialchars($dbError) ?>
+  </div>
+<?php elseif (empty($queues)): ?>
   <div class="empty">
     <div class="big">📋</div>
     ยังไม่มีคิววันนี้

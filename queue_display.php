@@ -198,8 +198,18 @@ html,body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh
         : null;
       $paidTime = !empty($q['approved_at']) ? date('H:i', strtotime($q['approved_at'])) : '-';
       $ref = $q['booking_ref'] ?? '';
+      $qData = json_encode([
+        'no'       => str_pad($q['daily_queue_no'], 4, '0', STR_PAD_LEFT),
+        'name'     => $q['full_name'],
+        'boat'     => $boatLabel,
+        'date'     => date('d/m/Y', strtotime($q['boat_date'])),
+        'time'     => $timeLabel ?? '-',
+        'paid'     => $paidTime,
+        'ref'      => $ref,
+        'status'   => $q['booking_status'],
+      ]);
     ?>
-    <div class="card">
+    <div class="card" onclick='openQueue(<?= htmlspecialchars($qData, ENT_QUOTES) ?>)'>
       <div class="card-left">
         <div class="q-label">QUEUE</div>
         <div class="q-num"><?= str_pad($q['daily_queue_no'], 4, '0', STR_PAD_LEFT) ?></div>
@@ -222,5 +232,127 @@ html,body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh
   </div>
 <?php endif; ?>
 
+<!-- ── QUEUE DETAIL POPUP ── -->
+<style>
+.card{cursor:pointer;}
+.card:active{transform:scale(.98);}
+
+#qdOverlay{
+  display:none;position:fixed;inset:0;z-index:999;
+  background:rgba(0,0,0,.5);backdrop-filter:blur(6px);
+  align-items:flex-end;justify-content:center;padding:0;
+}
+#qdOverlay.open{display:flex;}
+
+#qdSheet{
+  width:min(520px,100%);background:#fff;
+  border-radius:24px 24px 0 0;
+  box-shadow:0 -8px 40px rgba(0,0,0,.18);
+  animation:sheetUp .32s cubic-bezier(.25,.8,.25,1) both;
+  overflow:hidden;
+}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+.qd-head{
+  background:linear-gradient(135deg,#0d47a1 0%,#1976d2 60%,#42a5f5 100%);
+  padding:20px 22px 22px;color:#fff;position:relative;
+  display:flex;align-items:center;gap:16px;
+}
+.qd-no-wrap{
+  background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);
+  border-radius:14px;padding:10px 16px;text-align:center;flex-shrink:0;min-width:80px;
+}
+.qd-no-label{font-size:.6rem;font-weight:700;letter-spacing:.1em;opacity:.7;margin-bottom:2px;}
+.qd-no{font-family:'Kanit',sans-serif;font-size:2rem;font-weight:900;line-height:1;}
+.qd-name{font-family:'Kanit',sans-serif;font-size:1.15rem;font-weight:800;line-height:1.3;}
+.qd-ref{font-size:.72rem;opacity:.65;margin-top:3px;}
+.qd-close{
+  position:absolute;top:14px;right:14px;
+  width:34px;height:34px;border-radius:50%;
+  background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);
+  color:#fff;font-size:1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:.2s;
+}
+.qd-close:hover{background:rgba(255,255,255,.28);}
+
+.qd-body{padding:20px 22px 28px;}
+.qd-row{
+  display:flex;align-items:center;gap:14px;
+  padding:13px 16px;border-radius:12px;
+  background:#f8fbff;border:1px solid #e4edf8;
+  margin-bottom:10px;
+}
+.qd-icon{font-size:1.2rem;width:28px;text-align:center;flex-shrink:0;}
+.qd-lbl{font-size:.68rem;font-weight:700;color:#5f7281;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;}
+.qd-val{font-size:.9rem;font-weight:700;color:#0d1b2a;}
+
+.qd-badge{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  background:#ecfdf3;color:#15803d;border:1px solid #a7f3d0;
+  border-radius:10px;padding:11px;margin-top:4px;
+  font-size:.85rem;font-weight:700;
+}
+
+@media(min-width:521px){
+  #qdOverlay{align-items:center;}
+  #qdSheet{border-radius:20px;margin:20px;}
+}
+</style>
+
+<div id="qdOverlay" onclick="if(event.target===this)closeQueue()">
+  <div id="qdSheet">
+    <div class="qd-head">
+      <div class="qd-no-wrap">
+        <div class="qd-no-label">QUEUE</div>
+        <div class="qd-no" id="qdNo">0001</div>
+      </div>
+      <div>
+        <div class="qd-name" id="qdName">—</div>
+        <div class="qd-ref" id="qdRef">—</div>
+      </div>
+      <button class="qd-close" onclick="closeQueue()">✕</button>
+    </div>
+    <div class="qd-body">
+      <div class="qd-row">
+        <span class="qd-icon">🚤</span>
+        <div><div class="qd-lbl">ประเภทเรือ</div><div class="qd-val" id="qdBoat">—</div></div>
+      </div>
+      <div class="qd-row">
+        <span class="qd-icon">📅</span>
+        <div><div class="qd-lbl">วันที่จอง</div><div class="qd-val" id="qdDate">—</div></div>
+      </div>
+      <div class="qd-row" id="qdTimeRow">
+        <span class="qd-icon">🕐</span>
+        <div><div class="qd-lbl">เวลา</div><div class="qd-val" id="qdTime">—</div></div>
+      </div>
+      <div class="qd-row">
+        <span class="qd-icon">💳</span>
+        <div><div class="qd-lbl">เวลาชำระเงิน</div><div class="qd-val" id="qdPaid">—</div></div>
+      </div>
+      <div class="qd-badge">✅ ชำระเงินแล้ว · พร้อมใช้บริการ</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openQueue(q) {
+  document.getElementById('qdNo').textContent   = q.no;
+  document.getElementById('qdName').textContent = q.name;
+  document.getElementById('qdRef').textContent  = 'หมายเลขอ้างอิง: ' + q.ref;
+  document.getElementById('qdBoat').textContent = q.boat;
+  document.getElementById('qdDate').textContent = q.date;
+  document.getElementById('qdTime').textContent = q.time;
+  document.getElementById('qdPaid').textContent = 'ชำระ ' + q.paid + ' น.';
+  document.getElementById('qdTimeRow').style.display = q.time === '-' ? 'none' : 'flex';
+  document.getElementById('qdOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeQueue() {
+  document.getElementById('qdOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeQueue(); });
+</script>
 </body>
 </html>

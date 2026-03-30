@@ -2,21 +2,10 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 mysqli_report(MYSQLI_REPORT_OFF);
-ob_start(); // เปิด output buffer เพื่อจับ error
 register_shutdown_function(function(){
     $err = error_get_last();
-    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
-        ob_end_clean();
-        echo "<pre style='color:red;background:#fff;padding:20px;'>";
-        echo "FATAL ERROR:\n";
-        echo "Type: " . $err['type'] . "\n";
-        echo "Message: " . $err['message'] . "\n";
-        echo "File: " . $err['file'] . "\n";
-        echo "Line: " . $err['line'] . "\n";
-        echo "</pre>";
-    } else {
-        ob_end_flush();
-    }
+    $msg = $err ? print_r($err, true) : "No PHP error — possible segfault/OOM";
+    file_put_contents(__DIR__ . '/report_crash.log', date('Y-m-d H:i:s') . "\n" . $msg . "\n\n", FILE_APPEND);
 });
 $pageTitle  = "รายงานภาพรวม";
 $activeMenu = "admin_report";

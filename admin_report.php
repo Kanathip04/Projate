@@ -57,8 +57,8 @@ $boatData  = $conn->query("SELECT COUNT(*) total,
 $roomWhere = "WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived = 0";
 if ($bkStatus) $roomWhere .= " AND booking_status = '$bkStatus'";
 $roomData  = $conn->query("SELECT COUNT(*) total,
-    SUM(status='approved') paid,
-    SUM(status='pending') waiting,
+    SUM(booking_status='approved') paid,
+    SUM(booking_status='pending') waiting,
     SUM(booking_status='cancelled') cancelled,
     0 revenue
     FROM room_bookings $roomWhere")->fetch_assoc();
@@ -155,7 +155,7 @@ if ($serviceType === 'all' || $serviceType === 'boat') {
 }
 if ($serviceType === 'all' || $serviceType === 'room') {
     $rRows = $conn->query("SELECT 'room' svc, CONCAT('RM',id) ref, full_name, room_type subtype, created_at, checkin_date use_date,
-        0 total_amount, status payment_status, booking_status FROM room_bookings
+        0 total_amount, booking_status payment_status, booking_status FROM room_bookings
         WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived=0 ORDER BY created_at DESC LIMIT 50");
     while ($r = $rRows->fetch_assoc()) $bookingRows[] = $r;
 }

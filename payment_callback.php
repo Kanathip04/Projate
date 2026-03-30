@@ -43,6 +43,8 @@ $amountMatched = (bool)($data['amount_matched'] ?? false);
 $slipAmount    = (float)($data['slip_amount'] ?? 0);
 $txnId         = trim($data['provider_txn_id'] ?? '');
 $rejectReason  = trim($data['reject_reason']  ?? '');
+$is429         = (bool)($data['is429']         ?? false);
+$retryNeeded   = (bool)($data['retry_needed']  ?? false);
 
 if (!$booking_ref) {
     http_response_code(400);
@@ -76,6 +78,25 @@ $conn->query(
     "UPDATE boat_bookings SET webhook_payload = '" . $conn->real_escape_string($rawBody ?? '') . "'" .
     " WHERE booking_ref = '" . $conn->real_escape_string($booking_ref) . "'"
 );
+
+// ─── กรณี AI rate limit (429) หรือ retry_needed → คง waiting_verify ให้ admin ตรวจเอง ───
+if ($is429 || $retryNeeded || $rejectReason === 'AI_RATE_LIMIT') {
+    $note = "\n[AUTO] AI ยืนยันไม่ได้ (rate limit) รอ admin ตรวจสลิปเอง [" . date('Y-m-d H:i') . "]";
+    $conn->prepare("UPDATE boat_bookings SET note = CONCAT(COALESCE(note,''), ?) WHERE booking_ref = ?")
+         ->bind_param("ss", $note, $booking_ref) | null;
+    $st = $conn->prepare("UPDATE boat_bookings SET note = CONCAT(COALESCE(note,''), ?) WHERE booking_ref = ?");
+    $st->bind_param("ss", $note, $booking_ref);
+    $st->execute();
+    $st->close();
+
+    echo json_encode([
+        'ok'     => true,
+        'action' => 'pending_manual',
+        'note'   => 'AI rate limit — kept as waiting_verify for manual review',
+    ]);
+    $conn->close();
+    exit;
+}
 
 if ($verified && $amountMatched) {
     // ─── ชำระสำเร็จ: คำนวณเลขคิว + อนุมัติ ───

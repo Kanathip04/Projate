@@ -10,8 +10,8 @@ if ($conn->connect_error) die("DB Error");
 $today = date('Y-m-d');
 
 $result = $conn->query("
-    SELECT daily_queue_no, booking_ref, full_name, boat_type, num_people,
-           boat_date, approved_at, payment_status, booking_status
+    SELECT daily_queue_no, booking_ref, full_name, boat_type, boat_units,
+           boat_date, time_start, time_end, approved_at, payment_status, booking_status
     FROM boat_bookings
     WHERE DATE(approved_at) = '$today'
       AND booking_status = 'approved'
@@ -101,8 +101,14 @@ header{display:flex;align-items:flex-start;justify-content:space-between;flex-wr
       <div class="queue-no">Q<?= str_pad($q['daily_queue_no'], 4, '0', STR_PAD_LEFT) ?></div>
       <div class="name"><?= htmlspecialchars($q['full_name']) ?></div>
       <div class="detail">
-        <span>🚤 <?= htmlspecialchars($q['boat_type'] ?? '-') ?></span>
-        <span>👥 <?= (int)$q['num_people'] ?> คน</span>
+        <?php
+          $units = json_decode($q['boat_units'] ?? '[]', true) ?: [];
+          $boatLabel = !empty($units) ? implode(', ', array_map(fn($u)=>"เรือ $u คน", $units)) : ($q['boat_type'] ?? '-');
+        ?>
+        <span>🚤 <?= htmlspecialchars($boatLabel) ?></span>
+        <?php if (!empty($q['time_start'])): ?>
+        <span>🕐 <?= substr($q['time_start'],0,5) ?>–<?= substr($q['time_end'],0,5) ?></span>
+        <?php endif; ?>
         <span>📅 <?= date('d/m/Y', strtotime($q['boat_date'])) ?></span>
         <span>✅ ชำระ <?= date('H:i', strtotime($q['approved_at'])) ?> น.</span>
       </div>

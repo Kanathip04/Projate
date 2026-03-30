@@ -62,6 +62,7 @@ $conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS `provider_txn_i
 $conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS `paid_at` DATETIME DEFAULT NULL AFTER `provider_txn_id`");
 $conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS `approved_at` DATETIME DEFAULT NULL AFTER `paid_at`");
 $conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS `webhook_payload` LONGTEXT DEFAULT NULL AFTER `approved_at`");
+$conn->query("ALTER TABLE boat_bookings MODIFY COLUMN `payment_status` ENUM('pending','waiting_verify','checking','paid','failed','expired','duplicate','suspicious','manual_review','cash_pending','cash_paid') DEFAULT 'pending'");
 
 /* ── ดึงโปรไฟล์ ── */
 $user_name  = '';
@@ -97,10 +98,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ajax'])) {
     $phone         = trim($_POST['phone'] ?? '');
     $email         = trim($_POST['email'] ?? '');
     $guests        = max(1, (int)($_POST['guests'] ?? 1));
-    $boat_date     = trim($_POST['boat_date'] ?? '');
-    $queue_name    = trim($_POST['queue_name'] ?? '');
-    $boat_type     = trim($_POST['boat_type'] ?? '');
-    $note          = trim($_POST['note'] ?? '');
+    $boat_date      = trim($_POST['boat_date'] ?? '');
+    $queue_name     = trim($_POST['queue_name'] ?? '');
+    $boat_type      = trim($_POST['boat_type'] ?? '');
+    $note           = trim($_POST['note'] ?? '');
+    $pay_method     = in_array($_POST['pay_method'] ?? '', ['qr','cash']) ? $_POST['pay_method'] : 'qr';
 
     $errors = [];
     if ($queue_id <= 0)        $errors[] = "ไม่พบรหัสคิว";
@@ -138,10 +140,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ajax'])) {
     $temp_booking_ref = 'TMP' . time() . rand(100, 999);
 
     /* param count: s(booking_ref) i(queue_id) s(full_name) s(phone) s(email) s(queue_name) i(guests) s(boat_date) s(boat_type) d(price_per_boat) d(total_amount) i(daily_queue_no) s(note) = 13 params */
+    $init_pay_status = ($pay_method === 'cash') ? 'cash_pending' : 'pending';
+    $init_provider   = ($pay_method === 'cash') ? 'cash' : null;
+
     $stmt = $conn->prepare(
         "INSERT INTO boat_bookings
-         (booking_ref, queue_id, full_name, phone, email, queue_name, guests, boat_date, boat_type, price_per_boat, total_amount, daily_queue_no, note, booking_status, payment_status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending')"
+         (booking_ref, queue_id, full_name, phone, email, queue_name, guests, boat_date, boat_type, price_per_boat, total_amount, daily_queue_no, note, booking_status, payment_status, payment_provider)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)"
     );
 
     if (!$stmt) {
@@ -149,8 +154,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ajax'])) {
         $conn->close(); exit;
     }
 
-    // types: s i s s s s i s s d  d  i  s  (13 params)
-    $stmt->bind_param("sissssissddis",
+    // types: s i s s s s i s s d d i s s s (15 params)
+    $stmt->bind_param("sissssissddisss",
         $temp_booking_ref,  // 1  s
         $queue_id,          // 2  i
         $customer_name,     // 3  s
@@ -163,7 +168,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ajax'])) {
         $price_per_boat,    // 10 d
         $total_amount,      // 11 d
         $daily_queue_no,    // 12 i
-        $note               // 13 s
+        $note,              // 13 s
+        $init_pay_status,   // 14 s
+        $init_provider      // 15 s
     );
 
     if (!$stmt->execute()) {
@@ -183,11 +190,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ajax'])) {
     $ustmt->execute();
     $ustmt->close();
 
+    $redirect = ($pay_method === 'cash')
+        ? 'cash_waiting.php?ref=' . urlencode($booking_ref)
+        : 'payment_slip.php?ref=' . urlencode($booking_ref);
+
     echo json_encode([
         'ok'           => true,
         'booking_ref'  => $booking_ref,
         'total_amount' => $total_amount,
-        'redirect'     => 'payment_slip.php?ref=' . urlencode($booking_ref),
+        'pay_method'   => $pay_method,
+        'redirect'     => $redirect,
     ]);
     exit;
 }
@@ -708,6 +720,29 @@ $typeIcons = ['เรือพาย'=>'🚣','เรือคายัค'=>'�
             </div>
           </div>
 
+          <!-- วิธีชำระเงิน -->
+          <div style="margin-bottom:20px;">
+            <div class="sec-label">วิธีชำระเงิน</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" id="payMethodGrid">
+              <label id="pmQR" style="border:2px solid var(--blue);border-radius:12px;padding:14px 16px;cursor:pointer;background:var(--blue-lt);display:flex;align-items:center;gap:10px;transition:.2s;">
+                <input type="radio" name="pay_method" value="qr" checked style="display:none;">
+                <span style="font-size:1.4rem;">📱</span>
+                <div>
+                  <div style="font-size:.85rem;font-weight:800;color:var(--blue);">QR Code</div>
+                  <div style="font-size:.7rem;color:var(--muted);">โอนผ่านแอปธนาคาร</div>
+                </div>
+              </label>
+              <label id="pmCash" style="border:2px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;background:#f8fbff;display:flex;align-items:center;gap:10px;transition:.2s;">
+                <input type="radio" name="pay_method" value="cash" style="display:none;">
+                <span style="font-size:1.4rem;">💵</span>
+                <div>
+                  <div style="font-size:.85rem;font-weight:800;color:var(--ink);">เงินสด</div>
+                  <div style="font-size:.7rem;color:var(--muted);">จ่ายกับเจ้าหน้าที่</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <!-- ราคาสรุป -->
           <div id="priceSummary" style="background:linear-gradient(135deg,var(--navy) 0%,var(--blue2) 100%);border-radius:14px;padding:18px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 16px rgba(21,101,192,.3);">
             <div>
@@ -902,6 +937,27 @@ $typeIcons = ['เรือพาย'=>'🚣','เรือคายัค'=>'�
     });
   });
 
+  // Payment method toggle
+  document.querySelectorAll('input[name="pay_method"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const pmQR   = document.getElementById('pmQR');
+      const pmCash = document.getElementById('pmCash');
+      if (radio.value === 'qr') {
+        pmQR.style.border   = '2px solid var(--blue)';
+        pmQR.style.background = 'var(--blue-lt)';
+        pmCash.style.border  = '2px solid var(--border)';
+        pmCash.style.background = '#f8fbff';
+        document.querySelector('.submit-btn span:last-child').textContent = 'ยืนยันการจองและรับบัตรคิว';
+      } else {
+        pmCash.style.border  = '2px solid var(--blue)';
+        pmCash.style.background = 'var(--blue-lt)';
+        pmQR.style.border   = '2px solid var(--border)';
+        pmQR.style.background = '#f8fbff';
+        document.querySelector('.submit-btn span:last-child').textContent = 'ยืนยันการจอง (จ่ายสดกับเจ้าหน้าที่)';
+      }
+    });
+  });
+
   document.getElementById('bookingForm').addEventListener('submit', async function(e){
     e.preventDefault();
     const btn = document.getElementById('submitBtn');
@@ -922,6 +978,8 @@ $typeIcons = ['เรือพาย'=>'🚣','เรือคายัค'=>'�
     data.append('guests', document.getElementById('f_guests').value);
     data.append('boat_type', boatType);
     data.append('note', document.getElementById('f_note').value.trim());
+    const payMethodEl = document.querySelector('input[name="pay_method"]:checked');
+    data.append('pay_method', payMethodEl ? payMethodEl.value : 'qr');
 
     try {
       const res = await fetch('booking_boat.php', { method: 'POST', body: data });

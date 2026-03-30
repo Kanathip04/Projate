@@ -105,6 +105,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = "เปลี่ยนสถานะเป็นรอตรวจสอบแล้ว";
         }
 
+        if ($action === 'accept_cash') {
+            // คำนวณเลขคิววันนี้
+            $today  = date('Y-m-d');
+            $cntRes = $conn->query("SELECT COUNT(*) AS cnt FROM boat_bookings WHERE DATE(approved_at) = '$today' AND booking_status = 'approved'");
+            $qno    = (int)($cntRes->fetch_assoc()['cnt'] ?? 0) + 1;
+
+            $st = $conn->prepare("
+                UPDATE boat_bookings
+                SET payment_status  = 'cash_paid',
+                    booking_status  = 'approved',
+                    daily_queue_no  = ?,
+                    paid_at         = NOW(),
+                    approved_at     = NOW()
+                WHERE id = ?
+            ");
+            $st->bind_param("ii", $qno, $id);
+            $st->execute();
+            $st->close();
+
+            header("Location: {$currentPage}?tab=approved&msg=" . urlencode("รับเงินสดแล้ว ออกบัตรคิว Q" . str_pad($qno,4,'0',STR_PAD_LEFT)) . "&type=success");
+            exit;
+        }
+
         if ($action === 'reset_slip') {
             $st = $conn->prepare("
                 UPDATE boat_bookings
@@ -184,7 +207,9 @@ if ($tab === 'approved') {
 } elseif ($tab === 'waiting_payment') {
     $where .= " AND payment_status='waiting_verify'";
 } elseif ($tab === 'paid') {
-    $where .= " AND payment_status='paid'";
+    $where .= " AND payment_status IN ('paid','cash_paid')";
+} elseif ($tab === 'cash_pending') {
+    $where .= " AND payment_status='cash_pending'";
 } else {
     $where .= " AND booking_status IN ('pending','rejected','cancelled')";
 }
@@ -239,6 +264,8 @@ include 'admin_layout_top.php';
 .pay-duplicate{background:#fef3c7;color:#92400e;border:1px solid #fcd34d;}
 .pay-suspicious{background:#fce7f3;color:#9d174d;border:1px solid #f9a8d4;}
 .pay-manual{background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd;}
+.pay-cash-pending{background:#fff7ed;color:#c2410c;border:1px solid #fdba74;}
+.pay-cash-paid{background:#dcfce7;color:#166534;border:1px solid #86efac;}
 
 /* ── stat bar ── */
 .stat-bar{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px;}
@@ -323,6 +350,7 @@ include 'admin_layout_top.php';
     <a href="?tab=pending" class="ts-btn<?= $tab==='pending'?' active':'' ?>">ทั้งหมด / รออนุมัติ<span class="ts-badge"><?= $stat_pending ?></span></a>
     <a href="?tab=waiting_payment" class="ts-btn<?= $tab==='waiting_payment'?' active':'' ?>">รอตรวจสลิป<span class="ts-badge"><?= $stat_payment_waiting ?></span></a>
     <a href="?tab=paid" class="ts-btn<?= $tab==='paid'?' active':'' ?>">ชำระแล้ว</a>
+    <a href="?tab=cash_pending" class="ts-btn<?= $tab==='cash_pending'?' active':'' ?>">💵 รอจ่ายสด</a>
     <a href="?tab=approved" class="ts-btn<?= $tab==='approved'?' active':'' ?>">อนุมัติแล้ว</a>
   </div>
   <form method="GET" class="search-bar">
@@ -361,8 +389,8 @@ include 'admin_layout_top.php';
       $units = json_decode($row['boat_units'] ?? '[]', true) ?: [];
       $bCls = ['pending'=>'bk-badge-pending','approved'=>'bk-badge-approved','rejected'=>'bk-badge-rejected','cancelled'=>'bk-badge-cancelled'];
       $bLbl = ['pending'=>'รออนุมัติ','approved'=>'อนุมัติแล้ว','rejected'=>'ไม่อนุมัติ','cancelled'=>'ยกเลิก'];
-      $pCls = ['unpaid'=>'pay-unpaid','pending'=>'pay-waiting','waiting_verify'=>'pay-waiting','paid'=>'pay-paid','failed'=>'pay-failed','expired'=>'pay-failed','duplicate'=>'pay-duplicate','suspicious'=>'pay-suspicious','manual_review'=>'pay-manual','checking'=>'pay-waiting'];
-      $pLbl = ['unpaid'=>'ยังไม่ชำระ','pending'=>'ดำเนินการ','waiting_verify'=>'รอตรวจสลิป','paid'=>'ชำระแล้ว','failed'=>'สลิปไม่ผ่าน','expired'=>'หมดอายุ','duplicate'=>'⚠ สลิปซ้ำ','suspicious'=>'⚠ น่าสงสัย','manual_review'=>'รอตรวจด้วยมือ','checking'=>'กำลังตรวจ'];
+      $pCls = ['unpaid'=>'pay-unpaid','pending'=>'pay-waiting','waiting_verify'=>'pay-waiting','paid'=>'pay-paid','failed'=>'pay-failed','expired'=>'pay-failed','duplicate'=>'pay-duplicate','suspicious'=>'pay-suspicious','manual_review'=>'pay-manual','checking'=>'pay-waiting','cash_pending'=>'pay-cash-pending','cash_paid'=>'pay-cash-paid'];
+      $pLbl = ['unpaid'=>'ยังไม่ชำระ','pending'=>'ดำเนินการ','waiting_verify'=>'รอตรวจสลิป','paid'=>'ชำระแล้ว','failed'=>'สลิปไม่ผ่าน','expired'=>'หมดอายุ','duplicate'=>'⚠ สลิปซ้ำ','suspicious'=>'⚠ น่าสงสัย','manual_review'=>'รอตรวจด้วยมือ','checking'=>'กำลังตรวจ','cash_pending'=>'💵 รอจ่ายสด','cash_paid'=>'💵 จ่ายสดแล้ว'];
       $bs = $row['booking_status'] ?? 'pending';
       $ps = $row['payment_status'] ?? 'unpaid';
     ?>
@@ -460,6 +488,18 @@ include 'admin_layout_top.php';
       <!-- จัดการ -->
       <td>
         <div class="act-group">
+          <?php if ($ps === 'cash_pending'): ?>
+            <form method="POST" style="display:contents;">
+              <input type="hidden" name="tab" value="<?= h($tab) ?>">
+              <input type="hidden" name="action" value="accept_cash">
+              <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
+              <button class="btn btn-sm" style="background:#15803d;color:#fff;border:none;white-space:nowrap;"
+                      type="submit" onclick="return confirm('ยืนยันว่าลูกค้าชำระเงินสดแล้ว?\nระบบจะออกบัตรคิวให้อัตโนมัติ')">
+                ✓ รับเงินสด + ออกบัตรคิว
+              </button>
+            </form>
+          <?php endif; ?>
+
           <?php if ($ps === 'waiting_verify'): ?>
             <form method="POST" style="display:contents;">
               <input type="hidden" name="tab" value="<?= h($tab) ?>">

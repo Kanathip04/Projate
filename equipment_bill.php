@@ -14,6 +14,12 @@ $conn->query("ALTER TABLE equipment_bookings ADD COLUMN IF NOT EXISTS payment_sl
 $id = (int)($_GET['id'] ?? 0);
 if (!$id) { header("Location: booking_tent.php"); exit; }
 
+// รีเซ็ตสลิปเพื่อส่งใหม่
+if (isset($_GET['retry'])) {
+    $conn->query("UPDATE equipment_bookings SET payment_status='unpaid', payment_slip=NULL WHERE id=$id AND payment_status='failed'");
+    header("Location: equipment_bill.php?id=$id"); exit;
+}
+
 $st = $conn->prepare("SELECT * FROM equipment_bookings WHERE id=? LIMIT 1");
 $st->bind_param("i", $id); $st->execute();
 $bk = $st->get_result()->fetch_assoc(); $st->close();
@@ -36,9 +42,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['slip'])) {
         $fname = 'equip_slip_' . $id . '_' . time() . '.' . $ext;
         if (move_uploaded_file($file['tmp_name'], $dir . $fname)) {
             $slipPath = $dir . $fname;
-            $su = $conn->prepare("UPDATE equipment_bookings SET payment_slip=?, payment_status='waiting_verify' WHERE id=?");
-            $su->bind_param("si", $slipPath, $id); $su->execute(); $su->close();
-            header("Location: equipment_bill.php?id=$id&uploaded=1"); exit;
+            $slipHash = hash('sha256', file_get_contents($slipPath));
+
+            // ── ตรวจสลิปซ้ำ ──
+            $dupSt = $conn->prepare("SELECT id FROM payment_slips WHERE slip_hash=? LIMIT 1");
+            $dupSt->bind_param("s", $slipHash); $dupSt->execute();
+            $dupRow = $dupSt->get_result()->fetch_assoc(); $dupSt->close();
+
+            if ($dupRow) {
+                @unlink($slipPath);
+                $uploadError = 'สลิปนี้เคยถูกใช้แล้ว กรุณาใช้สลิปใหม่';
+            } else {
+                $bookingRef = 'EQUIP-' . str_pad($id, 5, '0', STR_PAD_LEFT);
+                $totalPay   = (float)$bk['total_price'];
+                // คำนวณคืน
+                $ni = 1;
+                if (!empty($bk['checkin_date']) && !empty($bk['checkout_date'])) {
+                    $d1t = new DateTime($bk['checkin_date']);
+                    $d2t = new DateTime($bk['checkout_date']);
+                    $ni  = max(1, (int)$d1t->diff($d2t)->days);
+                }
+                $totalPay *= $ni;
+
+                // บันทึก payment_slips
+                $conn->query("CREATE TABLE IF NOT EXISTS `payment_slips` (
+                    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    `booking_id` INT UNSIGNED,
+                    `booking_ref` VARCHAR(50),
+                    `slip_image_path` VARCHAR(500),
+                    `slip_hash` VARCHAR(64),
+                    `verification_status` VARCHAR(50) DEFAULT 'checking',
+                    `uploaded_ip` VARCHAR(50),
+                    `uploaded_ua` VARCHAR(500),
+                    `uploaded_at` DATETIME,
+                    `extracted_amount` DECIMAL(10,2) DEFAULT NULL,
+                    `extracted_ref_no` VARCHAR(100) DEFAULT NULL,
+                    `payer_name` VARCHAR(200) DEFAULT NULL,
+                    `payee_name` VARCHAR(200) DEFAULT NULL,
+                    `confidence_score` FLOAT DEFAULT NULL,
+                    `raw_ai_response` TEXT,
+                    `verification_reason` VARCHAR(500) DEFAULT NULL,
+                    `source_bank` VARCHAR(100) DEFAULT NULL,
+                    `destination_bank` VARCHAR(100) DEFAULT NULL,
+                    `extracted_transfer_datetime` DATETIME DEFAULT NULL,
+                    `booking_type` VARCHAR(30) DEFAULT 'boat'
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                $insStmt = $conn->prepare(
+                    "INSERT INTO payment_slips (booking_id,booking_ref,slip_image_path,slip_hash,verification_status,uploaded_ip,uploaded_ua,uploaded_at,booking_type)
+                     VALUES (?,?,?,?,'checking',?,?,NOW(),'equipment')"
+                );
+                $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+                $ua = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500);
+                $insStmt->bind_param("isssss", $id, $bookingRef, $slipPath, $slipHash, $ip, $ua);
+                $insStmt->execute(); $insStmt->close();
+
+                // อัปเดต booking
+                $su = $conn->prepare("UPDATE equipment_bookings SET payment_slip=?, payment_status='waiting_verify' WHERE id=?");
+                $su->bind_param("si", $slipPath, $id); $su->execute(); $su->close();
+
+                // ── ส่ง n8n webhook ──
+                $mimeMap  = ['jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp'];
+                $slipB64  = base64_encode(file_get_contents($slipPath));
+                $payload  = json_encode([
+                    'secret'          => 'wrbri_n8n_secret_2026',
+                    'booking_ref'     => $bookingRef,
+                    'booking_id'      => $id,
+                    'booking_type'    => 'equipment',
+                    'user_name'       => $bk['full_name'],
+                    'expected_amount' => $totalPay,
+                    'amount_tolerance'=> 1.00,
+                    'promptpay_id'    => PROMPTPAY_ID,
+                    'booking_created' => $bk['created_at'],
+                    'slip_hash'       => $slipHash,
+                    'slip_url'        => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/' . $slipPath,
+                    'callback_url'    => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/equipment_callback.php',
+                    'slip_base64'     => $slipB64,
+                    'slip_mime_type'  => $mimeMap[$ext] ?? 'image/jpeg',
+                ]);
+                $ch = curl_init('https://kanayhip.app.n8n.cloud/webhook/boat-slip');
+                curl_setopt_array($ch, [
+                    CURLOPT_POST           => true,
+                    CURLOPT_POSTFIELDS     => $payload,
+                    CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT        => 10,
+                ]);
+                curl_exec($ch); curl_close($ch);
+
+                header("Location: equipment_bill.php?id=$id&uploaded=1"); exit;
+            }
         } else {
             $uploadError = 'อัปโหลดไม่สำเร็จ กรุณาลองใหม่';
         }
@@ -247,6 +340,16 @@ a{text-decoration:none;}
 .confirm-total .val{font-family:'Kanit',sans-serif;font-size:1.4rem;font-weight:900;color:var(--gold-dark);}
 .confirm-note{background:var(--yellow-bg);border:1px solid var(--yellow-bd);border-radius:10px;
   padding:10px 14px;font-size:.8rem;color:var(--yellow);text-align:center;margin-top:12px;}
+
+/* failed */
+.fail-box{padding:28px 20px;text-align:center;}
+.fail-ico{font-size:2.5rem;margin-bottom:10px;}
+.fail-title{font-family:'Kanit',sans-serif;font-size:1.1rem;font-weight:900;color:var(--red);margin-bottom:6px;}
+.fail-sub{font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:16px;}
+.retry-btn{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;
+  background:var(--ink);color:#fff;border-radius:12px;font-family:'Kanit',sans-serif;
+  font-size:.9rem;font-weight:800;transition:.2s;}
+.retry-btn:hover{background:var(--red);}
 </style>
 </head>
 <body>
@@ -385,6 +488,19 @@ a{text-decoration:none;}
     </div>
   </div>
   <?= $confirmHtml ?>
+
+  <?php elseif ($payStatus === 'failed'): ?>
+  <div class="card">
+    <div class="fail-box">
+      <div class="fail-ico">❌</div>
+      <div class="fail-title">สลิปไม่ผ่านการตรวจสอบ</div>
+      <div class="fail-sub">
+        ระบบ AI ตรวจสอบสลิปแล้วพบว่าไม่ถูกต้อง<br>
+        กรุณาตรวจสอบยอดเงิน ชื่อผู้รับ และลองใหม่อีกครั้ง
+      </div>
+      <a href="equipment_bill.php?id=<?= $id ?>&retry=1" class="retry-btn">🔄 ส่งสลิปใหม่</a>
+    </div>
+  </div>
 
   <?php elseif ($payStatus === 'waiting_verify'): ?>
   <div class="card">

@@ -1454,66 +1454,105 @@ navBookWrap?.querySelectorAll('.nav-book-item, .nav-book-status').forEach(a => {
 
 <!-- ══════════ SITE AUTO POPUP ══════════ -->
 <?php if ($sitePopup): ?>
-<div id="sitePopupOverlay" style="display:none;position:fixed;inset:0;z-index:4000;background:rgba(10,12,24,.80);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);align-items:center;justify-content:center;padding:20px;overflow:auto;">
-  <div style="width:min(540px,100%);background:#fff;border-radius:26px;box-shadow:0 32px 90px rgba(0,0,0,.35);overflow:hidden;animation:sitePopIn .42s cubic-bezier(.34,1.56,.64,1) both;display:flex;flex-direction:column;max-height:90vh;position:relative;">
+<style>
+#spOverlay{
+  display:none;position:fixed;inset:0;z-index:4000;
+  background:rgba(0,0,0,.45);
+  align-items:center;justify-content:center;padding:20px;
+}
+#spOverlay.sp-open{display:flex;}
+#spBox{
+  width:min(480px,100%);background:#fff;border-radius:8px;
+  box-shadow:0 8px 40px rgba(0,0,0,.18);
+  position:relative;overflow:hidden;
+  animation:spIn .32s cubic-bezier(.25,.8,.25,1) both;
+  max-height:92vh;display:flex;flex-direction:column;
+}
+@keyframes spIn{from{opacity:0;transform:translateY(-18px) scale(.97)}to{opacity:1;transform:none}}
+#spClose{
+  position:absolute;top:12px;right:14px;z-index:10;
+  background:none;border:none;cursor:pointer;
+  color:#9ca3af;font-size:1.3rem;line-height:1;padding:4px;
+  transition:color .15s;
+}
+#spClose:hover{color:#111;}
+/* image strip */
+#spImg{width:100%;max-height:220px;object-fit:cover;display:block;}
+/* body */
+#spBody{padding:36px 36px 10px;text-align:center;overflow-y:auto;flex:1;}
+#spTitle{
+  font-family:'Kanit',sans-serif;
+  font-size:1.75rem;font-weight:900;
+  color:#111;line-height:1.25;margin-bottom:12px;
+}
+#spContent{
+  font-size:.93rem;color:#6b7280;line-height:1.75;
+  white-space:pre-line;word-break:break-word;
+}
+/* footer */
+#spFoot{padding:20px 36px 28px;display:flex;flex-direction:column;align-items:center;gap:12px;}
+#spCtaBtn{
+  display:block;width:100%;padding:14px;
+  background:#1e3a8a;color:#fff;border:none;border-radius:4px;
+  font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;
+  cursor:pointer;letter-spacing:.02em;transition:background .2s;
+  text-align:center;text-decoration:none;
+}
+#spCtaBtn:hover{background:#1e40af;}
+#spSkip{
+  background:none;border:none;cursor:pointer;
+  color:#9ca3af;font-size:.82rem;font-family:'Sarabun',sans-serif;
+  text-decoration:underline;transition:color .15s;
+}
+#spSkip:hover{color:#374151;}
+@media(max-width:480px){
+  #spBody{padding:28px 22px 8px;}
+  #spFoot{padding:14px 22px 24px;}
+  #spTitle{font-size:1.35rem;}
+}
+</style>
 
-    <!-- close X -->
-    <button onclick="closeSitePopup()" style="position:absolute;top:14px;right:14px;z-index:10;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);border:1.5px solid rgba(255,255,255,.3);color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s;" onmouseover="this.style.background='rgba(200,50,50,.75)'" onmouseout="this.style.background='rgba(0,0,0,.45)'">✕</button>
+<div id="spOverlay">
+  <div id="spBox">
+    <button id="spClose" onclick="closeSitePopup()">&#x2715;</button>
 
-    <!-- image / gradient header -->
     <?php if (!empty($sitePopup['image'])): ?>
-      <div style="position:relative;flex-shrink:0;">
-        <img src="uploads/<?= htmlspecialchars($sitePopup['image']) ?>" alt="" style="width:100%;height:240px;object-fit:cover;display:block;">
-        <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,12,24,.65) 0%,transparent 55%);pointer-events:none;"></div>
-      </div>
-    <?php else: ?>
-      <div style="height:110px;background:linear-gradient(135deg,#0d1b2a 0%,#1a3a5c 55%,#1565c0 100%);display:flex;align-items:center;justify-content:center;font-size:3rem;flex-shrink:0;">💬</div>
+      <img id="spImg" src="uploads/<?= htmlspecialchars($sitePopup['image']) ?>" alt="">
     <?php endif; ?>
 
-    <!-- body -->
-    <div style="padding:24px 28px 6px;overflow-y:auto;flex:1;">
-      <div style="font-family:'Kanit',sans-serif;font-size:1.4rem;font-weight:900;color:#0d1b2a;line-height:1.4;margin-bottom:14px;border-left:4px solid #c9a96e;padding-left:13px;">
-        <?= htmlspecialchars($sitePopup['title']) ?>
-      </div>
+    <div id="spBody">
+      <div id="spTitle"><?= htmlspecialchars($sitePopup['title']) ?></div>
       <?php if (!empty($sitePopup['content'])): ?>
-      <div style="font-size:.93rem;line-height:1.95;color:#3a3a4a;white-space:pre-line;word-break:break-word;">
-        <?= htmlspecialchars($sitePopup['content']) ?>
-      </div>
+        <div id="spContent"><?= htmlspecialchars($sitePopup['content']) ?></div>
       <?php endif; ?>
     </div>
 
-    <!-- footer -->
-    <div style="padding:16px 28px 22px;display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;flex-shrink:0;border-top:1px solid #e8e4de;background:#fdfcfb;margin-top:14px;">
+    <div id="spFoot">
       <?php if (!empty($sitePopup['btn_text']) && !empty($sitePopup['btn_url'])): ?>
-        <a href="<?= htmlspecialchars($sitePopup['btn_url']) ?>" style="display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:99px;background:#c9a96e;color:#1a1a2e;font-family:'Sarabun',sans-serif;font-size:.85rem;font-weight:700;text-decoration:none;transition:.2s;" onmouseover="this.style.background='#b8965a'" onmouseout="this.style.background='#c9a96e'">
-          <?= htmlspecialchars($sitePopup['btn_text']) ?> →
+        <a id="spCtaBtn" href="<?= htmlspecialchars($sitePopup['btn_url']) ?>">
+          <?= htmlspecialchars($sitePopup['btn_text']) ?>
         </a>
       <?php endif; ?>
-      <button onclick="closeSitePopup()" style="display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:99px;background:linear-gradient(135deg,#0d1b2a,#1565c0);color:#fff;border:none;font-family:'Sarabun',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:.2s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-        ✓ รับทราบแล้ว
-      </button>
+      <button id="spSkip" onclick="closeSitePopup()">ปิด</button>
     </div>
   </div>
 </div>
-<style>
-#sitePopupOverlay.sp-open{display:flex!important;}
-@keyframes sitePopIn{from{opacity:0;transform:scale(.86) translateY(28px)}to{opacity:1;transform:none}}
-</style>
+
 <script>
 (function(){
-  const KEY = 'site_popup_seen_<?= (int)$sitePopup['id'] ?>_' + new Date().toISOString().slice(0,10);
+  const KEY = 'sp_seen_<?= (int)$sitePopup['id'] ?>_' + new Date().toISOString().slice(0,10);
   if (!sessionStorage.getItem(KEY)) {
     setTimeout(function(){
-      document.getElementById('sitePopupOverlay').classList.add('sp-open');
+      document.getElementById('spOverlay').classList.add('sp-open');
       document.body.style.overflow = 'hidden';
-    }, 600);
+    }, 500);
   }
-  window.closeSitePopup = function() {
+  window.closeSitePopup = function(){
     sessionStorage.setItem(KEY, '1');
-    document.getElementById('sitePopupOverlay').classList.remove('sp-open');
+    document.getElementById('spOverlay').classList.remove('sp-open');
     document.body.style.overflow = '';
   };
-  document.getElementById('sitePopupOverlay').addEventListener('click', function(e){
+  document.getElementById('spOverlay').addEventListener('click', function(e){
     if (e.target === this) closeSitePopup();
   });
   document.addEventListener('keydown', function(e){

@@ -250,17 +250,26 @@ include 'admin_layout_top.php';
 </div>
 </div>
 
-<!-- ── PREVIEW POPUP (admin only) ── -->
-<div id="adminPopupOverlay" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(10,12,24,.78);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)this.style.display='none'">
-  <div id="adminPopupBox" style="width:min(520px,100%);background:#fff;border-radius:24px;box-shadow:0 32px 80px rgba(0,0,0,.3);overflow:hidden;animation:npIn .35s cubic-bezier(.34,1.56,.64,1) both;max-height:90vh;display:flex;flex-direction:column;">
-    <div id="apHeader" style="position:relative;flex-shrink:0;"></div>
-    <div style="padding:22px 26px;overflow-y:auto;flex:1;">
-      <div id="apTitle" style="font-family:'Kanit',sans-serif;font-size:1.35rem;font-weight:900;color:#0d1b2a;line-height:1.4;margin-bottom:12px;border-left:4px solid #c9a96e;padding-left:12px;"></div>
-      <div id="apContent" style="font-size:.92rem;line-height:1.9;color:#3a3a4a;white-space:pre-line;"></div>
+<!-- ── PREVIEW POPUP (admin) ── -->
+<style>
+#apOverlay{display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.45);align-items:center;justify-content:center;padding:20px;}
+#apOverlay.open{display:flex;}
+#apBox{width:min(480px,100%);background:#fff;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.18);position:relative;overflow:hidden;animation:apIn .3s ease both;max-height:92vh;display:flex;flex-direction:column;}
+@keyframes apIn{from{opacity:0;transform:translateY(-16px) scale(.97)}to{opacity:1;transform:none}}
+#apClose2{position:absolute;top:12px;right:14px;z-index:10;background:none;border:none;cursor:pointer;color:#9ca3af;font-size:1.3rem;line-height:1;padding:4px;transition:color .15s;}
+#apClose2:hover{color:#111;}
+</style>
+<div id="apOverlay" onclick="if(event.target===this)document.getElementById('apOverlay').classList.remove('open')">
+  <div id="apBox">
+    <button id="apClose2" onclick="document.getElementById('apOverlay').classList.remove('open')">&#x2715;</button>
+    <div id="apImgWrap"></div>
+    <div style="padding:36px 36px 10px;text-align:center;overflow-y:auto;flex:1;">
+      <div id="apTitle" style="font-family:'Kanit',sans-serif;font-size:1.75rem;font-weight:900;color:#111;line-height:1.25;margin-bottom:12px;"></div>
+      <div id="apContent" style="font-size:.93rem;color:#6b7280;line-height:1.75;white-space:pre-line;"></div>
     </div>
-    <div style="padding:14px 26px 18px;border-top:1px solid #e8e4de;display:flex;justify-content:flex-end;gap:10px;background:#fdfcfb;flex-shrink:0;">
-      <div id="apCta"></div>
-      <button onclick="document.getElementById('adminPopupOverlay').style.display='none'" style="padding:9px 22px;border-radius:99px;background:linear-gradient(135deg,#0d1b2a,#1565c0);color:#fff;border:none;font-family:'Sarabun',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;">✕ ปิด</button>
+    <div style="padding:20px 36px 28px;display:flex;flex-direction:column;align-items:center;gap:12px;">
+      <div id="apCta" style="width:100%;"></div>
+      <button onclick="document.getElementById('apOverlay').classList.remove('open')" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:.82rem;font-family:'Sarabun',sans-serif;text-decoration:underline;">ปิด</button>
     </div>
   </div>
 </div>
@@ -278,22 +287,16 @@ const popupData = <?= json_encode(array_map(fn($p) => [
 function previewPopup(id) {
   const p = popupData.find(x => x.id == id);
   if (!p) return;
-  const hdr = document.getElementById('apHeader');
-  if (p.image) {
-    hdr.innerHTML = `<img src="${p.image}" style="width:100%;height:220px;object-fit:cover;display:block;">
-      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,12,24,.7) 0%,transparent 50%);pointer-events:none;"></div>`;
-  } else {
-    hdr.innerHTML = `<div style="width:100%;height:120px;background:linear-gradient(135deg,#0d1b2a,#1565c0);display:flex;align-items:center;justify-content:center;font-size:3rem;">💬</div>`;
-  }
+  document.getElementById('apImgWrap').innerHTML = p.image
+    ? `<img src="${p.image}" style="width:100%;max-height:220px;object-fit:cover;display:block;">`
+    : '';
   document.getElementById('apTitle').textContent   = p.title;
   document.getElementById('apContent').textContent = p.content;
-  const cta = document.getElementById('apCta');
-  cta.innerHTML = p.btn_text && p.btn_url
-    ? `<a href="${p.btn_url}" target="_blank" style="padding:9px 20px;border-radius:99px;background:#c9a96e;color:#1a1a2e;font-weight:700;font-size:.85rem;text-decoration:none;">${p.btn_text} →</a>`
+  document.getElementById('apCta').innerHTML = (p.btn_text && p.btn_url)
+    ? `<a href="${p.btn_url}" target="_blank" style="display:block;width:100%;padding:14px;background:#1e3a8a;color:#fff;border-radius:4px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;text-align:center;text-decoration:none;">${p.btn_text}</a>`
     : '';
-  document.getElementById('adminPopupOverlay').style.display='flex';
+  document.getElementById('apOverlay').classList.add('open');
 }
 </script>
-<style>@keyframes npIn{from{opacity:0;transform:scale(.88) translateY(24px)}to{opacity:1;transform:none}}</style>
 
 <?php include 'admin_layout_bottom.php'; $conn->close(); ?>

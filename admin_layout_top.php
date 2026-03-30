@@ -323,7 +323,7 @@ body::before {
   <a href="daily_report.php" class="menu-item <?= $activeMenu==='report'?'active':'' ?>">
     <span class="icon">📈</span><span class="text">รายงานเช็คอิน</span>
   </a>
-  <a href="admin_report.php" class="menu-item <?= $activeMenu==='admin_report'?'active':'' ?>">
+  <a href="booking_report.php" class="menu-item <?= $activeMenu==='admin_report'?'active':'' ?>">
     <span class="icon">📋</span><span class="text">รายงานการจอง</span>
   </a>
   <a href="admin_charts.php" class="menu-item <?= $activeMenu==='charts'?'active':'' ?>">

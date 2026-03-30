@@ -6,7 +6,23 @@
 date_default_timezone_set('Asia/Bangkok');
 header('Content-Type: application/json; charset=utf-8');
 
-define('CALLBACK_SECRET', 'wrbri_n8n_secret_2026');
+define('CALLBACK_SECRET',    'wrbri_n8n_secret_2026');
+define('SLIP_MAX_AGE_SEC',   420);   // ยอมรับสลิปย้อนหลังได้ไม่เกิน 7 นาที (5 นาที + buffer 2 นาที)
+define('PAYEE_FIRST_NAME',   'สุรัชฎา');
+define('PAYEE_LAST_NAME',    'คุ้มชาติตา');
+
+/**
+ * ตรวจชื่อผู้รับเงินในสลิป
+ * รองรับ: "สุรัชฎา คุ้มชาติตา", "น.ส. สุรัชฎา คุ้มชาติตา", "น.ส สุรัชฎา คุ้มชาติตา", ฯลฯ
+ */
+function isPayeeNameValid(string $name): bool {
+    if ($name === '') return false;
+    // ตัด prefix คำนำหน้า (น.ส., นางสาว, นาย, นาง, ฯลฯ)
+    $norm = preg_replace('/^(น\.ส\.?\s*|นางสาว\s*|นาย\s*|นาง\s*|Mr\.?\s*|Ms\.?\s*|Mrs\.?\s*)/u', '', trim($name));
+    $norm = preg_replace('/\s+/u', ' ', $norm);
+    return mb_strpos($norm, PAYEE_FIRST_NAME) !== false
+        && mb_strpos($norm, PAYEE_LAST_NAME)  !== false;
+}
 
 $rawBody = file_get_contents('php://input');
 $data    = json_decode($rawBody, true);
@@ -183,15 +199,63 @@ if ($slipDt) $slipFields['extracted_transfer_datetime'] = $slipDt;
 $slipFields = array_filter($slipFields, fn($v) => $v !== null && $v !== '');
 if ($slipFields) updateSlipRecord($conn, $booking['id'], $slipFields);
 
-// ── ตรวจวันที่สลิปต้องไม่เก่ากว่าวันที่จองเกิน 1 วัน ──
+// ══════════════════════════════════════════════
+//  ตรวจที่ 1 — เวลาโอนต้องไม่เกิน 5 นาที (+ 2 นาที buffer)
+// ══════════════════════════════════════════════
 if ($verified && $slipDatetime) {
-    $slipTs    = strtotime($slipDatetime);
-    $bookingTs = strtotime($booking['created_at']);
+    $slipTs = strtotime($slipDatetime);
+    $nowTs  = time();
 
-    if ($slipTs !== false && $slipTs < ($bookingTs - 86400)) {
-        $slipDateFmt = date('d/m/Y H:i', $slipTs);
-        $bookDateFmt = date('d/m/Y H:i', $bookingTs);
-        $note = "\n[AUTO] วันที่สลิปไม่ตรง: สลิป {$slipDateFmt} แต่จอง {$bookDateFmt} [" . date('Y-m-d H:i') . "]";
+    if ($slipTs !== false) {
+        $diffSec = $nowTs - $slipTs;
+
+        // สลิปในอนาคต (clock skew) หรือเก่ากว่า SLIP_MAX_AGE_SEC
+        if ($diffSec < -120 || $diffSec > SLIP_MAX_AGE_SEC) {
+            $slipFmt = date('d/m/Y H:i:s', $slipTs);
+            $nowFmt  = date('d/m/Y H:i:s', $nowTs);
+            $reason  = $diffSec > 0
+                ? "สลิปเวลา {$slipFmt} โอนนานเกิน 5 นาทีแล้ว (ห่างจากปัจจุบัน " . round($diffSec/60, 1) . " นาที)"
+                : "เวลาในสลิป ({$slipFmt}) อยู่ในอนาคต";
+
+            $note = "\n[AUTO] ตรวจเวลาไม่ผ่าน: {$reason} [" . date('Y-m-d H:i') . "]";
+            $st = $conn->prepare("UPDATE boat_bookings SET payment_status='failed', note=CONCAT(COALESCE(note,''),?) WHERE booking_ref=?");
+            $st->bind_param("ss", $note, $booking_ref);
+            $st->execute(); $st->close();
+
+            updateSlipRecord($conn, $booking['id'], [
+                'verification_status' => 'rejected',
+                'verification_reason' => $reason,
+            ]);
+
+            echo json_encode(['ok'=>false,'action'=>'rejected','reject_reason'=>$reason]);
+            $conn->close(); exit;
+        }
+    }
+}
+
+// ══════════════════════════════════════════════
+//  ตรวจที่ 2 — ชื่อผู้รับต้องมี "สุรัชฎา" + "คุ้มชาติตา"
+// ══════════════════════════════════════════════
+if ($verified) {
+    if ($slipPayeeName === '') {
+        // AI อ่านชื่อผู้รับไม่ได้ → ส่ง manual_review แทนการผ่านอัตโนมัติ
+        $note = "\n[AUTO] AI อ่านชื่อผู้รับไม่ได้ รอ admin ตรวจสอบชื่อด้วยตนเอง [" . date('Y-m-d H:i') . "]";
+        $st = $conn->prepare("UPDATE boat_bookings SET payment_status='manual_review', note=CONCAT(COALESCE(note,''),?) WHERE booking_ref=?");
+        $st->bind_param("ss", $note, $booking_ref);
+        $st->execute(); $st->close();
+
+        updateSlipRecord($conn, $booking['id'], [
+            'verification_status' => 'manual_review',
+            'verification_reason' => 'AI อ่านชื่อผู้รับไม่ได้ ต้องตรวจสอบด้วยมือ',
+        ]);
+
+        echo json_encode(['ok'=>true,'action'=>'manual_review','reject_reason'=>'ระบบอ่านชื่อผู้รับไม่ได้ รอ admin ตรวจสอบ']);
+        $conn->close(); exit;
+
+    } elseif (!isPayeeNameValid($slipPayeeName)) {
+        // อ่านชื่อได้ แต่ไม่ตรงกับชื่อที่กำหนด
+        $reason = "ชื่อผู้รับ \"{$slipPayeeName}\" ไม่ตรง (ต้องเป็น " . PAYEE_FIRST_NAME . ' ' . PAYEE_LAST_NAME . ")";
+        $note   = "\n[AUTO] ชื่อผู้รับไม่ตรง: {$slipPayeeName} [" . date('Y-m-d H:i') . "]";
 
         $st = $conn->prepare("UPDATE boat_bookings SET payment_status='failed', note=CONCAT(COALESCE(note,''),?) WHERE booking_ref=?");
         $st->bind_param("ss", $note, $booking_ref);
@@ -199,14 +263,10 @@ if ($verified && $slipDatetime) {
 
         updateSlipRecord($conn, $booking['id'], [
             'verification_status' => 'rejected',
-            'verification_reason' => "วันที่สลิป ({$slipDateFmt}) เก่ากว่าวันที่จอง ({$bookDateFmt})",
+            'verification_reason' => $reason,
         ]);
 
-        echo json_encode([
-            'ok'            => false,
-            'action'        => 'rejected',
-            'reject_reason' => "สลิปวันที่ {$slipDateFmt} ไม่สามารถใช้ได้ กรุณาโอนเงินใหม่และแนบสลิปที่ถูกต้อง",
-        ]);
+        echo json_encode(['ok'=>false,'action'=>'rejected','reject_reason'=>$reason]);
         $conn->close(); exit;
     }
 }

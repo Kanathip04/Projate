@@ -183,6 +183,34 @@ if ($slipDt) $slipFields['extracted_transfer_datetime'] = $slipDt;
 $slipFields = array_filter($slipFields, fn($v) => $v !== null && $v !== '');
 if ($slipFields) updateSlipRecord($conn, $booking['id'], $slipFields);
 
+// ── ตรวจวันที่สลิปต้องไม่เก่ากว่าวันที่จองเกิน 1 วัน ──
+if ($verified && $slipDatetime) {
+    $slipTs    = strtotime($slipDatetime);
+    $bookingTs = strtotime($booking['created_at']);
+
+    if ($slipTs !== false && $slipTs < ($bookingTs - 86400)) {
+        $slipDateFmt = date('d/m/Y H:i', $slipTs);
+        $bookDateFmt = date('d/m/Y H:i', $bookingTs);
+        $note = "\n[AUTO] วันที่สลิปไม่ตรง: สลิป {$slipDateFmt} แต่จอง {$bookDateFmt} [" . date('Y-m-d H:i') . "]";
+
+        $st = $conn->prepare("UPDATE boat_bookings SET payment_status='failed', note=CONCAT(COALESCE(note,''),?) WHERE booking_ref=?");
+        $st->bind_param("ss", $note, $booking_ref);
+        $st->execute(); $st->close();
+
+        updateSlipRecord($conn, $booking['id'], [
+            'verification_status' => 'rejected',
+            'verification_reason' => "วันที่สลิป ({$slipDateFmt}) เก่ากว่าวันที่จอง ({$bookDateFmt})",
+        ]);
+
+        echo json_encode([
+            'ok'            => false,
+            'action'        => 'rejected',
+            'reject_reason' => "สลิปวันที่ {$slipDateFmt} ไม่สามารถใช้ได้ กรุณาโอนเงินใหม่และแนบสลิปที่ถูกต้อง",
+        ]);
+        $conn->close(); exit;
+    }
+}
+
 // ── ตัดสินผล ──
 if ($verified && $amountMatched) {
     // ── ชำระสำเร็จ ──

@@ -94,6 +94,28 @@ $totalWaiting = ($boatData['waiting'] ?? 0) + ($roomData['waiting'] ?? 0) + ($te
 $totalCancel  = ($boatData['cancelled'] ?? 0) + ($roomData['cancelled'] ?? 0) + ($tentData['cancelled'] ?? 0);
 $totalRevenue = (float)($boatData['revenue'] ?? 0);
 
+// ── Guest counts for current period ──
+$boatGuests = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM boat_bookings WHERE " . dateWhere('created_at',$dateFrom,$dateTo) . " AND archived=0")->fetch_assoc()['n'];
+$roomGuests = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM room_bookings WHERE " . dateWhere('created_at',$dateFrom,$dateTo) . " AND archived=0")->fetch_assoc()['n'];
+$tentGuests = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM tent_bookings WHERE " . dateWhere('created_at',$dateFrom,$dateTo) . " AND archived=0")->fetch_assoc()['n'];
+$stayGuests = $roomGuests + $tentGuests; // คนเข้าพักรวม
+
+// ── Revenue breakdown: วันนี้ / เดือนนี้ / ปีนี้ (เรือ) ──
+$revToday = (float)$conn->query("SELECT COALESCE(SUM(total_amount),0) s FROM boat_bookings WHERE DATE(created_at)='$today' AND payment_status='paid' AND archived=0")->fetch_assoc()['s'];
+$revMonth = (float)$conn->query("SELECT COALESCE(SUM(total_amount),0) s FROM boat_bookings WHERE DATE(created_at) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "' AND payment_status='paid' AND archived=0")->fetch_assoc()['s'];
+$revYear  = (float)$conn->query("SELECT COALESCE(SUM(total_amount),0) s FROM boat_bookings WHERE DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND payment_status='paid' AND archived=0")->fetch_assoc()['s'];
+
+// ── Guest counts: วันนี้ / เดือนนี้ / ปีนี้ ──
+$boatGuestToday = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM boat_bookings WHERE DATE(created_at)='$today' AND archived=0")->fetch_assoc()['n'];
+$boatGuestMonth = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM boat_bookings WHERE DATE(created_at) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "' AND archived=0")->fetch_assoc()['n'];
+$boatGuestYear  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM boat_bookings WHERE DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND archived=0")->fetch_assoc()['n'];
+$roomGuestToday = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM room_bookings WHERE DATE(created_at)='$today' AND archived=0")->fetch_assoc()['n'];
+$roomGuestMonth = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM room_bookings WHERE DATE(created_at) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "' AND archived=0")->fetch_assoc()['n'];
+$roomGuestYear  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM room_bookings WHERE DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND archived=0")->fetch_assoc()['n'];
+$tentGuestToday = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM tent_bookings WHERE DATE(created_at)='$today' AND archived=0")->fetch_assoc()['n'];
+$tentGuestMonth = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM tent_bookings WHERE DATE(created_at) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "' AND archived=0")->fetch_assoc()['n'];
+$tentGuestYear  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM tent_bookings WHERE DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND archived=0")->fetch_assoc()['n'];
+
 // ── Chart data: bookings per day/month ──
 if ($reportType === 'daily') {
     $chartLabels = ["'" . date('d/m', strtotime($dateFrom)) . "'"];
@@ -284,6 +306,46 @@ $qnavLinks = [
 .sec-hd{font-size:.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;
   letter-spacing:.12em;margin:20px 0 10px;display:flex;align-items:center;gap:8px;}
 .sec-hd::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── Stat table card ── */
+.stat-card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(26,26,46,.06);
+  overflow:hidden;margin-bottom:8px;}
+.stat-card-hd{padding:13px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;}
+.stat-card-title{font-size:.84rem;font-weight:800;color:var(--ink);}
+.stat-table{width:100%;border-collapse:collapse;}
+.stat-table th{background:#fafaf8;font-size:.67rem;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.08em;padding:9px 16px;
+  border-bottom:1px solid var(--border);text-align:left;}
+.stat-table th.num{text-align:right;}
+.stat-table td{padding:10px 16px;border-bottom:1px solid #f3f3f0;font-size:.84rem;color:var(--ink);}
+.stat-table td.num{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;}
+.stat-table tr:last-child td{border-bottom:none;}
+.stat-table tr:hover td{background:#fafaf8;}
+.stat-period-badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.68rem;
+  font-weight:700;background:#f0f0ee;color:var(--muted);}
+.stat-period-badge.today{background:#e8f5e9;color:#2e7d32;}
+.stat-period-badge.month{background:#e3f2fd;color:#1565c0;}
+.stat-period-badge.year{background:#fff3e0;color:#e65100;}
+
+/* ── Revenue highlight ── */
+.rev-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px;}
+.rev-card{background:#fff;border-radius:12px;padding:16px 18px;
+  box-shadow:0 2px 12px rgba(26,26,46,.06);border-top:3px solid;}
+.rev-card.today-card{border-top-color:#2e7d32;}
+.rev-card.month-card{border-top-color:#1565c0;}
+.rev-card.year-card{border-top-color:#e65100;}
+.rev-period{font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--muted);margin-bottom:6px;}
+.rev-amt{font-size:1.55rem;font-weight:900;color:var(--ink);line-height:1;}
+.rev-sub{font-size:.7rem;color:var(--muted);margin-top:4px;}
+.rev-detail{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);
+  display:flex;flex-direction:column;gap:4px;}
+.rev-row{display:flex;justify-content:space-between;font-size:.76rem;}
+.rev-row .rl{color:var(--muted);}
+.rev-row .rv{font-weight:700;color:var(--ink);}
+
+@media(max-width:700px){.rev-grid{grid-template-columns:1fr;}}
 
 /* ── KPI grid ── */
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:8px;}
@@ -502,6 +564,111 @@ $qnavLinks = [
     <div class="kpi-lbl">บริการยอดนิยม</div>
     <div class="kpi-val" style="font-size:1rem;margin-top:6px;"><?= $mostBooked ?></div>
     <div class="kpi-sub"><?= $maxSvc ?> รายการ</div>
+  </div>
+</div>
+
+<!-- ═══ สถิติจำนวนผู้ใช้งาน ═══ -->
+<div class="sec-hd">สถิติจำนวนผู้ใช้งาน (จำนวนคน)</div>
+
+<!-- Guest counts: วันนี้ / เดือนนี้ / ปีนี้ -->
+<div class="stat-card" style="margin-bottom:12px;">
+  <div class="stat-card-hd">
+    <span style="font-size:1.1rem;">👥</span>
+    <span class="stat-card-title">จำนวนผู้ใช้บริการ แยกตามบริการ</span>
+    <span style="font-size:.72rem;color:var(--muted);margin-left:auto;">นับจากจำนวนคนในการจอง (guests)</span>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="stat-table">
+      <thead>
+        <tr>
+          <th>บริการ</th>
+          <th class="num"><span class="stat-period-badge today">วันนี้</span></th>
+          <th class="num"><span class="stat-period-badge month">เดือนนี้</span></th>
+          <th class="num"><span class="stat-period-badge year">ปีนี้</span></th>
+          <th class="num">ช่วงที่เลือก (<?= $labelRange ?>)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="pay-badge svc-boat">🚣 เรือพาย</span></td>
+          <td class="num"><?= number_format($boatGuestToday) ?> คน</td>
+          <td class="num"><?= number_format($boatGuestMonth) ?> คน</td>
+          <td class="num"><?= number_format($boatGuestYear) ?> คน</td>
+          <td class="num"><?= number_format($boatGuests) ?> คน</td>
+        </tr>
+        <tr>
+          <td><span class="pay-badge svc-room">🏨 ห้องพัก</span></td>
+          <td class="num"><?= number_format($roomGuestToday) ?> คน</td>
+          <td class="num"><?= number_format($roomGuestMonth) ?> คน</td>
+          <td class="num"><?= number_format($roomGuestYear) ?> คน</td>
+          <td class="num"><?= number_format($roomGuests) ?> คน</td>
+        </tr>
+        <tr>
+          <td><span class="pay-badge svc-tent">⛺ เต็นท์</span></td>
+          <td class="num"><?= number_format($tentGuestToday) ?> คน</td>
+          <td class="num"><?= number_format($tentGuestMonth) ?> คน</td>
+          <td class="num"><?= number_format($tentGuestYear) ?> คน</td>
+          <td class="num"><?= number_format($tentGuests) ?> คน</td>
+        </tr>
+        <tr style="background:#fafaf8;font-weight:800;">
+          <td><strong>รวมทั้งหมด</strong></td>
+          <td class="num"><?= number_format($boatGuestToday+$roomGuestToday+$tentGuestToday) ?> คน</td>
+          <td class="num"><?= number_format($boatGuestMonth+$roomGuestMonth+$tentGuestMonth) ?> คน</td>
+          <td class="num"><?= number_format($boatGuestYear+$roomGuestYear+$tentGuestYear) ?> คน</td>
+          <td class="num"><?= number_format($boatGuests+$roomGuests+$tentGuests) ?> คน</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ รายได้จากเช่าเรือ ═══ -->
+<div class="sec-hd">รายได้จากเช่าเรือพาย</div>
+<div class="rev-grid">
+  <div class="rev-card today-card">
+    <div class="rev-period">วันนี้</div>
+    <div class="rev-amt">฿<?= number_format($revToday, 0) ?></div>
+    <div class="rev-sub"><?= date('d/m/Y', strtotime($today)) ?></div>
+    <div class="rev-detail">
+      <div class="rev-row">
+        <span class="rl">จำนวนลูกค้า (วันนี้)</span>
+        <span class="rv"><?= number_format($boatGuestToday) ?> คน</span>
+      </div>
+      <div class="rev-row">
+        <span class="rl">รายการจอง (วันนี้)</span>
+        <span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM boat_bookings WHERE DATE(created_at)='$today' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span>
+      </div>
+    </div>
+  </div>
+  <div class="rev-card month-card">
+    <div class="rev-period">เดือนนี้ (<?= date('m/Y') ?>)</div>
+    <div class="rev-amt">฿<?= number_format($revMonth, 0) ?></div>
+    <div class="rev-sub">ยอดชำระสำเร็จสะสม</div>
+    <div class="rev-detail">
+      <div class="rev-row">
+        <span class="rl">จำนวนลูกค้า</span>
+        <span class="rv"><?= number_format($boatGuestMonth) ?> คน</span>
+      </div>
+      <div class="rev-row">
+        <span class="rl">รายการจอง</span>
+        <span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM boat_bookings WHERE DATE(created_at) BETWEEN '".date('Y-m-01')."' AND '".date('Y-m-t')."' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span>
+      </div>
+    </div>
+  </div>
+  <div class="rev-card year-card">
+    <div class="rev-period">ปีนี้ (พ.ศ. <?= $thisYear+543 ?>)</div>
+    <div class="rev-amt">฿<?= number_format($revYear, 0) ?></div>
+    <div class="rev-sub">ยอดชำระสำเร็จสะสมทั้งปี</div>
+    <div class="rev-detail">
+      <div class="rev-row">
+        <span class="rl">จำนวนลูกค้า</span>
+        <span class="rv"><?= number_format($boatGuestYear) ?> คน</span>
+      </div>
+      <div class="rev-row">
+        <span class="rl">รายการจอง</span>
+        <span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM boat_bookings WHERE DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span>
+      </div>
+    </div>
   </div>
 </div>
 

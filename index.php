@@ -919,6 +919,7 @@ img{display:block;}
           <a href="booking_status.php" class="dd-item"><div class="dd-icon">🛎️</div> สถานะการจอง</a>
           <?php if ($isAdmin): ?>
             <hr class="dd-divider">
+            <a href="queue_display.php" class="dd-item"><div class="dd-icon">🚣</div> คิววันนี้</a>
             <a href="admin_dashboard.php" class="dd-item"><div class="dd-icon">📊</div> Admin Dashboard</a>
           <?php endif; ?>
           <hr class="dd-divider">
@@ -969,7 +970,10 @@ img{display:block;}
       <a href="profile.php"><div class="nav-drawer-icon">👤</div> โปรไฟล์ของฉัน</a>
       <a href="chat.php"><div class="nav-drawer-icon">💬</div> แชทโลก</a>
       <a href="booking_status.php"><div class="nav-drawer-icon">🛎️</div> สถานะการจอง</a>
-      <?php if ($isAdmin): ?><a href="admin_dashboard.php"><div class="nav-drawer-icon">📊</div> Admin Dashboard</a><?php endif; ?>
+      <?php if ($isAdmin): ?>
+        <a href="queue_display.php"><div class="nav-drawer-icon">🚣</div> คิววันนี้</a>
+        <a href="admin_dashboard.php"><div class="nav-drawer-icon">📊</div> Admin Dashboard</a>
+      <?php endif; ?>
       <a href="logout.php" style="color:#dc2626;"><div class="nav-drawer-icon" style="background:#fef2f2;">🚪</div> ออกจากระบบ</a>
     <?php else: ?>
       <a href="login.php" style="justify-content:center;background:var(--ink);color:#fff;border-radius:12px;padding:14px;">เข้าสู่ระบบ</a>

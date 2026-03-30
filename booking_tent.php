@@ -53,9 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'book'
     if ($full_name && $phone && $checkin && $checkout && $items_json) {
         $st = $conn->prepare("INSERT INTO equipment_bookings (full_name,phone,email,checkin_date,checkout_date,items_json,total_price,note) VALUES (?,?,?,?,?,?,?,?)");
         $st->bind_param("ssssssds", $full_name, $phone, $email, $checkin, $checkout, $items_json, $total_price, $note);
-        $st->execute(); $st->close();
-        $message = "ส่งคำขอเช่าอุปกรณ์เรียบร้อยแล้ว รอเจ้าหน้าที่ยืนยัน";
-        $message_type = 'success';
+        $st->execute();
+        $newId = $conn->insert_id;
+        $st->close();
+        header("Location: equipment_bill.php?id=" . $newId); exit;
     } else {
         $message = "กรุณากรอกข้อมูลให้ครบถ้วน";
         $message_type = 'error';

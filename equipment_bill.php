@@ -1,0 +1,396 @@
+<?php
+session_start();
+require_once 'auth_guard.php';
+date_default_timezone_set('Asia/Bangkok');
+
+$conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
+$conn->set_charset("utf8mb4");
+if ($conn->connect_error) die("DB Error");
+
+/* === ตรวจ/เพิ่มคอลัมน์ที่จำเป็น === */
+$conn->query("ALTER TABLE equipment_bookings ADD COLUMN IF NOT EXISTS payment_status ENUM('unpaid','waiting_verify','paid','failed') DEFAULT 'unpaid'");
+$conn->query("ALTER TABLE equipment_bookings ADD COLUMN IF NOT EXISTS payment_slip VARCHAR(500) DEFAULT NULL");
+
+$id = (int)($_GET['id'] ?? 0);
+if (!$id) { header("Location: booking_tent.php"); exit; }
+
+$st = $conn->prepare("SELECT * FROM equipment_bookings WHERE id=? LIMIT 1");
+$st->bind_param("i", $id); $st->execute();
+$bk = $st->get_result()->fetch_assoc(); $st->close();
+if (!$bk) { header("Location: booking_tent.php"); exit; }
+
+define('PROMPTPAY_ID', '0611360322');
+
+/* === อัปโหลดสลิป === */
+$uploadError = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['slip'])) {
+    $file = $_FILES['slip'];
+    $ext  = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, ['jpg','jpeg','png','webp'])) {
+        $uploadError = 'รองรับเฉพาะ jpg, png, webp เท่านั้น';
+    } elseif ($file['size'] > 5 * 1024 * 1024) {
+        $uploadError = 'ไฟล์ขนาดใหญ่เกินไป (สูงสุด 5MB)';
+    } else {
+        $dir = 'uploads/slips/';
+        if (!is_dir($dir)) mkdir($dir, 0755, true);
+        $fname = 'equip_slip_' . $id . '_' . time() . '.' . $ext;
+        if (move_uploaded_file($file['tmp_name'], $dir . $fname)) {
+            $slipPath = $dir . $fname;
+            $su = $conn->prepare("UPDATE equipment_bookings SET payment_slip=?, payment_status='waiting_verify' WHERE id=?");
+            $su->bind_param("si", $slipPath, $id); $su->execute(); $su->close();
+            header("Location: equipment_bill.php?id=$id&uploaded=1"); exit;
+        } else {
+            $uploadError = 'อัปโหลดไม่สำเร็จ กรุณาลองใหม่';
+        }
+    }
+    // reload booking
+    $st2 = $conn->prepare("SELECT * FROM equipment_bookings WHERE id=? LIMIT 1");
+    $st2->bind_param("i", $id); $st2->execute();
+    $bk = $st2->get_result()->fetch_assoc(); $st2->close();
+}
+
+$uploaded = isset($_GET['uploaded']);
+$items = json_decode($bk['items_json'] ?? '[]', true) ?: [];
+$total = (float)$bk['total_price'];
+$nights = 1;
+if (!empty($bk['checkin_date']) && !empty($bk['checkout_date'])) {
+    $d1 = new DateTime($bk['checkin_date']);
+    $d2 = new DateTime($bk['checkout_date']);
+    $nights = max(1, (int)$d1->diff($d2)->days);
+}
+
+/* === สร้าง PromptPay QR payload === */
+function promptpayPayload(string $target, float $amount): string {
+    $target = preg_replace('/\D/', '', $target);
+    if (strlen($target) === 10 && $target[0] === '0') $target = '0066' . substr($target, 1);
+    $isPhone  = strlen($target) === 13;
+    $subTag   = $isPhone ? '01' : '02';
+    $subLen   = str_pad(strlen($target), 2, '0', STR_PAD_LEFT);
+    $guid     = 'A000000677010111';
+    $guidTLV  = '00' . str_pad(strlen($guid), 2, '0', STR_PAD_LEFT) . $guid;
+    $phoneTLV = $subTag . $subLen . $target;
+    $merchant = $guidTLV . $phoneTLV;
+    $tag29    = '29' . str_pad(strlen($merchant), 2, '0', STR_PAD_LEFT) . $merchant;
+    $amtStr   = number_format($amount, 2, '.', '');
+    $amtTLV   = '54' . str_pad(strlen($amtStr), 2, '0', STR_PAD_LEFT) . $amtStr;
+    $body = '000201' . '010212' . $tag29 . '5303764' . $amtTLV . '5802TH' . '6304';
+    $crc  = 0xFFFF;
+    for ($i = 0; $i < strlen($body); $i++) {
+        $crc ^= ord($body[$i]) << 8;
+        for ($j = 0; $j < 8; $j++) {
+            $crc = ($crc & 0x8000) ? (($crc << 1) ^ 0x1021) : ($crc << 1);
+            $crc &= 0xFFFF;
+        }
+    }
+    return $body . strtoupper(str_pad(dechex($crc), 4, '0', STR_PAD_LEFT));
+}
+$qrPayload = promptpayPayload(PROMPTPAY_ID, $total * $nights);
+$payStatus = $bk['payment_status'] ?? 'unpaid';
+?>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>บิลเช่าอุปกรณ์ #<?= $id ?></title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&family=Kanit:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --ink:#0f172a;--bg:#f1f5f9;--card:#fff;--gold:#c9a96e;--gold-dark:#a8864d;
+  --border:#e2e8f0;--muted:#64748b;
+  --green:#16a34a;--green-bg:#f0fdf4;--green-bd:#bbf7d0;
+  --blue:#1d6fad;--blue-bg:#eff6ff;--blue-bd:#bfdbfe;
+  --yellow:#d97706;--yellow-bg:#fffbeb;--yellow-bd:#fde68a;
+  --red:#dc2626;--red-bg:#fef2f2;--red-bd:#fca5a5;
+  --shadow:0 4px 24px rgba(15,23,42,.08);
+}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+a{text-decoration:none;}
+.page{max-width:540px;margin:0 auto;padding:24px 16px 56px;}
+
+/* nav */
+.top-bar{display:flex;align-items:center;gap:10px;margin-bottom:24px;}
+.back-btn{padding:8px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px;
+  color:var(--muted);font-size:.82rem;font-weight:600;transition:.15s;}
+.back-btn:hover{border-color:var(--blue);color:var(--blue);}
+.page-title{font-family:'Kanit',sans-serif;font-size:1.05rem;font-weight:800;}
+
+/* status badge */
+.status-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;
+  border-radius:999px;font-size:.75rem;font-weight:700;}
+.s-unpaid{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-bd);}
+.s-waiting{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd);}
+.s-paid{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd);}
+.s-failed{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.3s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* card */
+.card{background:var(--card);border-radius:18px;box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;}
+
+/* bill header */
+.bill-head{background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 100%);padding:20px 22px;}
+.bill-ref{font-size:.72rem;color:rgba(255,255,255,.45);letter-spacing:.06em;margin-bottom:4px;}
+.bill-name{font-family:'Kanit',sans-serif;font-size:1.1rem;font-weight:900;color:#fff;margin-bottom:2px;}
+.bill-dates{font-size:.8rem;color:rgba(255,255,255,.65);}
+.bill-meta{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+.bill-chip{padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.12);
+  font-size:.72rem;font-weight:600;color:rgba(255,255,255,.85);}
+
+/* items table */
+.bill-items{padding:0;}
+.items-head{padding:10px 20px;background:#fafbfd;border-bottom:1px solid var(--border);
+  display:grid;grid-template-columns:1fr 60px 70px 80px;gap:8px;
+  font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+.item-row{padding:13px 20px;border-bottom:1px solid var(--border);
+  display:grid;grid-template-columns:1fr 60px 70px 80px;gap:8px;align-items:center;}
+.item-row:last-child{border-bottom:none;}
+.item-name{font-size:.92rem;font-weight:700;}
+.item-qty{font-size:.85rem;color:var(--muted);text-align:center;}
+.item-unit-price{font-size:.85rem;color:var(--muted);text-align:right;}
+.item-sub{font-size:.92rem;font-weight:700;color:var(--gold-dark);text-align:right;}
+
+/* totals */
+.bill-totals{padding:14px 20px;border-top:2px solid var(--border);}
+.total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.total-row .lbl{font-size:.85rem;color:var(--muted);}
+.total-row .val{font-size:.9rem;font-weight:600;}
+.total-final{display:flex;justify-content:space-between;align-items:center;
+  padding-top:10px;border-top:1px dashed var(--border);margin-top:4px;}
+.total-final .lbl{font-size:1rem;font-weight:700;}
+.total-final .val{font-family:'Kanit',sans-serif;font-size:1.5rem;font-weight:900;color:var(--gold-dark);}
+
+/* payment status banner */
+.pay-banner{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;
+  border-top:1px solid var(--border);background:#fafbfd;}
+
+/* QR */
+.qr-section{padding:22px;text-align:center;}
+.qr-canvas{width:190px!important;height:190px!important;border-radius:14px;
+  border:2px solid var(--border);margin:0 auto 12px;}
+.qr-label{font-size:.88rem;font-weight:700;margin-bottom:3px;}
+.qr-hint{font-size:.72rem;color:var(--muted);margin-bottom:10px;}
+.qr-amount{display:inline-block;padding:8px 24px;background:var(--blue-bg);
+  border-radius:999px;font-family:'Kanit',sans-serif;font-size:1.3rem;font-weight:900;color:var(--blue);}
+
+/* upload */
+.upload-wrap{padding:16px 20px 20px;border-top:1px solid var(--border);}
+.upload-label{font-size:.8rem;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;}
+.drop-zone{border:2px dashed var(--border);border-radius:14px;padding:22px 16px;
+  text-align:center;cursor:pointer;transition:.2s;background:#fafbfc;position:relative;}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--blue);background:var(--blue-bg);}
+.drop-zone input{display:none;}
+.dz-icon{font-size:1.8rem;margin-bottom:6px;}
+.dz-txt{font-size:.88rem;font-weight:700;margin-bottom:2px;}
+.dz-hint{font-size:.72rem;color:var(--muted);}
+#prevImg{max-width:100%;border-radius:10px;margin-top:12px;display:none;
+  border:1px solid var(--border);max-height:200px;object-fit:contain;}
+.err-box{background:var(--red-bg);border:1px solid var(--red-bd);border-radius:10px;
+  padding:10px 14px;color:var(--red);font-size:.82rem;font-weight:600;
+  margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.ok-box{background:var(--green-bg);border:1px solid var(--green-bd);border-radius:10px;
+  padding:10px 14px;color:var(--green);font-size:.82rem;font-weight:600;
+  margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.submit-btn{width:100%;margin-top:12px;padding:14px;border:none;border-radius:13px;
+  background:linear-gradient(135deg,#0a1628,#1d6fad);color:#fff;
+  font-family:'Kanit',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;transition:.2s;}
+.submit-btn:hover{filter:brightness(1.12);}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* waiting state */
+.wait-box{padding:28px 20px;text-align:center;}
+.wait-ico{font-size:2.5rem;margin-bottom:12px;animation:bob .8s infinite alternate;}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-5px)}}
+.wait-title{font-family:'Kanit',sans-serif;font-size:1.1rem;font-weight:800;margin-bottom:6px;}
+.wait-sub{font-size:.82rem;color:var(--muted);line-height:1.7;}
+.wait-bar{height:4px;background:var(--border);border-radius:4px;margin:14px 0;overflow:hidden;}
+.wait-inner{height:100%;background:linear-gradient(90deg,var(--blue),#7ec8f4);
+  border-radius:4px;animation:load 1.8s infinite;}
+@keyframes load{0%{width:0%;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%}}
+.refresh-btn{margin-top:10px;padding:9px 22px;background:var(--card);
+  border:1.5px solid var(--border);border-radius:10px;
+  font-family:'Sarabun',sans-serif;font-size:.82rem;font-weight:700;
+  color:var(--muted);cursor:pointer;transition:.15s;}
+.refresh-btn:hover{border-color:var(--blue);color:var(--blue);}
+
+/* paid */
+.paid-box{padding:28px 20px;text-align:center;}
+.paid-ico{font-size:3rem;margin-bottom:10px;}
+.paid-title{font-family:'Kanit',sans-serif;font-size:1.15rem;font-weight:900;margin-bottom:6px;}
+.paid-sub{font-size:.82rem;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="top-bar">
+    <a href="booking_tent.php" class="back-btn">← กลับ</a>
+    <span class="page-title">บิลเช่าอุปกรณ์</span>
+  </div>
+
+  <!-- BILL CARD -->
+  <div class="card">
+    <div class="bill-head">
+      <div class="bill-ref">หมายเลขคำขอ #<?= str_pad($id, 5, '0', STR_PAD_LEFT) ?></div>
+      <div class="bill-name"><?= htmlspecialchars($bk['full_name']) ?></div>
+      <div class="bill-dates">
+        📅 <?= date('d/m/Y', strtotime($bk['checkin_date'])) ?> → <?= date('d/m/Y', strtotime($bk['checkout_date'])) ?>
+        (<?= $nights ?> คืน)
+      </div>
+      <div class="bill-meta">
+        <span class="bill-chip">📞 <?= htmlspecialchars($bk['phone']) ?></span>
+        <?php if (!empty($bk['email'])): ?>
+        <span class="bill-chip">✉️ <?= htmlspecialchars($bk['email']) ?></span>
+        <?php endif; ?>
+        <?php if (!empty($bk['note'])): ?>
+        <span class="bill-chip">📝 <?= htmlspecialchars($bk['note']) ?></span>
+        <?php endif; ?>
+      </div>
+    </div>
+
+    <!-- ITEMS -->
+    <div class="bill-items">
+      <div class="items-head">
+        <div>รายการ</div>
+        <div style="text-align:center;">จำนวน</div>
+        <div style="text-align:right;">ราคา/<?= $nights > 1 ? $nights.' คืน' : 'คืน' ?></div>
+        <div style="text-align:right;">รวม</div>
+      </div>
+      <?php foreach ($items as $it): ?>
+        <?php $sub = (float)$it['price'] * (int)$it['qty'] * $nights; ?>
+      <div class="item-row">
+        <div class="item-name"><?= htmlspecialchars($it['name']) ?></div>
+        <div class="item-qty"><?= (int)$it['qty'] ?> <?= htmlspecialchars($it['unit']) ?></div>
+        <div class="item-unit-price">฿<?= number_format((float)$it['price'] * $nights) ?></div>
+        <div class="item-sub">฿<?= number_format($sub) ?></div>
+      </div>
+      <?php endforeach; ?>
+    </div>
+
+    <!-- TOTALS -->
+    <div class="bill-totals">
+      <?php if ($nights > 1): ?>
+      <div class="total-row">
+        <span class="lbl">ราคาต่อคืน</span>
+        <span class="val">฿<?= number_format($total) ?></span>
+      </div>
+      <div class="total-row">
+        <span class="lbl">จำนวน <?= $nights ?> คืน</span>
+        <span class="val">× <?= $nights ?></span>
+      </div>
+      <?php endif; ?>
+      <div class="total-final">
+        <span class="lbl">ยอดรวมทั้งหมด</span>
+        <span class="val">฿<?= number_format($total * $nights) ?></span>
+      </div>
+    </div>
+
+    <!-- PAYMENT STATUS -->
+    <div class="pay-banner">
+      <span style="font-size:.82rem;font-weight:600;color:var(--muted);">สถานะการชำระเงิน</span>
+      <?php
+        $sClass = ['unpaid'=>'s-unpaid','waiting_verify'=>'s-waiting','paid'=>'s-paid','failed'=>'s-failed'][$payStatus] ?? 's-unpaid';
+        $sLabel = ['unpaid'=>'ยังไม่ชำระ','waiting_verify'=>'รอตรวจสอบ','paid'=>'ชำระแล้ว','failed'=>'ไม่ผ่าน'][$payStatus] ?? 'ยังไม่ชำระ';
+      ?>
+      <span class="status-pill <?= $sClass ?>">
+        <?php if ($payStatus === 'waiting_verify'): ?><span class="dot"></span><?php endif; ?>
+        <?= $sLabel ?>
+      </span>
+    </div>
+  </div>
+
+  <!-- PAYMENT SECTION -->
+  <?php if ($payStatus === 'paid'): ?>
+  <div class="card">
+    <div class="paid-box">
+      <div class="paid-ico">✅</div>
+      <div class="paid-title">ชำระเงินเรียบร้อยแล้ว!</div>
+      <div class="paid-sub">เจ้าหน้าที่ยืนยันการชำระของท่านแล้ว กรุณาแจ้งเจ้าหน้าที่เมื่อถึงวันเช่า</div>
+    </div>
+  </div>
+
+  <?php elseif ($payStatus === 'waiting_verify'): ?>
+  <div class="card">
+    <div class="wait-box">
+      <div class="wait-ico">📤</div>
+      <div class="wait-title">ได้รับสลิปแล้ว รอตรวจสอบ</div>
+      <div class="wait-sub">เจ้าหน้าที่จะตรวจสอบและยืนยันการชำระเงินของท่าน<br>กรุณารอการแจ้งเตือน</div>
+      <div class="wait-bar"><div class="wait-inner"></div></div>
+      <button class="refresh-btn" onclick="location.reload()">🔄 รีเฟรชสถานะ</button>
+    </div>
+  </div>
+
+  <?php else: ?>
+  <!-- QR + UPLOAD -->
+  <div class="card">
+    <div class="qr-section">
+      <canvas id="qrCanvas" class="qr-canvas"></canvas>
+      <div class="qr-label">พร้อมเพย์: <?= PROMPTPAY_ID ?></div>
+      <div class="qr-hint">สแกนด้วยแอปธนาคาร หรือ Mobile Banking</div>
+      <div class="qr-amount">฿<?= number_format($total * $nights, 2) ?></div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+    <script>QRCode.toCanvas(document.getElementById('qrCanvas'),'<?= addslashes($qrPayload) ?>',{width:190,margin:1},function(){});</script>
+
+    <div class="upload-wrap">
+      <div class="upload-label">แนบสลิปการโอนเงิน</div>
+
+      <?php if ($uploadError): ?>
+        <div class="err-box">⚠️ <?= htmlspecialchars($uploadError) ?></div>
+      <?php endif; ?>
+      <?php if ($uploaded): ?>
+        <div class="ok-box">✅ อัปโหลดสลิปสำเร็จแล้ว กรุณารอการยืนยัน</div>
+      <?php endif; ?>
+
+      <form method="POST" enctype="multipart/form-data" id="slipForm">
+        <div class="drop-zone" id="dz" onclick="document.getElementById('slipInp').click()">
+          <input type="file" id="slipInp" name="slip" accept="image/*" required>
+          <div class="dz-icon">📷</div>
+          <div class="dz-txt">แตะเพื่อเลือกรูปสลิป</div>
+          <div class="dz-hint">JPG, PNG, WEBP · สูงสุด 5MB</div>
+          <img id="prevImg" src="" alt="">
+        </div>
+        <button type="submit" class="submit-btn" id="upBtn">
+          <span>📤</span><span>ส่งสลิปยืนยันการชำระ</span>
+        </button>
+      </form>
+    </div>
+  </div>
+  <?php endif; ?>
+
+</div>
+
+<script>
+const inp = document.getElementById('slipInp');
+const prev = document.getElementById('prevImg');
+const dz = document.getElementById('dz');
+if (inp) {
+  inp.addEventListener('change', function() {
+    if (this.files[0]) {
+      const r = new FileReader();
+      r.onload = e => { prev.src = e.target.result; prev.style.display = 'block'; };
+      r.readAsDataURL(this.files[0]);
+    }
+  });
+}
+if (dz) {
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag');
+    inp.files = e.dataTransfer.files;
+    inp.dispatchEvent(new Event('change'));
+  });
+  document.getElementById('slipForm').addEventListener('submit', () => {
+    const b = document.getElementById('upBtn');
+    b.innerHTML = '<span>⏳</span><span>กำลังส่ง...</span>';
+    b.disabled = true;
+  });
+}
+</script>
+<?php $conn->close(); ?>
+</body>
+</html>

@@ -72,6 +72,19 @@ if ($resAp) {
 
 /* === ดึงรายการเต็นท์ === */
 $result = $conn->query("SELECT * FROM tents WHERE status='show' ORDER BY id DESC");
+
+/* === ดึงอุปกรณ์ให้เช่า === */
+$conn->query("CREATE TABLE IF NOT EXISTS `tent_equipment` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(200) NOT NULL,
+    `price` DECIMAL(10,2) DEFAULT 0,
+    `unit` VARCHAR(50) DEFAULT 'ชิ้น',
+    `note` TEXT,
+    `sort_order` INT DEFAULT 0,
+    `is_available` TINYINT(1) DEFAULT 1,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$equipResult = $conn->query("SELECT * FROM tent_equipment WHERE is_available=1 ORDER BY sort_order, id");
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -123,7 +136,18 @@ a{text-decoration:none;}
 .tent-card:hover{transform:translateY(-6px);box-shadow:0 20px 48px rgba(26,26,46,.14);}
 .tent-image-wrap{position:relative;}
 .tent-image{width:100%;height:240px;object-fit:cover;display:block;background:#ddd;}
-.tent-price-tag{position:absolute;top:16px;right:16px;background:rgba(26,26,46,.88);color:var(--gold);padding:10px 14px;border-radius:999px;font-size:14px;font-weight:700;backdrop-filter:blur(8px);border:1px solid rgba(201,169,110,.3);}
+.equip-section{background:var(--card);border-radius:20px;border:1px solid var(--border);box-shadow:var(--card-shadow);overflow:hidden;margin-top:36px;}
+.equip-head{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.equip-head h3{font-size:20px;font-weight:800;color:var(--ink);margin:0;}
+.equip-head p{font-size:14px;color:var(--muted);margin:4px 0 0;}
+.equip-table{width:100%;border-collapse:collapse;}
+.equip-table thead th{padding:11px 20px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);text-align:left;font-weight:700;background:#fdfcfa;}
+.equip-table tbody td{padding:14px 20px;font-size:15px;color:var(--ink);border-bottom:1px solid var(--border);}
+.equip-table tbody tr:last-child td{border-bottom:none;}
+.equip-table tbody tr:hover{background:#fafaf8;}
+.equip-price{font-weight:800;color:var(--gold-dark);}
+.equip-note{font-size:13px;color:var(--muted);}
+.equip-empty{padding:36px;text-align:center;color:var(--muted);}
 .tent-stock-badge{position:absolute;top:16px;left:16px;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;font-size:13px;font-weight:700;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.25);}
 .tent-stock-badge.available{background:rgba(21,128,61,.88);color:#fff;}
 .tent-stock-badge.full{background:rgba(217,45,32,.88);color:#fff;}
@@ -139,9 +163,7 @@ a{text-decoration:none;}
 .tent-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
 .meta-item{background:var(--bg);border:1px solid var(--border);padding:12px 14px;border-radius:14px;font-size:14px;color:var(--muted);}
 .meta-item strong{color:var(--ink);}
-.tent-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
-.price{font-size:26px;font-weight:800;color:var(--gold-dark);}
-.price span{font-size:14px;color:var(--muted);font-weight:500;}
+.tent-footer{display:flex;justify-content:flex-end;align-items:center;gap:12px;flex-wrap:wrap;}
 .book-btn{display:inline-flex;align-items:center;justify-content:center;min-width:150px;padding:13px 18px;border-radius:14px;background:var(--ink);color:#fff;font-weight:700;font-size:15px;transition:.2s ease;font-family:'Sarabun',sans-serif;}
 .book-btn:hover{background:var(--gold);color:var(--ink);}
 .book-btn.disabled{background:#9ca3af;cursor:not-allowed;pointer-events:none;}
@@ -198,7 +220,6 @@ a{text-decoration:none;}
                              alt="<?= htmlspecialchars($tent['tent_name']) ?>"
                              class="tent-image"
                              onerror="this.src='uploads/no-image.png'">
-                        <div class="tent-price-tag">฿<?= number_format($price) ?> / คืน</div>
                         <div class="tent-stock-badge <?= $isFull ? 'full' : 'available' ?>">
                             <?= $isFull ? 'เต็มแล้ว' : 'ว่าง ' . $avail . '/' . $total ?>
                         </div>
@@ -225,7 +246,6 @@ a{text-decoration:none;}
                         </div>
 
                         <div class="tent-footer">
-                            <div class="price">฿<?= number_format($price) ?><span> / คืน</span></div>
                             <?php if ($isFull): ?>
                                 <span class="book-btn disabled">เต็มแล้ว</span>
                             <?php else: ?>
@@ -242,6 +262,42 @@ a{text-decoration:none;}
             <p>กรุณาติดต่อเจ้าหน้าที่หรือรอเพิ่มข้อมูลเต็นท์</p>
         </div>
     <?php endif; ?>
+
+    <!-- อุปกรณ์ให้เช่า -->
+    <div class="equip-section">
+        <div class="equip-head">
+            <div>
+                <h3>🏕️ อุปกรณ์ให้เช่า</h3>
+                <p>รายการอุปกรณ์ที่สามารถเช่าเพิ่มเติมได้ กรุณาแจ้งเจ้าหน้าที่เมื่อต้องการเช่า</p>
+            </div>
+        </div>
+        <table class="equip-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>รายการ</th>
+                    <th>ราคา</th>
+                    <th>หน่วย</th>
+                    <th>หมายเหตุ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if ($equipResult && $equipResult->num_rows > 0): ?>
+                    <?php $i = 1; while ($eq = $equipResult->fetch_assoc()): ?>
+                    <tr>
+                        <td style="color:#9ca3af;font-size:13px;"><?= $i++ ?></td>
+                        <td><strong><?= htmlspecialchars($eq['name']) ?></strong></td>
+                        <td class="equip-price">฿<?= number_format((float)$eq['price']) ?></td>
+                        <td style="color:var(--muted);font-size:14px;"><?= htmlspecialchars($eq['unit']) ?></td>
+                        <td class="equip-note"><?= htmlspecialchars($eq['note'] ?: '—') ?></td>
+                    </tr>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <tr><td colspan="5" class="equip-empty">ยังไม่มีรายการอุปกรณ์</td></tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <?php $conn->close(); ?>

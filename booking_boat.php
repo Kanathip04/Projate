@@ -376,6 +376,81 @@ textarea{min-height:80px;resize:vertical;}
   margin-bottom:14px;display:none;
 }
 
+/* ── 2-COLUMN LAYOUT ── */
+.booking-layout{
+  display:grid;
+  grid-template-columns:300px 1fr;
+  gap:20px;
+  align-items:start;
+}
+/* Queue info sidebar */
+.q-sidebar{
+  background:var(--card);border-radius:var(--radius);
+  box-shadow:0 4px 20px rgba(13,27,42,.09);
+  overflow:hidden;border:1px solid var(--border);
+  position:sticky;top:20px;
+}
+.q-sidebar-img{
+  width:100%;height:180px;object-fit:cover;display:block;
+}
+.q-sidebar-img-ph{
+  width:100%;height:180px;
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 55%,var(--blue2) 100%);
+  display:flex;align-items:center;justify-content:center;font-size:3.5rem;
+}
+.q-sidebar-body{padding:18px;}
+.q-sidebar-name{font-family:'Kanit',sans-serif;font-size:1.1rem;font-weight:800;color:var(--ink);margin-bottom:10px;}
+.q-info-row{display:flex;align-items:center;gap:8px;font-size:.82rem;margin-bottom:7px;color:var(--muted);}
+.q-info-row .ico{width:20px;text-align:center;font-size:.9rem;}
+.q-info-row .val{font-weight:600;color:var(--ink);}
+.q-price-badge{
+  display:inline-flex;align-items:center;gap:6px;margin-top:10px;
+  background:linear-gradient(135deg,var(--navy),var(--blue2));
+  color:#fff;border-radius:10px;padding:10px 14px;
+  font-family:'Kanit',sans-serif;font-size:1.1rem;font-weight:800;
+  width:100%;justify-content:center;
+}
+.q-type-chip{
+  display:inline-flex;align-items:center;gap:6px;margin-top:8px;
+  background:var(--blue-lt);color:var(--blue);
+  border-radius:99px;padding:5px 12px;font-size:.78rem;font-weight:700;
+  border:1px solid rgba(21,101,192,.2);
+}
+
+/* Queue mini selector (top) */
+.queue-selector{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:10px;margin-bottom:20px;
+}
+.queue-opt{
+  border:2px solid var(--border);border-radius:14px;
+  background:var(--card);cursor:pointer;overflow:hidden;
+  transition:all .2s;position:relative;
+  box-shadow:0 2px 8px rgba(13,27,42,.05);
+}
+.queue-opt:hover{border-color:var(--blue2);transform:translateY(-2px);box-shadow:0 6px 18px rgba(21,101,192,.12);}
+.queue-opt.active{border-color:var(--blue);box-shadow:0 0 0 3px rgba(21,101,192,.12);}
+.queue-opt.active::after{
+  content:'✓';position:absolute;top:8px;right:8px;
+  background:var(--blue);color:#fff;font-size:.68rem;font-weight:800;
+  width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+}
+.qo-img{width:100%;height:90px;object-fit:cover;display:block;}
+.qo-img-ph{width:100%;height:90px;background:linear-gradient(135deg,var(--navy),var(--blue2));display:flex;align-items:center;justify-content:center;font-size:1.8rem;}
+.qo-body{padding:10px 12px;}
+.qo-name{font-size:.82rem;font-weight:800;color:var(--ink);}
+.qo-date{font-size:.72rem;color:var(--blue);font-weight:600;margin-top:2px;}
+.qo-price{font-size:.72rem;color:var(--muted);margin-top:2px;}
+.qo-desc{font-size:.68rem;color:var(--muted);margin-top:4px;line-height:1.4;}
+
+/* ── FORM CARD (no sidebar mode) ── */
+.form-card{
+  background:var(--card);border-radius:var(--radius);
+  box-shadow:0 4px 20px rgba(13,27,42,.09);overflow:hidden;
+  border:1px solid var(--border);
+}
+
 /* Empty */
 .empty-box{
   background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
@@ -457,6 +532,8 @@ textarea{min-height:80px;resize:vertical;}
   .queue-no{font-size:64px;}
   .payment-grid{grid-template-columns:1fr;}
   .page-wrap{margin-top:-40px;}
+  .booking-layout{grid-template-columns:1fr;}
+  .q-sidebar{position:static;}
 }
 </style>
 </head>
@@ -477,6 +554,12 @@ textarea{min-height:80px;resize:vertical;}
 
 <div class="page-wrap">
 
+<?php
+$q0       = $queueList[0] ?? null;
+$q0types  = $q0 ? array_values(array_filter(array_map('trim', explode(',', $q0['boat_types'] ?? 'เรือคายัค')))) : ['เรือคายัค'];
+$typeIcons = ['เรือพาย'=>'🚣','เรือคายัค'=>'🛶','เรือบด'=>'⛵','เรือแคนู'=>'🛻','เรือยาง'=>'🔵'];
+?>
+
 <?php if (empty($queueList)): ?>
   <div class="empty-box">
     <div style="font-size:3rem;margin-bottom:12px;">🚣</div>
@@ -485,19 +568,21 @@ textarea{min-height:80px;resize:vertical;}
   </div>
 <?php else: ?>
 
-  <div class="qs-label"><?= count($queueList) > 1 ? 'เลือกรอบที่ต้องการ' : 'รอบพายเรือ' ?></div>
+  <?php if (count($queueList) > 1): ?>
+  <div class="qs-label" style="margin-bottom:10px;">เลือกรอบที่ต้องการ</div>
   <div class="queue-selector" id="queueSelector">
-    <?php foreach ($queueList as $i => $q): ?>
+    <?php foreach ($queueList as $i => $q):
+      $img = !empty($q['image_path']) ? $q['image_path'] : null;
+    ?>
     <div class="queue-opt <?= $i===0?'active':'' ?>"
          data-id="<?= (int)$q['id'] ?>"
          data-name="<?= htmlspecialchars($q['queue_name']) ?>"
          data-date="<?= htmlspecialchars($q['queue_date']) ?>"
          data-price="<?= (float)$q['price_per_boat'] ?>"
-         data-types="<?= htmlspecialchars($q['boat_types'] ?? 'เรือพาย,เรือคายัค,เรือบด') ?>"
+         data-types="<?= htmlspecialchars($q['boat_types'] ?? 'เรือคายัค') ?>"
          data-img="<?= htmlspecialchars($q['image_path'] ?? '') ?>">
-      <?php $img = !empty($q['image_path']) ? $q['image_path'] : null; ?>
       <?php if ($img): ?>
-        <img class="qo-img" src="<?= htmlspecialchars($img) ?>" onerror="this.parentElement.querySelector('.qo-img-ph').style.display='flex';this.style.display='none';" alt="">
+        <img class="qo-img" src="<?= htmlspecialchars($img) ?>" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
         <div class="qo-img-ph" style="display:none;">🚣</div>
       <?php else: ?>
         <div class="qo-img-ph">🚣</div>
@@ -505,91 +590,148 @@ textarea{min-height:80px;resize:vertical;}
       <div class="qo-body">
         <div class="qo-name"><?= htmlspecialchars($q['queue_name']) ?></div>
         <div class="qo-date">📅 <?= date('d/m/Y', strtotime($q['queue_date'])) ?></div>
-        <div class="qo-price"><?= (float)$q['price_per_boat'] > 0 ? '฿'.number_format((float)$q['price_per_boat']).' / ลำ' : '✓ ฟรี' ?></div>
-        <?php if (!empty($q['description'])): ?>
-        <div class="qo-desc"><?= htmlspecialchars(mb_substr($q['description'],0,60)) ?><?= mb_strlen($q['description'])>60?'…':'' ?></div>
-        <?php endif; ?>
+        <div class="qo-price"><?= (float)$q['price_per_boat'] > 0 ? '฿'.number_format((float)$q['price_per_boat']).' / ลำ' : 'ฟรี' ?></div>
       </div>
     </div>
     <?php endforeach; ?>
   </div>
+  <?php endif; ?>
 
-  <div class="form-card" id="formCard">
-    <?php $q0 = $queueList[0]; $q0img = $q0['image_path'] ?? ''; ?>
-    <div class="form-header" id="formHeader" <?= $q0img ? 'style="background-image:url('.htmlspecialchars($q0img).');background-size:cover;background-position:center;"' : '' ?>>
+  <!-- ── 2-COLUMN LAYOUT ── -->
+  <div class="booking-layout" id="bookingLayout">
+
+    <!-- LEFT: Queue Info Sidebar -->
+    <div class="q-sidebar" id="qSidebar">
+      <?php $q0img = $q0['image_path'] ?? ''; ?>
       <?php if ($q0img): ?>
-      <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,22,40,.88) 0%,rgba(26,58,92,.78) 100%);border-radius:0;"></div>
+        <img class="q-sidebar-img" id="sideImg" src="<?= htmlspecialchars($q0img) ?>" alt="" onerror="this.style.display='none';document.getElementById('sideImgPh').style.display='flex';">
+        <div class="q-sidebar-img-ph" id="sideImgPh" style="display:none;">🚣</div>
+      <?php else: ?>
+        <img class="q-sidebar-img" id="sideImg" src="" alt="" style="display:none;">
+        <div class="q-sidebar-img-ph" id="sideImgPh">🚣</div>
       <?php endif; ?>
-      <div style="position:relative;z-index:1;">
-        <h2>🚣 กรอกข้อมูลการจอง</h2>
-        <p id="formSubtitle">
-          <?= htmlspecialchars($q0['queue_name']) ?> &nbsp;·&nbsp;
-          <?= date('d/m/Y', strtotime($q0['queue_date'])) ?>
-          <?= (float)$q0['price_per_boat'] > 0 ? '&nbsp;·&nbsp; ฿'.number_format((float)$q0['price_per_boat']).' / ลำ' : '&nbsp;·&nbsp; ฟรี' ?>
-        </p>
+      <div class="q-sidebar-body">
+        <div class="q-sidebar-name" id="sideName"><?= htmlspecialchars($q0['queue_name'] ?? '') ?></div>
+        <div class="q-info-row">
+          <span class="ico">📅</span>
+          <span class="val" id="sideDate"><?= date('d/m/Y', strtotime($q0['queue_date'] ?? 'today')) ?></span>
+        </div>
+        <div class="q-info-row">
+          <span class="ico">🛶</span>
+          <span class="val" id="sideType"><?= htmlspecialchars($q0types[0] ?? 'เรือคายัค') ?></span>
+        </div>
+        <?php if (!empty($q0['description'])): ?>
+        <div class="q-info-row" style="align-items:flex-start;">
+          <span class="ico">📝</span>
+          <span style="font-size:.78rem;color:var(--muted);line-height:1.5;"><?= htmlspecialchars($q0['description']) ?></span>
+        </div>
+        <?php endif; ?>
+        <div class="q-price-badge" id="sidePriceBadge">
+          <?php if ((float)($q0['price_per_boat'] ?? 0) > 0): ?>
+            💰 ฿<?= number_format((float)$q0['price_per_boat']) ?> <span style="font-size:.75rem;font-weight:400;opacity:.8;">/ ลำ</span>
+          <?php else: ?>
+            ✓ ฟรี
+          <?php endif; ?>
+        </div>
       </div>
     </div>
-    <div class="form-body">
 
-      <?php if ($isLoggedIn && $user_name): ?>
-      <div class="profile-banner">
-        <span>✓</span> ดึงข้อมูลจากโปรไฟล์อัตโนมัติ &nbsp;·&nbsp; แก้ไขได้ก่อนยืนยัน
+    <!-- RIGHT: Booking Form -->
+    <div class="form-card">
+      <div class="form-header">
+        <div class="fh-inner">
+          <h2>📋 กรอกข้อมูลการจอง</h2>
+          <p id="formSubtitle"><?= htmlspecialchars($q0['queue_name'] ?? '') ?> · <?= date('d/m/Y', strtotime($q0['queue_date'] ?? 'today')) ?></p>
+        </div>
       </div>
-      <?php endif; ?>
+      <div class="form-body">
 
-      <form id="bookingForm">
-        <input type="hidden" id="f_queue_id" value="<?= (int)$queueList[0]['id'] ?>">
-        <input type="hidden" id="f_queue_name" value="<?= htmlspecialchars($queueList[0]['queue_name']) ?>">
-        <input type="hidden" id="f_boat_date" value="<?= htmlspecialchars($queueList[0]['queue_date']) ?>">
+        <?php if ($isLoggedIn && $user_name): ?>
+        <div class="profile-banner">✓ ดึงข้อมูลจากโปรไฟล์อัตโนมัติ · แก้ไขได้ก่อนยืนยัน</div>
+        <?php endif; ?>
 
-        <div class="sec-label">เลือกประเภทเรือ</div>
-        <div class="boat-type-grid" id="boatTypeGrid">
-          <?php
-          $typeIcons = ['เรือพาย'=>'🚣','เรือคายัค'=>'🛶','เรือบด'=>'⛵','เรือแคนู'=>'🛻','เรือยาง'=>'🔵'];
-          $firstTypes = array_filter(array_map('trim', explode(',', $queueList[0]['boat_types'] ?? 'เรือพาย,เรือคายัค,เรือบด')));
-          foreach (array_values($firstTypes) as $i => $bt):
-            $ico = $typeIcons[$bt] ?? '🚤';
-          ?>
-          <label class="bt-card <?= $i===0?'active':'' ?>">
-            <input type="radio" name="boat_type" value="<?= htmlspecialchars($bt) ?>" <?= $i===0?'checked':'' ?> required>
-            <span class="bt-ico"><?= $ico ?></span>
-            <span class="bt-lbl"><?= htmlspecialchars($bt) ?></span>
-          </label>
-          <?php endforeach; ?>
-        </div>
+        <form id="bookingForm">
+          <input type="hidden" id="f_queue_id"   value="<?= (int)($queueList[0]['id'] ?? 0) ?>">
+          <input type="hidden" id="f_queue_name" value="<?= htmlspecialchars($queueList[0]['queue_name'] ?? '') ?>">
+          <input type="hidden" id="f_boat_date"  value="<?= htmlspecialchars($queueList[0]['queue_date'] ?? '') ?>">
+          <input type="hidden" id="f_boat_type_single" name="boat_type_single" value="<?= htmlspecialchars($q0types[0] ?? 'เรือคายัค') ?>">
 
-        <div class="sec-label">ข้อมูลผู้จอง</div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label>ชื่อผู้จอง <?php if ($user_name): ?><span class="badge-pre">จากโปรไฟล์</span><?php endif; ?></label>
-            <input type="text" id="f_name" placeholder="ชื่อ-นามสกุล" value="<?= htmlspecialchars($user_name) ?>" required>
+          <!-- ประเภทเรือ: ถ้ามีแค่ 1 แสดงเป็น chip, ถ้ามีหลายแสดง selector -->
+          <?php if (count($q0types) === 1): ?>
+          <!-- auto-select เดียว -->
+          <input type="hidden" name="boat_type" id="f_boat_type_hidden" value="<?= htmlspecialchars($q0types[0]) ?>">
+          <div style="margin-bottom:20px;">
+            <div class="sec-label">ประเภทเรือ</div>
+            <div class="q-type-chip" id="boatTypeChip">
+              <?= ($typeIcons[$q0types[0]] ?? '🚤') ?> <?= htmlspecialchars($q0types[0]) ?>
+              <span style="margin-left:4px;font-size:.7rem;opacity:.7;">(เลือกอัตโนมัติ)</span>
+            </div>
           </div>
-          <div class="form-group">
-            <label>เบอร์โทร <?php if ($user_phone): ?><span class="badge-pre">จากโปรไฟล์</span><?php endif; ?></label>
-            <input type="text" id="f_phone" placeholder="0XX-XXX-XXXX" value="<?= htmlspecialchars($user_phone) ?>" required>
+          <?php else: ?>
+          <div style="margin-bottom:20px;">
+            <div class="sec-label">เลือกประเภทเรือ</div>
+            <div class="boat-type-grid" id="boatTypeGrid">
+              <?php foreach ($q0types as $i => $bt):
+                $ico = $typeIcons[$bt] ?? '🚤';
+              ?>
+              <label class="bt-card <?= $i===0?'active':'' ?>">
+                <input type="radio" name="boat_type" value="<?= htmlspecialchars($bt) ?>" <?= $i===0?'checked':'' ?> required>
+                <span class="bt-ico"><?= $ico ?></span>
+                <span class="bt-lbl"><?= htmlspecialchars($bt) ?></span>
+              </label>
+              <?php endforeach; ?>
+            </div>
           </div>
-          <div class="form-group">
-            <label>อีเมล <?php if ($user_email): ?><span class="badge-pre">จากโปรไฟล์</span><?php endif; ?></label>
-            <input type="email" id="f_email" placeholder="example@email.com" value="<?= htmlspecialchars($user_email) ?>">
-          </div>
-          <div class="form-group">
-            <label>จำนวนผู้เข้าร่วม (คน)</label>
-            <input type="number" id="f_guests" min="1" value="1" required>
-          </div>
-          <div class="form-group full">
-            <label>หมายเหตุ (ถ้ามี)</label>
-            <textarea id="f_note" placeholder="ข้อมูลเพิ่มเติม หรือความต้องการพิเศษ..."></textarea>
-          </div>
-        </div>
+          <?php endif; ?>
 
-        <div class="form-error" id="formError"></div>
+          <div class="sec-label">ข้อมูลผู้จอง</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>ชื่อผู้จอง <?php if ($user_name): ?><span class="badge-pre">จากโปรไฟล์</span><?php endif; ?></label>
+              <input type="text" id="f_name" placeholder="ชื่อ-นามสกุล" value="<?= htmlspecialchars($user_name) ?>" required>
+            </div>
+            <div class="form-group">
+              <label>เบอร์โทร <?php if ($user_phone): ?><span class="badge-pre">จากโปรไฟล์</span><?php endif; ?></label>
+              <input type="text" id="f_phone" placeholder="0XX-XXX-XXXX" value="<?= htmlspecialchars($user_phone) ?>" required>
+            </div>
+            <div class="form-group">
+              <label>อีเมล <?php if ($user_email): ?><span class="badge-pre">จากโปรไฟล์</span><?php endif; ?></label>
+              <input type="email" id="f_email" placeholder="example@email.com" value="<?= htmlspecialchars($user_email) ?>">
+            </div>
+            <div class="form-group">
+              <label>จำนวนผู้เข้าร่วม (คน)</label>
+              <input type="number" id="f_guests" min="1" value="1" required>
+            </div>
+            <div class="form-group full">
+              <label>หมายเหตุ (ถ้ามี)</label>
+              <textarea id="f_note" placeholder="ข้อมูลเพิ่มเติม หรือความต้องการพิเศษ..."></textarea>
+            </div>
+          </div>
 
-        <button type="submit" class="submit-btn" id="submitBtn">
-          <span>🚣</span><span>ยืนยันการจองและรับบัตรคิว</span>
-        </button>
-      </form>
+          <!-- ราคาสรุป -->
+          <div id="priceSummary" style="background:linear-gradient(135deg,var(--navy) 0%,var(--blue2) 100%);border-radius:14px;padding:18px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 16px rgba(21,101,192,.3);">
+            <div>
+              <div style="font-size:.72rem;font-weight:700;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">ยอดที่ต้องชำระ</div>
+              <div style="font-size:.8rem;color:rgba(255,255,255,.55);">ต่อ 1 ลำ</div>
+            </div>
+            <div style="text-align:right;">
+              <div id="priceDisplay" style="font-family:'Kanit',sans-serif;font-size:2.2rem;font-weight:900;color:#fff;line-height:1;text-shadow:0 2px 8px rgba(0,0,0,.2);">
+                <?= (float)($q0['price_per_boat'] ?? 0) > 0 ? '฿'.number_format((float)$q0['price_per_boat']) : 'ฟรี' ?>
+              </div>
+              <div style="font-size:.7rem;color:rgba(255,255,255,.55);margin-top:2px;">บาท / ลำ</div>
+            </div>
+          </div>
+
+          <div class="form-error" id="formError"></div>
+
+          <button type="submit" class="submit-btn" id="submitBtn">
+            <span>🚣</span><span>ยืนยันการจองและรับบัตรคิว</span>
+          </button>
+        </form>
+      </div>
     </div>
-  </div>
+
+  </div><!-- end booking-layout -->
 
 <?php endif; ?>
 </div>
@@ -696,44 +838,67 @@ textarea{min-height:80px;resize:vertical;}
       document.getElementById('f_queue_name').value = opt.dataset.name;
       document.getElementById('f_boat_date').value  = opt.dataset.date;
       const price = parseFloat(opt.dataset.price);
+      const priceText = price > 0 ? '฿' + price.toLocaleString() : 'ฟรี';
+
+      // อัปเดต form subtitle
+      const dateObj = new Date(opt.dataset.date);
+      const dateStr = dateObj.toLocaleDateString('th-TH');
       document.getElementById('formSubtitle').textContent =
-        opt.dataset.name + '  ·  ' +
-        new Date(opt.dataset.date).toLocaleDateString('th-TH') +
-        (price > 0 ? '  ·  ฿' + price.toLocaleString() + ' / ลำ' : '  ·  ฟรี');
-      // อัปเดต header background image
-      const hdr = document.getElementById('formHeader');
+        opt.dataset.name + '  ·  ' + dateStr + (price > 0 ? '  ·  ฿' + price.toLocaleString() + ' / ลำ' : '  ·  ฟรี');
+
+      // อัปเดต sidebar
+      const imgEl  = document.getElementById('sideImg');
+      const imgPh  = document.getElementById('sideImgPh');
       const imgUrl = opt.dataset.img;
       if (imgUrl) {
-        hdr.style.backgroundImage = `url(${imgUrl})`;
-        hdr.style.backgroundSize = 'cover';
-        hdr.style.backgroundPosition = 'center';
-        if (!hdr.querySelector('.hdr-overlay')) {
-          const ov = document.createElement('div');
-          ov.className = 'hdr-overlay';
-          ov.style.cssText = 'position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,22,40,.88) 0%,rgba(26,58,92,.78) 100%);';
-          hdr.insertBefore(ov, hdr.firstChild);
-        }
+        imgEl.src = imgUrl; imgEl.style.display = 'block'; imgPh.style.display = 'none';
       } else {
-        hdr.style.backgroundImage = '';
-        const ov = hdr.querySelector('.hdr-overlay');
-        if (ov) ov.remove();
+        imgEl.src = ''; imgEl.style.display = 'none'; imgPh.style.display = 'flex';
       }
+      document.getElementById('sideName').textContent = opt.dataset.name;
+      const dd = dateObj.getDate().toString().padStart(2,'0');
+      const mm = (dateObj.getMonth()+1).toString().padStart(2,'0');
+      const yy = dateObj.getFullYear();
+      document.getElementById('sideDate').textContent = dd+'/'+mm+'/'+yy;
 
-      const grid = document.getElementById('boatTypeGrid');
-      grid.innerHTML = '';
+      // อัปเดตประเภทเรือและ sidebar type
       const types = opt.dataset.types.split(',').map(t => t.trim()).filter(Boolean);
-      types.forEach((bt, i) => {
-        const ico = typeIcons[bt] || '🚤';
-        const lbl = document.createElement('label');
-        lbl.className = 'bt-card' + (i === 0 ? ' active' : '');
-        lbl.innerHTML = `<input type="radio" name="boat_type" value="${bt}" ${i===0?'checked':''}><span class="bt-ico">${ico}</span><span class="bt-lbl">${bt}</span>`;
-        lbl.addEventListener('click', () => {
-          grid.querySelectorAll('.bt-card').forEach(c => c.classList.remove('active'));
-          lbl.classList.add('active');
-          lbl.querySelector('input').checked = true;
-        });
-        grid.appendChild(lbl);
-      });
+      document.getElementById('sideType').textContent = types[0] || 'เรือคายัค';
+
+      // อัปเดต sidebar price badge
+      document.getElementById('sidePriceBadge').innerHTML =
+        price > 0 ? '💰 ฿' + price.toLocaleString() + ' <span style="font-size:.75rem;font-weight:400;opacity:.8;">/ ลำ</span>' : '✓ ฟรี';
+
+      // อัปเดต price summary box
+      document.getElementById('priceDisplay').textContent = priceText;
+
+      // อัปเดต boat type grid หรือ chip
+      const grid = document.getElementById('boatTypeGrid');
+      const chip = document.getElementById('boatTypeChip');
+      const hiddenType = document.getElementById('f_boat_type_hidden');
+      if (types.length === 1) {
+        if (grid) { grid.parentElement.style.display = 'none'; }
+        if (chip) { chip.parentElement.style.display = 'block'; chip.innerHTML = (typeIcons[types[0]]||'🚤') + ' ' + types[0] + '<span style="margin-left:4px;font-size:.7rem;opacity:.7;">(เลือกอัตโนมัติ)</span>'; }
+        if (hiddenType) hiddenType.value = types[0];
+      } else {
+        if (chip) chip.parentElement.style.display = 'none';
+        if (grid) {
+          grid.parentElement.style.display = 'block';
+          grid.innerHTML = '';
+          types.forEach((bt, i) => {
+            const ico = typeIcons[bt] || '🚤';
+            const lbl = document.createElement('label');
+            lbl.className = 'bt-card' + (i === 0 ? ' active' : '');
+            lbl.innerHTML = `<input type="radio" name="boat_type" value="${bt}" ${i===0?'checked':''}><span class="bt-ico">${ico}</span><span class="bt-lbl">${bt}</span>`;
+            lbl.addEventListener('click', () => {
+              grid.querySelectorAll('.bt-card').forEach(c => c.classList.remove('active'));
+              lbl.classList.add('active');
+              lbl.querySelector('input').checked = true;
+            });
+            grid.appendChild(lbl);
+          });
+        }
+      }
     });
   });
 

@@ -311,19 +311,6 @@ a{text-decoration:none;color:inherit;}
     if (e.target === document.getElementById('newsOverlay')) closePopup();
   };
 
-  window.dismissToday = function() {
-    if (!currentCard) return;
-    const key = 'news_dismiss_' + currentCard.dataset.id + '_' + TODAY;
-    localStorage.setItem(key, '1');
-    currentCard.classList.add('dismissed');
-    const btn = document.getElementById('btnDismiss');
-    btn.disabled = true;
-    btn.style.opacity = '.45';
-    btn.textContent = '🚫 ซ่อนแล้ววันนี้';
-    // brief visual feedback then close
-    setTimeout(() => closePopup(), 600);
-  };
-
   // keyboard close
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closePopup();

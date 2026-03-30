@@ -1400,20 +1400,10 @@ navBookWrap?.querySelectorAll('.nav-book-item, .nav-book-status').forEach(a => {
 
 /* ── News Popup ── */
 (function(){
-  const TODAY = new Date().toISOString().slice(0,10);
   let currentCard = null;
-
-  // mark dismissed cards on load
-  document.querySelectorAll('.news-main[data-id], .news-side-card[data-id]').forEach(card => {
-    if (localStorage.getItem('news_dismiss_' + card.dataset.id + '_' + TODAY)) {
-      card.style.opacity = '.55';
-      card.style.filter  = 'grayscale(.4)';
-    }
-  });
 
   window.openNewsPopup = function(card) {
     currentCard = card;
-    const key = 'news_dismiss_' + card.dataset.id + '_' + TODAY;
 
     document.getElementById('npTitle').textContent   = card.dataset.title;
     document.getElementById('npContent').textContent = card.dataset.content;
@@ -1427,12 +1417,6 @@ navBookWrap?.querySelectorAll('.nav-book-item, .nav-book-status').forEach(a => {
       imgEl.style.display='none'; imgPh.style.display='flex';
     }
 
-    const dismissed = !!localStorage.getItem(key);
-    const btnD = document.getElementById('npBtnDismiss');
-    btnD.disabled = dismissed;
-    btnD.style.opacity = dismissed ? '.45' : '1';
-    btnD.innerHTML = dismissed ? '🚫 ซ่อนแล้ววันนี้' : '🚫 ไม่แสดงอีกวันนี้';
-
     document.getElementById('newsPopupOverlay').classList.add('np-open');
     document.body.style.overflow = 'hidden';
   };
@@ -1441,19 +1425,6 @@ navBookWrap?.querySelectorAll('.nav-book-item, .nav-book-status').forEach(a => {
     document.getElementById('newsPopupOverlay').classList.remove('np-open');
     document.body.style.overflow = '';
     currentCard = null;
-  };
-
-  window.dismissNewsToday = function() {
-    if (!currentCard) return;
-    const key = 'news_dismiss_' + currentCard.dataset.id + '_' + TODAY;
-    localStorage.setItem(key, '1');
-    currentCard.style.opacity = '.55';
-    currentCard.style.filter  = 'grayscale(.4)';
-    const btnD = document.getElementById('npBtnDismiss');
-    btnD.disabled = true;
-    btnD.style.opacity = '.45';
-    btnD.innerHTML = '🚫 ซ่อนแล้ววันนี้';
-    setTimeout(() => closeNewsPopup(), 600);
   };
 
   document.getElementById('newsPopupOverlay').addEventListener('click', function(e){
@@ -1485,7 +1456,6 @@ navBookWrap?.querySelectorAll('.nav-book-item, .nav-book-status').forEach(a => {
     </div>
     <!-- footer -->
     <div style="padding:14px 28px 18px;border-top:1px solid #e8e4de;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;flex-shrink:0;background:#fdfcfb;">
-      <button id="npBtnDismiss" onclick="dismissNewsToday()" style="display:inline-flex;align-items:center;gap:7px;background:transparent;border:1.5px solid #e8e4de;color:#7a7a8c;padding:9px 18px;border-radius:99px;font-family:'Sarabun',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;transition:.2s;" onmouseover="this.style.borderColor='#f87171';this.style.color='#dc2626';this.style.background='#fef2f2'" onmouseout="this.style.borderColor='#e8e4de';this.style.color='#7a7a8c';this.style.background='transparent'">🚫 ไม่แสดงอีกวันนี้</button>
       <button onclick="closeNewsPopup()" style="display:inline-flex;align-items:center;gap:7px;background:linear-gradient(135deg,#1a1a2e,#0f3460);color:#fff;padding:9px 22px;border-radius:99px;font-family:'Sarabun',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;border:none;transition:.2s;" onmouseover="this.style.background='linear-gradient(135deg,#0f3460,#1565c0)'" onmouseout="this.style.background='linear-gradient(135deg,#1a1a2e,#0f3460)'">✓ รับทราบแล้ว</button>
     </div>
   </div>

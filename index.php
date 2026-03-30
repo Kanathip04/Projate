@@ -1002,9 +1002,7 @@ img{display:block;}
       <div class="hero-cta fade-up fade-up-4">
         <a href="#booking-section" class="hero-btn hero-btn-primary">🗓️ จองบริการ</a>
         <a href="view_data.php" class="hero-btn hero-btn-register"><span class="reg-dot"></span> ลงทะเบียนกิจกรรม</a>
-        <?php if ($isAdmin): ?>
         <a href="queue_display.php" class="hero-btn hero-btn-register">🚣 คิววันนี้</a>
-        <?php endif; ?>
       </div>
     </div>
   </div>

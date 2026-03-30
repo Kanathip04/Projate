@@ -8,6 +8,9 @@ if ($conn->connect_error) die("DB Error: " . $conn->connect_error);
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
+// ให้แน่ใจว่า ENUM มีค่า cash_pending, cash_paid
+$conn->query("ALTER TABLE boat_bookings MODIFY COLUMN `payment_status` ENUM('pending','waiting_verify','checking','paid','failed','expired','duplicate','suspicious','manual_review','cash_pending','cash_paid') DEFAULT 'pending'");
+
 $currentPage = basename($_SERVER['PHP_SELF']);
 $message = '';
 $message_type = 'success';

@@ -7,11 +7,11 @@ if ($conn->connect_error) die("DB Error");
 $today = date('Y-m-d');
 $result = $conn->query("
     SELECT daily_queue_no, booking_ref, full_name, boat_type, boat_units,
-           boat_date, time_start, time_end, approved_at, payment_status, booking_status
+           boat_date, time_start, time_end, approved_at, payment_status, payment_provider, booking_status
     FROM boat_bookings
     WHERE DATE(approved_at) = '$today'
       AND booking_status = 'approved'
-      AND payment_status = 'paid'
+      AND payment_status IN ('paid','cash_paid')
     ORDER BY daily_queue_no ASC
 ");
 
@@ -127,6 +127,7 @@ html,body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh
   border-radius:99px;padding:3px 9px;font-size:.7rem;font-weight:700;
   margin-top:6px;
 }
+.c-badge-cash{background:#fff7ed;color:#c2410c;}
 
 /* ── EMPTY ── */
 .empty{text-align:center;padding:60px 20px;}
@@ -198,6 +199,9 @@ html,body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh
         : null;
       $paidTime = !empty($q['approved_at']) ? date('H:i', strtotime($q['approved_at'])) : '-';
       $ref = $q['booking_ref'] ?? '';
+      $isCash = ($q['payment_status'] === 'cash_paid' || $q['payment_provider'] === 'cash');
+      $payMethodLabel = $isCash ? 'เงินสด' : 'โอน / QR Code';
+      $payMethodIcon  = $isCash ? '💵' : '📱';
       $qData = json_encode([
         'no'       => str_pad($q['daily_queue_no'], 4, '0', STR_PAD_LEFT),
         'name'     => $q['full_name'],
@@ -207,6 +211,8 @@ html,body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh
         'paid'     => $paidTime,
         'ref'      => $ref,
         'status'   => $q['booking_status'],
+        'payIcon'  => $payMethodIcon,
+        'payLabel' => $payMethodLabel,
       ]);
     ?>
     <div class="card" onclick='openQueue(<?= htmlspecialchars($qData, ENT_QUOTES) ?>)'>
@@ -224,8 +230,9 @@ html,body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh
           <div class="c-row"><span class="c-icon">🕐</span><span class="c-val"><?= $timeLabel ?></span></div>
           <?php endif; ?>
           <div class="c-row"><span class="c-icon">💳</span><span class="c-val">ชำระ <?= $paidTime ?> น.</span></div>
+          <div class="c-row"><span class="c-icon"><?= $payMethodIcon ?></span><span class="c-val"><?= htmlspecialchars($payMethodLabel) ?></span></div>
         </div>
-        <div class="c-badge">✅ ชำระแล้ว</div>
+        <div class="c-badge <?= $isCash ? 'c-badge-cash' : '' ?>">✅ ชำระแล้ว</div>
       </div>
     </div>
     <?php endforeach; ?>
@@ -330,21 +337,36 @@ html,body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh
         <span class="qd-icon">💳</span>
         <div><div class="qd-lbl">เวลาชำระเงิน</div><div class="qd-val" id="qdPaid">—</div></div>
       </div>
-      <div class="qd-badge">✅ ชำระเงินแล้ว · พร้อมใช้บริการ</div>
+      <div class="qd-row">
+        <span class="qd-icon" id="qdPayIcon">📱</span>
+        <div><div class="qd-lbl">วิธีชำระเงิน</div><div class="qd-val" id="qdPayLabel">—</div></div>
+      </div>
+      <div class="qd-badge" id="qdBadge">✅ ชำระเงินแล้ว · พร้อมใช้บริการ</div>
     </div>
   </div>
 </div>
 
 <script>
 function openQueue(q) {
-  document.getElementById('qdNo').textContent   = q.no;
-  document.getElementById('qdName').textContent = q.name;
-  document.getElementById('qdRef').textContent  = 'หมายเลขอ้างอิง: ' + q.ref;
-  document.getElementById('qdBoat').textContent = q.boat;
-  document.getElementById('qdDate').textContent = q.date;
-  document.getElementById('qdTime').textContent = q.time;
-  document.getElementById('qdPaid').textContent = 'ชำระ ' + q.paid + ' น.';
+  document.getElementById('qdNo').textContent       = q.no;
+  document.getElementById('qdName').textContent     = q.name;
+  document.getElementById('qdRef').textContent      = 'หมายเลขอ้างอิง: ' + q.ref;
+  document.getElementById('qdBoat').textContent     = q.boat;
+  document.getElementById('qdDate').textContent     = q.date;
+  document.getElementById('qdTime').textContent     = q.time;
+  document.getElementById('qdPaid').textContent     = 'ชำระ ' + q.paid + ' น.';
+  document.getElementById('qdPayIcon').textContent  = q.payIcon || '📱';
+  document.getElementById('qdPayLabel').textContent = q.payLabel || '-';
   document.getElementById('qdTimeRow').style.display = q.time === '-' ? 'none' : 'flex';
+  // badge สีตามวิธีจ่าย
+  const badge = document.getElementById('qdBadge');
+  if (q.payLabel === 'เงินสด') {
+    badge.style.background = '#fff7ed'; badge.style.color = '#c2410c'; badge.style.borderColor = '#fdba74';
+    badge.textContent = '💵 จ่ายเงินสดแล้ว · พร้อมใช้บริการ';
+  } else {
+    badge.style.background = ''; badge.style.color = ''; badge.style.borderColor = '';
+    badge.textContent = '✅ ชำระเงินแล้ว · พร้อมใช้บริการ';
+  }
   document.getElementById('qdOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }

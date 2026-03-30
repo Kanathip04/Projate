@@ -226,7 +226,8 @@ a{text-decoration:none;color:inherit;}
 .queue-opt:hover{border-color:var(--blue);transform:translateY(-2px);}
 .queue-opt.active{border-color:var(--blue);box-shadow:0 0 0 3px rgba(29,111,173,.12);}
 .queue-opt.active::after{content:'✓ เลือกแล้ว';position:absolute;top:10px;right:10px;background:var(--blue);color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;}
-.qo-img{width:100%;height:130px;object-fit:cover;display:block;background:#c9dff5;}
+.qo-img{width:100%;height:140px;object-fit:cover;display:block;background:#c9dff5;}
+.qo-img-ph{width:100%;height:140px;background:linear-gradient(135deg,#0d2344,#1a3a5c);display:flex;align-items:center;justify-content:center;font-size:2.5rem;}
 .qo-body{padding:14px 16px;}
 .qo-name{font-size:16px;font-weight:700;margin-bottom:4px;}
 .qo-date{font-size:13px;color:var(--blue);font-weight:600;}
@@ -344,8 +345,9 @@ textarea{min-height:90px;resize:vertical;}
   </div>
 <?php else: ?>
 
-  <?php if (count($queueList) > 1): ?>
-  <div style="margin-bottom:8px;font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">เลือกรอบที่ต้องการ</div>
+  <div style="margin-bottom:8px;font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">
+    <?= count($queueList) > 1 ? 'เลือกรอบที่ต้องการ' : 'รอบพายเรือ' ?>
+  </div>
   <div class="queue-selector" id="queueSelector">
     <?php foreach ($queueList as $i => $q): ?>
     <div class="queue-opt <?= $i===0?'active':'' ?>"
@@ -353,31 +355,41 @@ textarea{min-height:90px;resize:vertical;}
          data-name="<?= htmlspecialchars($q['queue_name']) ?>"
          data-date="<?= htmlspecialchars($q['queue_date']) ?>"
          data-price="<?= (float)$q['price_per_boat'] ?>"
-         data-types="<?= htmlspecialchars($q['boat_types'] ?? 'เรือพาย,เรือคายัค,เรือบด') ?>">
-      <?php $img = !empty($q['image_path']) ? $q['image_path'] : 'uploads/no-image.png'; ?>
-      <img class="qo-img" src="<?= htmlspecialchars($img) ?>" onerror="this.src='uploads/no-image.png'" alt="">
+         data-types="<?= htmlspecialchars($q['boat_types'] ?? 'เรือพาย,เรือคายัค,เรือบด') ?>"
+         data-img="<?= htmlspecialchars($q['image_path'] ?? '') ?>">
+      <?php $img = !empty($q['image_path']) ? $q['image_path'] : null; ?>
+      <?php if ($img): ?>
+        <img class="qo-img" src="<?= htmlspecialchars($img) ?>" onerror="this.parentElement.querySelector('.qo-img-ph').style.display='flex';this.style.display='none';" alt="">
+        <div class="qo-img-ph" style="display:none;">🚣</div>
+      <?php else: ?>
+        <div class="qo-img-ph">🚣</div>
+      <?php endif; ?>
       <div class="qo-body">
         <div class="qo-name"><?= htmlspecialchars($q['queue_name']) ?></div>
         <div class="qo-date">📅 <?= date('d/m/Y', strtotime($q['queue_date'])) ?></div>
         <div class="qo-price"><?= (float)$q['price_per_boat'] > 0 ? '฿'.number_format((float)$q['price_per_boat']).' / ลำ' : 'ฟรี' ?></div>
+        <?php if (!empty($q['description'])): ?>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:5px;line-height:1.4;"><?= htmlspecialchars(mb_substr($q['description'],0,60)) ?><?= mb_strlen($q['description'])>60?'…':'' ?></div>
+        <?php endif; ?>
       </div>
     </div>
     <?php endforeach; ?>
   </div>
-  <?php endif; ?>
 
-  <div class="form-card">
-    <div class="form-header">
-      <h2>🚣 กรอกข้อมูลการจอง</h2>
-      <p id="formSubtitle">
-        <?= htmlspecialchars($queueList[0]['queue_name']) ?> &nbsp;·&nbsp;
-        <?= date('d/m/Y', strtotime($queueList[0]['queue_date'])) ?>
-        <?php if ((float)$queueList[0]['price_per_boat'] > 0): ?>
-          &nbsp;·&nbsp; ฿<?= number_format((float)$queueList[0]['price_per_boat']) ?> / ลำ
-        <?php else: ?>
-          &nbsp;·&nbsp; ฟรี
-        <?php endif; ?>
-      </p>
+  <div class="form-card" id="formCard">
+    <?php $q0 = $queueList[0]; $q0img = $q0['image_path'] ?? ''; ?>
+    <div class="form-header" id="formHeader" <?= $q0img ? 'style="background-image:url('.htmlspecialchars($q0img).');background-size:cover;background-position:center;"' : '' ?>>
+      <?php if ($q0img): ?>
+      <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,22,40,.88) 0%,rgba(26,58,92,.78) 100%);border-radius:0;"></div>
+      <?php endif; ?>
+      <div style="position:relative;z-index:1;">
+        <h2>🚣 กรอกข้อมูลการจอง</h2>
+        <p id="formSubtitle">
+          <?= htmlspecialchars($q0['queue_name']) ?> &nbsp;·&nbsp;
+          <?= date('d/m/Y', strtotime($q0['queue_date'])) ?>
+          <?= (float)$q0['price_per_boat'] > 0 ? '&nbsp;·&nbsp; ฿'.number_format((float)$q0['price_per_boat']).' / ลำ' : '&nbsp;·&nbsp; ฟรี' ?>
+        </p>
+      </div>
     </div>
     <div class="form-body">
 
@@ -550,6 +562,24 @@ textarea{min-height:90px;resize:vertical;}
         opt.dataset.name + '  ·  ' +
         new Date(opt.dataset.date).toLocaleDateString('th-TH') +
         (price > 0 ? '  ·  ฿' + price.toLocaleString() + ' / ลำ' : '  ·  ฟรี');
+      // อัปเดต header background image
+      const hdr = document.getElementById('formHeader');
+      const imgUrl = opt.dataset.img;
+      if (imgUrl) {
+        hdr.style.backgroundImage = `url(${imgUrl})`;
+        hdr.style.backgroundSize = 'cover';
+        hdr.style.backgroundPosition = 'center';
+        if (!hdr.querySelector('.hdr-overlay')) {
+          const ov = document.createElement('div');
+          ov.className = 'hdr-overlay';
+          ov.style.cssText = 'position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,22,40,.88) 0%,rgba(26,58,92,.78) 100%);';
+          hdr.insertBefore(ov, hdr.firstChild);
+        }
+      } else {
+        hdr.style.backgroundImage = '';
+        const ov = hdr.querySelector('.hdr-overlay');
+        if (ov) ov.remove();
+      }
 
       const grid = document.getElementById('boatTypeGrid');
       grid.innerHTML = '';

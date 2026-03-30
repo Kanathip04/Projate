@@ -114,6 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['slip'])) {
 
                 $webhookUrl = 'https://kanayhip.app.n8n.cloud/webhook/boat-slip';
                 $payload = json_encode([
+                    'secret'           => 'wrbri_n8n_secret_2026',
                     'booking_ref'      => $booking_ref,
                     'booking_id'       => $booking['id'],
                     'user_name'        => $booking['full_name'],

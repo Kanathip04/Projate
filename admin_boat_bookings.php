@@ -105,6 +105,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = "เปลี่ยนสถานะเป็นรอตรวจสอบแล้ว";
         }
 
+        if ($action === 'reset_slip') {
+            $st = $conn->prepare("
+                UPDATE boat_bookings
+                SET payment_status='pending', payment_slip=NULL,
+                    note=CONCAT(COALESCE(note,''), ?)
+                WHERE id=?
+            ");
+            $resetNote = "\n[ADMIN] รีเซ็ตสลิป รอผู้จองอัปโหลดใหม่ [" . date('Y-m-d H:i') . "]";
+            $st->bind_param("si", $resetNote, $id);
+            $st->execute();
+            $st->close();
+            // ล้างสลิปใน payment_slips ด้วย
+            $conn->query("UPDATE payment_slips SET verification_status='voided' WHERE booking_id=$id ORDER BY id DESC LIMIT 1");
+            $message = "รีเซ็ตสลิปแล้ว ผู้จองสามารถอัปโหลดสลิปใหม่ได้";
+            $message_type = "success";
+        }
+
         if ($action === 'archive') {
             $st = $conn->prepare("UPDATE boat_bookings SET archived=1 WHERE id=?");
             $st->bind_param("i", $id);
@@ -219,6 +236,9 @@ include 'admin_layout_top.php';
 .pay-waiting{background:#fff3e0;color:#9a6700;}
 .pay-paid{background:#dcfce7;color:#166534;}
 .pay-failed{background:#fee2e2;color:#991b1b;}
+.pay-duplicate{background:#fef3c7;color:#92400e;border:1px solid #fcd34d;}
+.pay-suspicious{background:#fce7f3;color:#9d174d;border:1px solid #f9a8d4;}
+.pay-manual{background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd;}
 
 /* ── stat bar ── */
 .stat-bar{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px;}
@@ -341,8 +361,8 @@ include 'admin_layout_top.php';
       $units = json_decode($row['boat_units'] ?? '[]', true) ?: [];
       $bCls = ['pending'=>'bk-badge-pending','approved'=>'bk-badge-approved','rejected'=>'bk-badge-rejected','cancelled'=>'bk-badge-cancelled'];
       $bLbl = ['pending'=>'รออนุมัติ','approved'=>'อนุมัติแล้ว','rejected'=>'ไม่อนุมัติ','cancelled'=>'ยกเลิก'];
-      $pCls = ['unpaid'=>'pay-unpaid','pending'=>'pay-waiting','waiting_verify'=>'pay-waiting','paid'=>'pay-paid','failed'=>'pay-failed','expired'=>'pay-failed'];
-      $pLbl = ['unpaid'=>'ยังไม่ชำระ','pending'=>'ดำเนินการ','waiting_verify'=>'รอตรวจสลิป','paid'=>'ชำระแล้ว','failed'=>'ไม่ผ่าน','expired'=>'หมดอายุ'];
+      $pCls = ['unpaid'=>'pay-unpaid','pending'=>'pay-waiting','waiting_verify'=>'pay-waiting','paid'=>'pay-paid','failed'=>'pay-failed','expired'=>'pay-failed','duplicate'=>'pay-duplicate','suspicious'=>'pay-suspicious','manual_review'=>'pay-manual','checking'=>'pay-waiting'];
+      $pLbl = ['unpaid'=>'ยังไม่ชำระ','pending'=>'ดำเนินการ','waiting_verify'=>'รอตรวจสลิป','paid'=>'ชำระแล้ว','failed'=>'สลิปไม่ผ่าน','expired'=>'หมดอายุ','duplicate'=>'⚠ สลิปซ้ำ','suspicious'=>'⚠ น่าสงสัย','manual_review'=>'รอตรวจด้วยมือ','checking'=>'กำลังตรวจ'];
       $bs = $row['booking_status'] ?? 'pending';
       $ps = $row['payment_status'] ?? 'unpaid';
     ?>
@@ -413,9 +433,27 @@ include 'admin_layout_top.php';
       <!-- สถานะ (รวม 2 บรรทัด) -->
       <td>
         <div><span class="<?= isset($bCls[$bs]) ? $bCls[$bs] : 'bk-badge-pending' ?>"><?= isset($bLbl[$bs]) ? $bLbl[$bs] : $bs ?></span></div>
-        <div style="margin-top:5px;"><span class="<?= isset($pCls[$ps]) ? $pCls[$ps] : 'pay-unpaid' ?>"><?= isset($pLbl[$ps]) ? $pLbl[$ps] : $ps ?></span></div>
+        <div style="margin-top:5px;">
+          <span class="<?= isset($pCls[$ps]) ? $pCls[$ps] : 'pay-unpaid' ?>"
+            <?php
+              $tips = [
+                'duplicate'     => 'สลิปไฟล์นี้เคยถูกใช้กับการจองอื่นแล้ว',
+                'suspicious'    => 'AI ตรวจพบว่าสลิปอาจไม่ถูกต้อง',
+                'manual_review' => 'AI อ่านสลิปไม่ชัด ต้องตรวจด้วยตัวเอง',
+                'failed'        => 'สลิปไม่ผ่านการตรวจ (ยอดไม่ตรง/วันที่เก่า)',
+              ];
+              if (isset($tips[$ps])) echo 'title="'.$tips[$ps].'"';
+            ?>
+          ><?= isset($pLbl[$ps]) ? $pLbl[$ps] : $ps ?></span>
+        </div>
+        <?php if (!empty($row['note'])): ?>
+        <div class="bk-td-sub" style="margin-top:3px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+             title="<?= h($row['note']) ?>">
+          📋 <?= h(mb_substr(trim(str_replace(["\n","[AUTO]"],' ',$row['note'])),0,40)) ?>
+        </div>
+        <?php endif; ?>
         <?php if (!empty($row['paid_at'])): ?>
-        <div class="bk-td-sub" style="margin-top:4px;"><?= date('d/m H:i', strtotime($row['paid_at'])) ?></div>
+        <div class="bk-td-sub" style="margin-top:2px;"><?= date('d/m H:i', strtotime($row['paid_at'])) ?></div>
         <?php endif; ?>
       </td>
 
@@ -449,6 +487,17 @@ include 'admin_layout_top.php';
               <input type="hidden" name="action" value="reject_booking">
               <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
               <button class="btn btn-danger btn-sm" type="submit" onclick="return confirm('ปฏิเสธการจอง?')">ปฏิเสธ</button>
+            </form>
+          <?php endif; ?>
+
+          <?php if (in_array($ps, ['duplicate','suspicious','failed','manual_review'])): ?>
+            <form method="POST" style="display:contents;">
+              <input type="hidden" name="tab" value="<?= h($tab) ?>">
+              <input type="hidden" name="action" value="reset_slip">
+              <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
+              <button class="btn btn-sm" style="background:#fff3e0;color:#9a6700;border:1px solid #fcd34d;" type="submit"
+                      onclick="return confirm('รีเซ็ตสถานะสลิป ให้ผู้จองอัปโหลดสลิปใหม่ได้?')"
+                      title="ล้างสลิปเก่า ให้ผู้ใช้อัปโหลดใหม่">🔄 รีเซ็ตสลิป</button>
             </form>
           <?php endif; ?>
 

@@ -247,6 +247,49 @@ if ($reportType === 'daily') {
     $isCurrentPeriod = ($yp === (int)$thisYear);
 }
 
+// ── Base URL (preserve period params for service tab links) ──
+$baseUrl = '?type=' . $reportType;
+if ($reportType === 'daily')        $baseUrl .= '&date='  . ($dateParam  ?? $today);
+elseif ($reportType === 'monthly')  $baseUrl .= '&month=' . ($monthParam ?? $thisMonth);
+else                                $baseUrl .= '&year='  . ($yearParam  ?? $thisYear);
+if ($bkStatus)  $baseUrl .= '&bk_status='  . $bkStatus;
+if ($payStatus) $baseUrl .= '&pay_status=' . $payStatus;
+
+// ── Context KPIs (ขึ้นอยู่กับ serviceType) ──
+if ($serviceType === 'boat') {
+    $ctxTotal   = (int)$boatData['total'];
+    $ctxPaid    = (int)$boatData['paid'];
+    $ctxWaiting = (int)$boatData['waiting'];
+    $ctxCancel  = (int)$boatData['cancelled'];
+    $ctxRevenue = (float)$boatData['revenue'];
+    $ctxGuests  = $boatGuests;
+    $ctxLabel   = 'เรือพาย';
+} elseif ($serviceType === 'room') {
+    $ctxTotal   = (int)$roomData['total'];
+    $ctxPaid    = (int)$roomData['paid'];
+    $ctxWaiting = (int)$roomData['waiting'];
+    $ctxCancel  = (int)$roomData['cancelled'];
+    $ctxRevenue = 0;
+    $ctxGuests  = $roomGuests;
+    $ctxLabel   = 'ห้องพัก';
+} elseif ($serviceType === 'tent') {
+    $ctxTotal   = (int)$tentData['total'];
+    $ctxPaid    = (int)$tentData['paid'];
+    $ctxWaiting = (int)$tentData['waiting'];
+    $ctxCancel  = (int)$tentData['cancelled'];
+    $ctxRevenue = 0;
+    $ctxGuests  = $tentGuests;
+    $ctxLabel   = 'เต็นท์';
+} else {
+    $ctxTotal   = $totalAll;
+    $ctxPaid    = $totalPaid;
+    $ctxWaiting = $totalWaiting;
+    $ctxCancel  = $totalCancel;
+    $ctxRevenue = $totalRevenue;
+    $ctxGuests  = $boatGuests + $roomGuests + $tentGuests;
+    $ctxLabel   = 'ทุกบริการ';
+}
+
 // Quick nav shortcuts
 $qnavLinks = [
     ['วันนี้',        '?type=daily&date='    . $today,                                        $reportType==='daily'   && ($dateParam??$today)===$today],
@@ -306,6 +349,21 @@ $qnavLinks = [
 .sec-hd{font-size:.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;
   letter-spacing:.12em;margin:20px 0 10px;display:flex;align-items:center;gap:8px;}
 .sec-hd::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── Service tabs ── */
+.svc-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.svc-tab{display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:10px;
+  border:2px solid var(--border);background:#fff;text-decoration:none;
+  color:var(--muted);font-size:.84rem;font-weight:700;transition:.15s;
+  box-shadow:0 1px 6px rgba(26,26,46,.05);}
+.svc-tab:hover{border-color:var(--ink);color:var(--ink);}
+.svc-tab.active{border-color:var(--ink);background:var(--ink);color:#fff;}
+.svc-tab.active.boat{background:#1d6fad;border-color:#1d6fad;}
+.svc-tab.active.room{background:#a07c3a;border-color:#a07c3a;}
+.svc-tab.active.tent{background:#2e7d32;border-color:#2e7d32;}
+.stab-cnt{background:rgba(255,255,255,.22);color:inherit;padding:1px 7px;
+  border-radius:20px;font-size:.7rem;font-weight:800;}
+.svc-tab:not(.active) .stab-cnt{background:#f0efec;color:var(--muted);}
 
 /* ── Stat table card ── */
 .stat-card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(26,26,46,.06);
@@ -464,6 +522,22 @@ $qnavLinks = [
   <a href="<?= htmlspecialchars($nextNavUrl) ?>" class="pnav-arrow" title="ถัดไป">&#8250;</a>
 </div>
 
+<!-- Service tabs -->
+<div class="svc-tabs no-print">
+  <a href="<?= htmlspecialchars($baseUrl.'&service=all') ?>" class="svc-tab<?= $serviceType==='all'?' active':'' ?>">
+    ทั้งหมด <span class="stab-cnt"><?= $totalAll ?></span>
+  </a>
+  <a href="<?= htmlspecialchars($baseUrl.'&service=boat') ?>" class="svc-tab boat<?= $serviceType==='boat'?' active boat':'' ?>">
+    🚣 เรือพาย <span class="stab-cnt"><?= $boatData['total'] ?></span>
+  </a>
+  <a href="<?= htmlspecialchars($baseUrl.'&service=room') ?>" class="svc-tab room<?= $serviceType==='room'?' active room':'' ?>">
+    🏨 ห้องพัก <span class="stab-cnt"><?= $roomData['total'] ?></span>
+  </a>
+  <a href="<?= htmlspecialchars($baseUrl.'&service=tent') ?>" class="svc-tab tent<?= $serviceType==='tent'?' active tent':'' ?>">
+    ⛺ เต็นท์ <span class="stab-cnt"><?= $tentData['total'] ?></span>
+  </a>
+</div>
+
 <!-- Filter -->
 <form method="GET" class="rpt-filter no-print">
   <div>
@@ -521,50 +595,57 @@ $qnavLinks = [
   </div>
 </form>
 
-<div class="sec-hd">ภาพรวม</div>
+<div class="sec-hd">ภาพรวม — <?= $ctxLabel ?> · <?= $labelRange ?></div>
 <div class="kpi-grid">
   <div class="kpi-card blue">
     <div class="kpi-icon">📋</div>
     <div class="kpi-lbl">การจองทั้งหมด</div>
-    <div class="kpi-val"><?= number_format($totalAll) ?></div>
+    <div class="kpi-val"><?= number_format($ctxTotal) ?></div>
     <div class="kpi-sub">รายการ</div>
   </div>
   <div class="kpi-card green">
     <div class="kpi-icon">✅</div>
-    <div class="kpi-lbl">ชำระ/อนุมัติแล้ว</div>
-    <div class="kpi-val"><?= number_format($totalPaid) ?></div>
+    <div class="kpi-lbl"><?= $serviceType==='boat' ? 'ชำระแล้ว' : 'อนุมัติแล้ว' ?></div>
+    <div class="kpi-val"><?= number_format($ctxPaid) ?></div>
     <div class="kpi-sub">รายการ</div>
   </div>
   <div class="kpi-card yellow">
     <div class="kpi-icon">⏳</div>
-    <div class="kpi-lbl">รอชำระ</div>
-    <div class="kpi-val"><?= number_format($totalWaiting) ?></div>
+    <div class="kpi-lbl"><?= $serviceType==='boat' ? 'รอชำระ' : 'รอดำเนินการ' ?></div>
+    <div class="kpi-val"><?= number_format($ctxWaiting) ?></div>
     <div class="kpi-sub">รายการ</div>
   </div>
   <div class="kpi-card red">
     <div class="kpi-icon">❌</div>
     <div class="kpi-lbl">ยกเลิก</div>
-    <div class="kpi-val"><?= number_format($totalCancel) ?></div>
+    <div class="kpi-val"><?= number_format($ctxCancel) ?></div>
     <div class="kpi-sub">รายการ</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-icon">💰</div>
     <div class="kpi-lbl">รายได้รวม</div>
-    <div class="kpi-val" style="font-size:1.3rem;">฿<?= number_format($totalRevenue, 0) ?></div>
-    <div class="kpi-sub">บาท (เฉพาะเรือ)</div>
+    <?php if ($ctxRevenue > 0): ?>
+    <div class="kpi-val" style="font-size:1.3rem;">฿<?= number_format($ctxRevenue, 0) ?></div>
+    <div class="kpi-sub">บาท (ชำระแล้ว)</div>
+    <?php else: ?>
+    <div class="kpi-val" style="font-size:1rem;color:var(--muted);margin-top:6px;">—</div>
+    <div class="kpi-sub">ไม่มีข้อมูลรายได้</div>
+    <?php endif; ?>
   </div>
   <div class="kpi-card teal">
     <div class="kpi-icon">👥</div>
-    <div class="kpi-lbl">ผู้เข้าใช้งาน</div>
-    <div class="kpi-val"><?= number_format((int)$visitorData['total']) ?></div>
+    <div class="kpi-lbl">จำนวนคน (การจอง)</div>
+    <div class="kpi-val"><?= number_format($ctxGuests) ?></div>
     <div class="kpi-sub">คน</div>
   </div>
+  <?php if ($serviceType === 'all'): ?>
   <div class="kpi-card purple">
     <div class="kpi-icon">🏆</div>
     <div class="kpi-lbl">บริการยอดนิยม</div>
     <div class="kpi-val" style="font-size:1rem;margin-top:6px;"><?= $mostBooked ?></div>
     <div class="kpi-sub"><?= $maxSvc ?> รายการ</div>
   </div>
+  <?php endif; ?>
 </div>
 
 <!-- ═══ สถิติจำนวนผู้ใช้งาน ═══ -->
@@ -697,6 +778,7 @@ $qnavLinks = [
   </div>
 </div>
 
+<?php if ($serviceType === 'all'): ?>
 <div class="sec-hd">แยกตามบริการ</div>
 <!-- Service breakdown -->
 <div class="svc-grid" style="margin-bottom:20px;">
@@ -725,8 +807,10 @@ $qnavLinks = [
     <div class="svc-row"><span class="lbl">รายได้</span><span class="val">—</span></div>
   </div>
 </div>
+<?php endif; // end serviceType === 'all' for svc-grid ?>
 
-<div class="sec-hd">การเงิน</div>
+<?php if ($serviceType === 'all' || $serviceType === 'boat'): ?>
+<div class="sec-hd">การเงิน (เรือพาย)</div>
 <!-- Finance -->
 <div class="lm-card" style="margin-bottom:20px;">
   <div class="lm-card-header">
@@ -742,6 +826,7 @@ $qnavLinks = [
     </div>
   </div>
 </div>
+<?php endif; ?>
 
 <div class="sec-hd">รายละเอียดการจอง</div>
 <!-- Booking table -->

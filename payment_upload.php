@@ -55,7 +55,8 @@ if ($fileSize > 5 * 1024 * 1024) {
  * ถ้าของคุณชื่อไม่ตรง ให้เปลี่ยน total_amount ตรง SQL ด้านล่าง
  */
 $stmt = $conn->prepare("
-    SELECT id, payment_status, total_amount
+    SELECT id, payment_status, total_amount, user_name, amount_tolerance,
+           promptpay_id, created_at AS booking_created, expired_at, payment_channel
     FROM boat_bookings
     WHERE booking_ref = ?
     LIMIT 1
@@ -71,8 +72,14 @@ if (!$booking) {
     exit;
 }
 
-$booking_id   = (int)$booking['id'];
-$total_amount = (float)$booking['total_amount'];
+$booking_id       = (int)$booking['id'];
+$total_amount     = (float)$booking['total_amount'];
+$user_name        = $booking['user_name'] ?? '';
+$amount_tolerance = (float)($booking['amount_tolerance'] ?? 1);
+$promptpay_id     = $booking['promptpay_id'] ?? '';
+$booking_created  = $booking['booking_created'] ?? '';
+$expired_at       = $booking['expired_at'] ?? '';
+$payment_channel  = $booking['payment_channel'] ?? 'promptpay';
 
 $newFileName = 'slip_' . preg_replace('/[^A-Za-z0-9_-]/', '', $booking_ref) . '_' . time() . '.' . $ext;
 $targetPath  = $uploadDir . $newFileName;
@@ -104,7 +111,7 @@ $update->close();
 /* =========================
    สร้าง URL สำหรับเรียก n8n
 ========================= */
-$webhookUrl = 'https://kanayhip.app.n8n.cloud/webhook-test/boat-slip';
+$webhookUrl = 'https://kanayhip.app.n8n.cloud/webhook/boat-slip';
 
 /* =========================
    สร้าง URL รูปสลิป + callback
@@ -125,14 +132,26 @@ $callback_url = $baseUrl . '/payment_callback.php';
 /* =========================
    ส่งข้อมูลไปหา n8n
 ========================= */
+$slip_base64   = base64_encode(file_get_contents($targetPath));
+$slip_mime_type = 'image/' . ($ext === 'jpg' ? 'jpeg' : $ext);
+$slip_hash     = md5_file($targetPath);
+
 $payload = [
-    'booking_ref'=> $booking_ref,
-    'booking_id'=> $booking_id,
-    'total_amount'=> $total_amount,
-    'slip_path'=> $dbPath,
-    'slip_url'=> $slip_url,
-    'callback_url'=> $callback_url,
-    'secret'=> 'wrbri_n8n_secret_2026'
+    'secret'           => 'wrbri_n8n_secret_2026',
+    'booking_ref'      => $booking_ref,
+    'booking_id'       => $booking_id,
+    'user_name'        => $user_name,
+    'expected_amount'  => $total_amount,
+    'amount_tolerance' => $amount_tolerance,
+    'promptpay_id'     => $promptpay_id,
+    'booking_created'  => $booking_created,
+    'expired_at'       => $expired_at,
+    'payment_channel'  => $payment_channel,
+    'slip_hash'        => $slip_hash,
+    'slip_url'         => $slip_url,
+    'slip_base64'      => $slip_base64,
+    'slip_mime_type'   => $slip_mime_type,
+    'callback_url'     => $callback_url,
 ];
 
 $n8nSent      = false;

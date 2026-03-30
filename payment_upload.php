@@ -132,7 +132,6 @@ $callback_url = $baseUrl . '/payment_callback.php';
 /* =========================
    ส่งข้อมูลไปหา n8n
 ========================= */
-$slip_base64   = base64_encode(file_get_contents($targetPath));
 $slip_mime_type = 'image/' . ($ext === 'jpg' ? 'jpeg' : $ext);
 $slip_hash     = md5_file($targetPath);
 
@@ -149,7 +148,6 @@ $payload = [
     'payment_channel'  => $payment_channel,
     'slip_hash'        => $slip_hash,
     'slip_url'         => $slip_url,
-    'slip_base64'      => $slip_base64,
     'slip_mime_type'   => $slip_mime_type,
     'callback_url'     => $callback_url,
 ];

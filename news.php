@@ -256,9 +256,6 @@ a{text-decoration:none;color:inherit;}
       <div class="popup-content" id="popupContent"></div>
     </div>
     <div class="popup-footer">
-      <button class="btn-dismiss" id="btnDismiss" onclick="dismissToday()">
-        🚫 ไม่แสดงอีกวันนี้
-      </button>
       <button class="btn-close-popup" onclick="closePopup()">
         ✓ รับทราบแล้ว
       </button>
@@ -299,13 +296,6 @@ a{text-decoration:none;color:inherit;}
       imgEl.style.display = 'none';
       imgPh.style.display = 'flex';
     }
-
-    // update dismiss button
-    const dismissed = !!localStorage.getItem(key);
-    const btn = document.getElementById('btnDismiss');
-    btn.disabled  = dismissed;
-    btn.style.opacity = dismissed ? '.45' : '1';
-    btn.textContent = dismissed ? '🚫 ซ่อนแล้ววันนี้' : '🚫 ไม่แสดงอีกวันนี้';
 
     document.getElementById('newsOverlay').classList.add('open');
     document.body.style.overflow = 'hidden';

@@ -116,21 +116,48 @@ body::before {
 .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
 .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(201,169,110,0.4); border-radius: 4px; }
 
-.menu-section { margin-bottom: 6px; }
-.menu-section-label {
-  font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
-  color: rgba(255,255,255,0.22); padding: 10px 10px 6px; display: block;
+.menu-section { margin-bottom: 2px; }
+
+/* ── Accordion toggle header ── */
+.menu-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px 6px; cursor: pointer; border-radius: 6px;
+  transition: background .15s; user-select: none;
+}
+.menu-toggle:hover { background: rgba(255,255,255,.04); }
+.menu-toggle-label {
+  font-size: 0.58rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(255,255,255,0.28); font-weight: 700;
+}
+.menu-toggle-arrow {
+  font-size: 0.55rem; color: rgba(255,255,255,.22);
+  transition: transform .2s ease;
+}
+.menu-section.open .menu-toggle-arrow { transform: rotate(90deg); }
+
+/* ── Collapsible body ── */
+.menu-body {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height .25s ease;
+}
+.menu-section.open .menu-body { max-height: 600px; }
+
+/* ── Sub-group inside section ── */
+.menu-sub-label {
+  font-size: 0.6rem; color: rgba(255,255,255,.18);
+  padding: 6px 10px 3px 12px; display: block; letter-spacing: .08em;
 }
 
 .menu-item {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; border-radius: 8px;
+  padding: 8px 10px; border-radius: 8px;
   color: rgba(255,255,255,0.6); text-decoration: none;
-  font-size: 0.82rem; font-weight: 500;
-  transition: all 0.2s ease; margin-bottom: 2px;
+  font-size: 0.8rem; font-weight: 500;
+  transition: all 0.2s ease; margin-bottom: 1px;
   position: relative;
 }
-.menu-item .icon { font-size: 1rem; flex-shrink: 0; width: 20px; text-align: center; opacity: 0.8; }
+.menu-item .icon { font-size: .9rem; flex-shrink: 0; width: 20px; text-align: center; opacity: 0.8; }
 .menu-item:hover  { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.9); }
 .menu-item.active {
   background: var(--accent-dim);
@@ -143,6 +170,12 @@ body::before {
   width: 3px; height: 60%; background: var(--accent); border-radius: 0 2px 2px 0;
 }
 .menu-item.active .icon { opacity: 1; }
+
+/* ── hide labels on small sidebar ── */
+@media(max-width:900px){
+  .menu-toggle-label,.menu-toggle-arrow,.menu-sub-label{ display:none; }
+  .menu-body{ max-height:none!important; overflow:visible; }
+}
 
 .sidebar-footer {
   padding: 16px 12px; flex-shrink: 0; position: relative; z-index: 1;
@@ -315,97 +348,130 @@ body::before {
 
   <div class="sidebar-scroll">
 
-<div class="menu-section">
-  <span class="menu-section-label">ภาพรวม</span>
-  <a href="admin_dashboard.php" class="menu-item <?= $activeMenu==='dashboard'?'active':'' ?>">
-    <span class="icon">📊</span><span class="text">Dashboard</span>
-  </a>
-  <a href="daily_report.php" class="menu-item <?= $activeMenu==='report'?'active':'' ?>">
-    <span class="icon">📈</span><span class="text">รายงานเช็คอิน</span>
-  </a>
-  <a href="booking_report.php" class="menu-item <?= $activeMenu==='admin_report'?'active':'' ?>">
-    <span class="icon">📋</span><span class="text">รายงานการจอง</span>
-  </a>
-  <a href="admin_charts.php" class="menu-item <?= $activeMenu==='charts'?'active':'' ?>">
-    <span class="icon">📊</span><span class="text">กราฟรายงาน</span>
-  </a>
-</div>
+<?php
+// กำหนด section ที่ active menu อยู่ใน section ไหน
+$_sectionMap = [
+  'overview'  => ['dashboard','report','admin_report','charts'],
+  'booking'   => ['booking','booking_approved','booking_archive','rooms','tent_booking','tent_approved','tent_manage','boat_booking','boat_queue'],
+  'content'   => ['news_add','news_manage','popup','banner','about','survey'],
+  'settings'  => ['users','password','profile'],
+];
+$_activeSection = '';
+foreach ($_sectionMap as $_sec => $_items) {
+  if (in_array($activeMenu, $_items)) { $_activeSection = $_sec; break; }
+}
+?>
 
-<div class="menu-section">
-  <span class="menu-section-label">จัดการการจอง</span>
-  <a href="admin_booking_list.php" class="menu-item <?= $activeMenu==='booking'?'active':'' ?>">
-    <span class="icon">🏨</span><span class="text">ข้อมูลการเข้าพัก</span>
-  </a>
-  <a href="admin_booking_approved.php" class="menu-item <?= $activeMenu==='booking_approved'?'active':'' ?>">
-    <span class="icon">✅</span><span class="text">รายการอนุมัติแล้ว</span>
-  </a>
-  <a href="admin_booking_archive.php" class="menu-item <?= $activeMenu==='booking_archive'?'active':'' ?>">
-    <span class="icon">🗂️</span><span class="text">รายการย้อนหลัง</span>
-  </a>
-  <a href="manage_rooms.php" class="menu-item <?= $activeMenu==='rooms'?'active':'' ?>">
-    <span class="icon">🛏️</span><span class="text">จัดการห้องพัก</span>
-  </a>
-  <a href="admin_tent_list.php" class="menu-item <?= $activeMenu==='tent_booking'?'active':'' ?>">
-    <span class="icon">⛺</span><span class="text">การจองเต็นท์</span>
-  </a>
-  <a href="admin_tent_approved.php" class="menu-item <?= $activeMenu==='tent_approved'?'active':'' ?>">
-    <span class="icon">✅</span><span class="text">เต็นท์อนุมัติแล้ว</span>
-  </a>
-  <a href="manage_tents.php" class="menu-item <?= $activeMenu==='tent_manage'?'active':'' ?>">
-    <span class="icon">🏕️</span><span class="text">จัดการเต็นท์</span>
-  </a>
-  <a href="admin_boat_bookings.php" class="menu-item <?= $activeMenu==='boat_booking'?'active':'' ?>">
-    <span class="icon">🚣</span><span class="text">การจองพายเรือ</span>
-  </a>
-  <a href="admin_boat_queues.php" class="menu-item <?= $activeMenu==='boat_queue'?'active':'' ?>">
-    <span class="icon">🛶</span><span class="text">จัดการคิวพายเรือ</span>
-  </a>
-</div>
-
-<div class="menu-section">
-  <span class="menu-section-label">ผู้ใช้งาน</span>
-  <a href="manage_users.php" class="menu-item <?= $activeMenu==='users'?'active':'' ?>">
-    <span class="icon">👥</span><span class="text">จัดการผู้ใช้งาน</span>
-  </a>
-</div>
-
-<div class="menu-section">
-  <span class="menu-section-label">คอนเทนต์</span>
-  <a href="admin_add_news.php" class="menu-item <?= $activeMenu==='news_add'?'active':'' ?>">
-    <span class="icon">📰</span><span class="text">เพิ่มข่าวสาร</span>
-  </a>
-  <a href="manage_news.php" class="menu-item <?= $activeMenu==='news_manage'?'active':'' ?>">
-    <span class="icon">✏️</span><span class="text">จัดการข่าว</span>
-  </a>
-  <a href="admin_popup.php" class="menu-item <?= $activeMenu==='popup'?'active':'' ?>">
-    <span class="icon">💬</span><span class="text">จัดการ Popup</span>
-  </a>
-  <a href="change_banner.php" class="menu-item <?= $activeMenu==='banner'?'active':'' ?>">
-    <span class="icon">🖼️</span><span class="text">เปลี่ยนรูปหน้าเว็บ</span>
-  </a>
-  <a href="edit_about.php" class="menu-item <?= $activeMenu==='about'?'active':'' ?>">
-    <span class="icon">📝</span><span class="text">จัดการเกี่ยวกับ</span>
-  </a>
-</div>
-
-<div class="menu-section">
-  <span class="menu-section-label">ประเมินผล</span>
-  <a href="admin_survey.php" class="menu-item <?= $activeMenu==='survey'?'active':'' ?>">
-    <span class="icon">📝</span><span class="text">ผลการประเมิน</span>
-  </a>
-</div>
-
-<div class="menu-section">
-  <span class="menu-section-label">ตั้งค่า</span>
-  <a href="change_password.php" class="menu-item <?= $activeMenu==='password'?'active':'' ?>">
-    <span class="icon">🔐</span><span class="text">เปลี่ยนรหัสผ่าน</span>
-  </a>
-  <a href="admin_profile.php" class="menu-item <?= $activeMenu==='profile'?'active':'' ?>">
-    <span class="icon">👤</span><span class="text">โปรไฟล์แอดมิน</span>
-  </a>
-</div>
-
+<!-- ภาพรวม -->
+<div class="menu-section <?= $_activeSection==='overview'?'open':'' ?>" data-sec="overview">
+  <div class="menu-toggle" onclick="toggleMenu(this)">
+    <span class="menu-toggle-label">ภาพรวม</span>
+    <span class="menu-toggle-arrow">▶</span>
   </div>
+  <div class="menu-body">
+    <a href="admin_dashboard.php" class="menu-item <?= $activeMenu==='dashboard'?'active':'' ?>">
+      <span class="icon">📊</span><span class="text">Dashboard</span>
+    </a>
+    <a href="daily_report.php" class="menu-item <?= $activeMenu==='report'?'active':'' ?>">
+      <span class="icon">📈</span><span class="text">รายงานเช็คอิน</span>
+    </a>
+    <a href="booking_report.php" class="menu-item <?= $activeMenu==='admin_report'?'active':'' ?>">
+      <span class="icon">📋</span><span class="text">รายงานการจอง</span>
+    </a>
+    <a href="admin_charts.php" class="menu-item <?= $activeMenu==='charts'?'active':'' ?>">
+      <span class="icon">📉</span><span class="text">กราฟรายงาน</span>
+    </a>
+  </div>
+</div>
+
+<!-- จัดการการจอง -->
+<div class="menu-section <?= $_activeSection==='booking'?'open':'' ?>" data-sec="booking">
+  <div class="menu-toggle" onclick="toggleMenu(this)">
+    <span class="menu-toggle-label">การจอง</span>
+    <span class="menu-toggle-arrow">▶</span>
+  </div>
+  <div class="menu-body">
+    <span class="menu-sub-label">🏨 ห้องพัก</span>
+    <a href="admin_booking_list.php" class="menu-item <?= $activeMenu==='booking'?'active':'' ?>">
+      <span class="icon">🏨</span><span class="text">ข้อมูลการเข้าพัก</span>
+    </a>
+    <a href="admin_booking_approved.php" class="menu-item <?= $activeMenu==='booking_approved'?'active':'' ?>">
+      <span class="icon">✅</span><span class="text">อนุมัติแล้ว</span>
+    </a>
+    <a href="admin_booking_archive.php" class="menu-item <?= $activeMenu==='booking_archive'?'active':'' ?>">
+      <span class="icon">🗂️</span><span class="text">ย้อนหลัง</span>
+    </a>
+    <a href="manage_rooms.php" class="menu-item <?= $activeMenu==='rooms'?'active':'' ?>">
+      <span class="icon">🛏️</span><span class="text">จัดการห้องพัก</span>
+    </a>
+    <span class="menu-sub-label">⛺ เต็นท์</span>
+    <a href="admin_tent_list.php" class="menu-item <?= $activeMenu==='tent_booking'?'active':'' ?>">
+      <span class="icon">⛺</span><span class="text">การจองเต็นท์</span>
+    </a>
+    <a href="admin_tent_approved.php" class="menu-item <?= $activeMenu==='tent_approved'?'active':'' ?>">
+      <span class="icon">✅</span><span class="text">อนุมัติแล้ว</span>
+    </a>
+    <a href="manage_tents.php" class="menu-item <?= $activeMenu==='tent_manage'?'active':'' ?>">
+      <span class="icon">🏕️</span><span class="text">จัดการเต็นท์</span>
+    </a>
+    <span class="menu-sub-label">🚣 พายเรือ</span>
+    <a href="admin_boat_bookings.php" class="menu-item <?= $activeMenu==='boat_booking'?'active':'' ?>">
+      <span class="icon">🚣</span><span class="text">การจองพายเรือ</span>
+    </a>
+    <a href="admin_boat_queues.php" class="menu-item <?= $activeMenu==='boat_queue'?'active':'' ?>">
+      <span class="icon">🛶</span><span class="text">จัดการคิวพายเรือ</span>
+    </a>
+  </div>
+</div>
+
+<!-- คอนเทนต์ + ประเมินผล -->
+<div class="menu-section <?= $_activeSection==='content'?'open':'' ?>" data-sec="content">
+  <div class="menu-toggle" onclick="toggleMenu(this)">
+    <span class="menu-toggle-label">คอนเทนต์</span>
+    <span class="menu-toggle-arrow">▶</span>
+  </div>
+  <div class="menu-body">
+    <a href="admin_add_news.php" class="menu-item <?= $activeMenu==='news_add'?'active':'' ?>">
+      <span class="icon">📰</span><span class="text">เพิ่มข่าวสาร</span>
+    </a>
+    <a href="manage_news.php" class="menu-item <?= $activeMenu==='news_manage'?'active':'' ?>">
+      <span class="icon">✏️</span><span class="text">จัดการข่าว</span>
+    </a>
+    <a href="admin_popup.php" class="menu-item <?= $activeMenu==='popup'?'active':'' ?>">
+      <span class="icon">💬</span><span class="text">จัดการ Popup</span>
+    </a>
+    <a href="change_banner.php" class="menu-item <?= $activeMenu==='banner'?'active':'' ?>">
+      <span class="icon">🖼️</span><span class="text">เปลี่ยนแบนเนอร์</span>
+    </a>
+    <a href="edit_about.php" class="menu-item <?= $activeMenu==='about'?'active':'' ?>">
+      <span class="icon">📝</span><span class="text">เกี่ยวกับเรา</span>
+    </a>
+    <a href="admin_survey.php" class="menu-item <?= $activeMenu==='survey'?'active':'' ?>">
+      <span class="icon">📊</span><span class="text">ผลการประเมิน</span>
+    </a>
+  </div>
+</div>
+
+<!-- ตั้งค่า -->
+<div class="menu-section <?= $_activeSection==='settings'?'open':'' ?>" data-sec="settings">
+  <div class="menu-toggle" onclick="toggleMenu(this)">
+    <span class="menu-toggle-label">ผู้ใช้ / ตั้งค่า</span>
+    <span class="menu-toggle-arrow">▶</span>
+  </div>
+  <div class="menu-body">
+    <a href="manage_users.php" class="menu-item <?= $activeMenu==='users'?'active':'' ?>">
+      <span class="icon">👥</span><span class="text">จัดการผู้ใช้งาน</span>
+    </a>
+    <a href="change_password.php" class="menu-item <?= $activeMenu==='password'?'active':'' ?>">
+      <span class="icon">🔐</span><span class="text">เปลี่ยนรหัสผ่าน</span>
+    </a>
+    <a href="admin_profile.php" class="menu-item <?= $activeMenu==='profile'?'active':'' ?>">
+      <span class="icon">👤</span><span class="text">โปรไฟล์แอดมิน</span>
+    </a>
+  </div>
+</div>
+
+  </div><!-- end sidebar-scroll -->
 
   <div class="sidebar-footer">
     <div class="sidebar-user">
@@ -420,6 +486,34 @@ body::before {
     </a>
   </div>
 </div>
+
+<script>
+function toggleMenu(btn) {
+  const section = btn.closest('.menu-section');
+  const isOpen = section.classList.contains('open');
+  section.classList.toggle('open', !isOpen);
+  // save state
+  try {
+    const sec = section.dataset.sec;
+    const saved = JSON.parse(localStorage.getItem('menuState') || '{}');
+    saved[sec] = !isOpen;
+    localStorage.setItem('menuState', JSON.stringify(saved));
+  } catch(e) {}
+}
+// restore state for sections not forced open by PHP
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem('menuState') || '{}');
+    document.querySelectorAll('.menu-section').forEach(sec => {
+      const key = sec.dataset.sec;
+      // PHP already opens the active section; only restore others
+      if (!sec.classList.contains('open') && saved[key] === true) {
+        sec.classList.add('open');
+      }
+    });
+  } catch(e) {}
+});
+</script>
 
 <div class="main">
   <div class="topbar">

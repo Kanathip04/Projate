@@ -192,6 +192,18 @@ include 'admin_layout_top.php';
 .rm-empty{padding:48px;text-align:center;color:var(--muted);}
 .rm-empty-ico{font-size:2.5rem;opacity:.3;margin-bottom:10px;}
 
+/* Amenity checkboxes */
+.rm-amenity-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.am-chip{
+  display:flex;align-items:center;gap:6px;padding:7px 10px;
+  border-radius:10px;border:1.5px solid var(--border);background:#fafaf8;
+  font-size:.78rem;font-weight:600;color:var(--muted);cursor:pointer;
+  transition:.15s;user-select:none;
+}
+.am-chip input{display:none;}
+.am-chip.checked{border-color:var(--gold);background:var(--gold-dim);color:var(--ink);}
+.am-chip:hover{border-color:var(--gold);}
+
 /* Alert */
 .rm-alert{display:flex;align-items:center;gap:10px;padding:13px 18px;
   border-radius:12px;font-size:.85rem;font-weight:600;margin-bottom:20px;
@@ -312,6 +324,27 @@ include 'admin_layout_top.php';
             <input type="number" id="bed_single" min="0" placeholder="0"
                    value="<?= $bedSingle ?>">
           </div>
+        </div>
+
+<?php
+  $amenityList = [
+    ['เตียงคู่','🛏️'], ['แอร์','❄️'], ['TV','📺'],
+    ['Wi-Fi','📶'], ['ตู้เย็น','🧊'], ['ห้องน้ำในตัว','🚿'],
+    ['เครื่องทำน้ำอุ่น','🔥'], ['ระเบียง','🌅'],
+  ];
+  $savedAmenities = array_filter(array_map('trim', explode('|', $editData['amenities'] ?? '')));
+?>
+        <div class="rm-section-label">สิ่งอำนวยความสะดวก</div>
+        <input type="hidden" name="amenities" id="amenities_hidden" value="<?= htmlspecialchars($editData['amenities'] ?? '') ?>">
+        <div class="rm-amenity-grid">
+          <?php foreach ($amenityList as [$amName, $amIcon]):
+            $isChecked = in_array($amName, $savedAmenities, true);
+          ?>
+          <label class="am-chip <?= $isChecked ? 'checked' : '' ?>" onclick="toggleAmenity(this)">
+            <input type="checkbox" value="<?= htmlspecialchars($amName) ?>" <?= $isChecked ? 'checked' : '' ?>>
+            <?= $amIcon ?> <?= htmlspecialchars($amName) ?>
+          </label>
+          <?php endforeach; ?>
         </div>
 
         <div class="rm-section-label">การแสดงผลและรูปภาพ</div>
@@ -437,7 +470,17 @@ document.querySelector('form').addEventListener('submit', () => {
   if (d > 0) parts.push('เตียงคู่:' + d);
   if (s > 0) parts.push('เตียงเดี่ยว:' + s);
   document.getElementById('bed_type_hidden').value = parts.join('|') || '';
+
+  // รวม amenities
+  const checked = [...document.querySelectorAll('.am-chip input:checked')].map(cb => cb.value);
+  document.getElementById('amenities_hidden').value = checked.join('|');
 });
+
+function toggleAmenity(label) {
+  const cb = label.querySelector('input');
+  cb.checked = !cb.checked;
+  label.classList.toggle('checked', cb.checked);
+}
 </script>
 
 <?php include 'admin_layout_bottom.php'; ?>

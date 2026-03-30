@@ -66,6 +66,7 @@ $hasImagePath   = in_array('image_path', $roomColumns, true);
 $hasDescription = in_array('description', $roomColumns, true);
 $hasStatus      = in_array('status', $roomColumns, true);
 $hasTotalRooms  = in_array('total_rooms', $roomColumns, true);
+$hasAmenities   = in_array('amenities', $roomColumns, true);
 
 if (!$hasId || !$hasRoomName) {
     die("ตาราง rooms ต้องมีคอลัมน์ id และ room_name อย่างน้อย");
@@ -129,6 +130,7 @@ if ($hasImagePath)   $selectFields[] = 'image_path';
 if ($hasDescription) $selectFields[] = 'description';
 if ($hasTotalRooms)  $selectFields[] = 'total_rooms';
 if ($hasStatus)      $selectFields[] = 'status';
+if ($hasAmenities)   $selectFields[] = 'amenities';
 
 /* =========================
    สร้าง SQL หลัก
@@ -509,6 +511,13 @@ a{
         width:100%;
     }
 }
+.amenity-list{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px;margin-bottom:4px;}
+.amenity-chip{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600;
+    background:rgba(26,26,46,.06);color:var(--ink);
+    border:1px solid var(--border);
+}
 .top-nav{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px;}
 .nav-btn{
     display:inline-flex;align-items:center;padding:10px 18px;
@@ -612,6 +621,32 @@ a{
 
                                 <?php if ($hasMaxGuests): ?>
                                     <div class="meta-item"><strong>รองรับ:</strong> <?php echo (int)($room['max_guests'] ?? 0); ?> คน</div>
+                                <?php endif; ?>
+
+                                <?php if ($hasAmenities && !empty($room['amenities'])): ?>
+                                    <?php
+                                        $amIcons = [
+                                            'เตียงคู่'       => '🛏️',
+                                            'แอร์'           => '❄️',
+                                            'TV'             => '📺',
+                                            'Wi-Fi'          => '📶',
+                                            'ตู้เย็น'        => '🧊',
+                                            'ห้องน้ำในตัว'  => '🚿',
+                                            'เครื่องทำน้ำอุ่น' => '🔥',
+                                            'ระเบียง'        => '🌅',
+                                        ];
+                                        $amItems = array_filter(array_map('trim', explode('|', $room['amenities'])));
+                                    ?>
+                                    <div class="meta-item">
+                                        <strong>สิ่งอำนวยความสะดวก:</strong>
+                                        <div class="amenity-list">
+                                            <?php foreach ($amItems as $am): ?>
+                                                <span class="amenity-chip">
+                                                    <?php echo isset($amIcons[$am]) ? $amIcons[$am] . ' ' : ''; echo htmlspecialchars($am); ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
                                 <?php endif; ?>
                             </div>
 

@@ -25,6 +25,12 @@ function redirect_back($message, $editId = 0, $type = 'error') {
 $checkTable = $conn->query("SHOW TABLES LIKE 'rooms'");
 if (!$checkTable || $checkTable->num_rows === 0) die("ไม่พบตาราง rooms");
 
+// เพิ่มคอลัมน์ amenities ถ้ายังไม่มี
+$colCheck = $conn->query("SHOW COLUMNS FROM rooms LIKE 'amenities'");
+if ($colCheck && $colCheck->num_rows === 0) {
+    $conn->query("ALTER TABLE rooms ADD COLUMN amenities TEXT DEFAULT NULL");
+}
+
 $id          = isset($_POST['id'])          ? (int)$_POST['id']          : 0;
 $room_name   = trim($_POST['room_name']     ?? '');
 $room_type   = trim($_POST['room_type']     ?? '');
@@ -34,6 +40,7 @@ $total_rooms = isset($_POST['total_rooms']) ? (int)$_POST['total_rooms'] : 5;
 $max_guests  = isset($_POST['max_guests'])  ? (int)$_POST['max_guests']  : 2;
 $room_size   = trim($_POST['room_size']     ?? '');
 $bed_type    = trim($_POST['bed_type']      ?? '');
+$amenities   = trim($_POST['amenities']    ?? '');
 $capacity    = $max_guests;
 
 // ✅ แก้: status เป็น ENUM('show','hide') ไม่ใช่ 0/1
@@ -103,6 +110,7 @@ if ($id > 0) {
                 status      = ?,
                 room_size   = ?,
                 bed_type    = ?,
+                amenities   = ?,
                 capacity    = ?,
                 total_rooms = ?,
                 max_guests  = ?,
@@ -112,10 +120,10 @@ if ($id > 0) {
     $stmt = $conn->prepare($sql);
     if (!$stmt) redirect_back("Prepare UPDATE failed: " . $conn->error, $id);
 
-    // s s d s s s s i i i s i
-    $stmt->bind_param("ssdssssiissi",
+    // s s d s s s s s i i i s i
+    $stmt->bind_param("ssdsssssiissi",
         $room_name, $room_type, $price, $description, $status,
-        $room_size, $bed_type, $capacity, $total_rooms, $max_guests,
+        $room_size, $bed_type, $amenities, $capacity, $total_rooms, $max_guests,
         $dbUploadPath, $id
     );
 
@@ -131,16 +139,16 @@ if ($id > 0) {
 
     $sql = "INSERT INTO rooms
                 (room_name, room_type, price, description, status,
-                 room_size, bed_type, capacity, total_rooms, max_guests, image_path)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                 room_size, bed_type, amenities, capacity, total_rooms, max_guests, image_path)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) redirect_back("Prepare INSERT failed: " . $conn->error);
 
-    // s s d s s s s i i i s
-    $stmt->bind_param("ssdssssiiis",
+    // s s d s s s s s i i i s
+    $stmt->bind_param("ssdsssssiiis",
         $room_name, $room_type, $price, $description, $status,
-        $room_size, $bed_type, $capacity, $total_rooms, $max_guests,
+        $room_size, $bed_type, $amenities, $capacity, $total_rooms, $max_guests,
         $dbUploadPath
     );
 

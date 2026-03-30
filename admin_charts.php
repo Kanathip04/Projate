@@ -98,7 +98,7 @@ $allTotal  = $boatTotal + $roomTotal + $tentTotal;
 
 $boatPaid  = (int)$conn->query("SELECT COUNT(*) c FROM boat_bookings WHERE DATE(created_at) BETWEEN '$winStart' AND '$winEnd' AND payment_status='paid' AND archived=0")->fetch_assoc()['c'];
 $boatRev   = (float)$conn->query("SELECT COALESCE(SUM(total_amount),0) s FROM boat_bookings WHERE DATE(created_at) BETWEEN '$winStart' AND '$winEnd' AND payment_status='paid' AND archived=0")->fetch_assoc()['s'];
-$visitors  = (int)$conn->query("SELECT COUNT(*) c FROM tourists WHERE DATE(visit_date) BETWEEN '$winStart' AND '$winEnd' AND archived=0")->fetch_assoc()['c'];
+$visitors  = (int)$conn->query("SELECT COUNT(*) c FROM tourists WHERE DATE(visit_date) BETWEEN '$winStart' AND '$winEnd'")->fetch_assoc()['c'];
 
 // ── Payment status breakdown (boat) ──
 $payBreak = $conn->query("SELECT payment_status, COUNT(*) c FROM boat_bookings WHERE DATE(created_at) BETWEEN '$winStart' AND '$winEnd' AND archived=0 GROUP BY payment_status")->fetch_all(MYSQLI_ASSOC);

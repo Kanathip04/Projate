@@ -1,6 +1,4 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 $pageTitle  = "รายงานภาพรวม";
 $activeMenu = "admin_report";
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
@@ -77,7 +75,7 @@ $tentData  = $conn->query("SELECT COUNT(*) total,
 
 // ── Visitors ──
 $visitorData = $conn->query("SELECT COUNT(*) total FROM tourists
-    WHERE " . dateWhere('visit_date', $dateFrom, $dateTo) . " AND archived = 0")->fetch_assoc();
+    WHERE " . dateWhere('visit_date', $dateFrom, $dateTo))->fetch_assoc();
 
 // ── Finance (boat only has payment) ──
 $finData = $conn->query("SELECT
@@ -111,7 +109,7 @@ if ($reportType === 'daily') {
         $chartBoat[]   = (int)$conn->query("SELECT COUNT(*) c FROM boat_bookings WHERE DATE(created_at)='$dt' AND archived=0")->fetch_assoc()['c'];
         $chartRoom[]   = (int)$conn->query("SELECT COUNT(*) c FROM room_bookings WHERE DATE(created_at)='$dt' AND archived=0")->fetch_assoc()['c'];
         $chartTent[]   = (int)$conn->query("SELECT COUNT(*) c FROM tent_bookings WHERE DATE(created_at)='$dt' AND archived=0")->fetch_assoc()['c'];
-        $chartVisit[]  = (int)$conn->query("SELECT COUNT(*) c FROM tourists WHERE visit_date='$dt' AND archived=0")->fetch_assoc()['c'];
+        $chartVisit[]  = (int)$conn->query("SELECT COUNT(*) c FROM tourists WHERE visit_date='$dt'")->fetch_assoc()['c'];
     }
 } else {
     $chartLabels = $chartBoat = $chartRoom = $chartTent = $chartVisit = [];
@@ -123,7 +121,7 @@ if ($reportType === 'daily') {
         $chartBoat[]   = (int)$conn->query("SELECT COUNT(*) c FROM boat_bookings WHERE DATE(created_at) BETWEEN '$mStart' AND '$mEnd' AND archived=0")->fetch_assoc()['c'];
         $chartRoom[]   = (int)$conn->query("SELECT COUNT(*) c FROM room_bookings WHERE DATE(created_at) BETWEEN '$mStart' AND '$mEnd' AND archived=0")->fetch_assoc()['c'];
         $chartTent[]   = (int)$conn->query("SELECT COUNT(*) c FROM tent_bookings WHERE DATE(created_at) BETWEEN '$mStart' AND '$mEnd' AND archived=0")->fetch_assoc()['c'];
-        $chartVisit[]  = (int)$conn->query("SELECT COUNT(*) c FROM tourists WHERE visit_date BETWEEN '$mStart' AND '$mEnd' AND archived=0")->fetch_assoc()['c'];
+        $chartVisit[]  = (int)$conn->query("SELECT COUNT(*) c FROM tourists WHERE visit_date BETWEEN '$mStart' AND '$mEnd'")->fetch_assoc()['c'];
     }
 }
 

@@ -81,7 +81,9 @@ $visitorData = $conn->query("SELECT COUNT(*) total FROM tourists
 // ── Finance (boat only has payment) ──
 $finData = $conn->query("SELECT
     COALESCE(SUM(total_amount),0) grand_total,
-    COALESCE(SUM(CASE WHEN payment_status='paid' THEN total_amount END),0) paid_amt,
+    COALESCE(SUM(CASE WHEN payment_status IN('paid','cash_paid') THEN total_amount END),0) paid_amt,
+    COALESCE(SUM(CASE WHEN payment_status='cash_paid' OR payment_provider='cash' THEN total_amount END),0) cash_amt,
+    COALESCE(SUM(CASE WHEN payment_status='paid' AND (payment_provider IS NULL OR payment_provider!='cash') THEN total_amount END),0) transfer_amt,
     COALESCE(SUM(CASE WHEN payment_status IN('unpaid','pending') THEN total_amount END),0) unpaid_amt,
     COALESCE(SUM(CASE WHEN payment_status='waiting_verify' THEN total_amount END),0) waiting_amt,
     COALESCE(SUM(CASE WHEN payment_status='failed' THEN total_amount END),0) failed_amt
@@ -101,9 +103,19 @@ $tentGuests = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM tent_book
 $stayGuests = $roomGuests + $tentGuests; // คนเข้าพักรวม
 
 // ── Revenue breakdown: วันนี้ / เดือนนี้ / ปีนี้ (เรือ) ──
-$revToday = (float)$conn->query("SELECT COALESCE(SUM(total_amount),0) s FROM boat_bookings WHERE DATE(created_at)='$today' AND payment_status='paid' AND archived=0")->fetch_assoc()['s'];
-$revMonth = (float)$conn->query("SELECT COALESCE(SUM(total_amount),0) s FROM boat_bookings WHERE DATE(created_at) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "' AND payment_status='paid' AND archived=0")->fetch_assoc()['s'];
-$revYear  = (float)$conn->query("SELECT COALESCE(SUM(total_amount),0) s FROM boat_bookings WHERE DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND payment_status='paid' AND archived=0")->fetch_assoc()['s'];
+$_revQ = function($conn, $where) {
+    return $conn->query("SELECT
+        COALESCE(SUM(CASE WHEN payment_status IN('paid','cash_paid') THEN total_amount END),0) total,
+        COALESCE(SUM(CASE WHEN payment_status='cash_paid' OR payment_provider='cash' THEN total_amount END),0) cash,
+        COALESCE(SUM(CASE WHEN payment_status='paid' AND (payment_provider IS NULL OR payment_provider!='cash') THEN total_amount END),0) transfer
+        FROM boat_bookings WHERE $where AND archived=0")->fetch_assoc();
+};
+$_revToday = $_revQ($conn, "DATE(created_at)='$today'");
+$_revMonth = $_revQ($conn, "DATE(created_at) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "'");
+$_revYear  = $_revQ($conn, "DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31'");
+$revToday = (float)$_revToday['total'];
+$revMonth = (float)$_revMonth['total'];
+$revYear  = (float)$_revYear['total'];
 
 // ── Guest counts: วันนี้ / เดือนนี้ / ปีนี้ ──
 $boatGuestToday = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM boat_bookings WHERE DATE(created_at)='$today' AND archived=0")->fetch_assoc()['n'];
@@ -410,6 +422,10 @@ $qnavLinks = [
 .rev-row{display:flex;justify-content:space-between;font-size:.76rem;}
 .rev-row .rl{color:var(--muted);}
 .rev-row .rv{font-weight:700;color:var(--ink);}
+.pay-split{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.ps-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:99px;font-size:.72rem;font-weight:700;}
+.ps-cash{background:#fff7ed;color:#c2410c;border:1px solid #fdba74;}
+.ps-transfer{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;}
 
 @media(max-width:700px){.rev-grid{grid-template-columns:1fr;}}
 
@@ -718,6 +734,10 @@ $qnavLinks = [
     <div class="rev-period">วันนี้</div>
     <div class="rev-amt">฿<?= number_format($revToday, 0) ?></div>
     <div class="rev-sub"><?= date('d/m/Y', strtotime($today)) ?></div>
+    <div class="pay-split">
+      <span class="ps-chip ps-cash">💵 สด ฿<?= number_format((float)$_revToday['cash'], 0) ?></span>
+      <span class="ps-chip ps-transfer">📱 โอน ฿<?= number_format((float)$_revToday['transfer'], 0) ?></span>
+    </div>
     <div class="rev-detail">
       <div class="rev-row">
         <span class="rl">จำนวนลูกค้า (วันนี้)</span>
@@ -733,6 +753,10 @@ $qnavLinks = [
     <div class="rev-period">เดือนนี้ (<?= date('m/Y') ?>)</div>
     <div class="rev-amt">฿<?= number_format($revMonth, 0) ?></div>
     <div class="rev-sub">ยอดชำระสำเร็จสะสม</div>
+    <div class="pay-split">
+      <span class="ps-chip ps-cash">💵 สด ฿<?= number_format((float)$_revMonth['cash'], 0) ?></span>
+      <span class="ps-chip ps-transfer">📱 โอน ฿<?= number_format((float)$_revMonth['transfer'], 0) ?></span>
+    </div>
     <div class="rev-detail">
       <div class="rev-row">
         <span class="rl">จำนวนลูกค้า</span>
@@ -748,6 +772,10 @@ $qnavLinks = [
     <div class="rev-period">ปีนี้ (พ.ศ. <?= $thisYear+543 ?>)</div>
     <div class="rev-amt">฿<?= number_format($revYear, 0) ?></div>
     <div class="rev-sub">ยอดชำระสำเร็จสะสมทั้งปี</div>
+    <div class="pay-split">
+      <span class="ps-chip ps-cash">💵 สด ฿<?= number_format((float)$_revYear['cash'], 0) ?></span>
+      <span class="ps-chip ps-transfer">📱 โอน ฿<?= number_format((float)$_revYear['transfer'], 0) ?></span>
+    </div>
     <div class="rev-detail">
       <div class="rev-row">
         <span class="rl">จำนวนลูกค้า</span>
@@ -839,10 +867,17 @@ $qnavLinks = [
   <div class="lm-card-body">
     <div class="fin-grid">
       <div class="fin-card"><div class="fin-lbl">ยอดรวมทั้งหมด</div><div class="fin-val">฿<?= number_format((float)$finData['grand_total'], 2) ?></div></div>
-      <div class="fin-card"><div class="fin-lbl">ชำระแล้ว</div><div class="fin-val" style="color:#2e7d32;">฿<?= number_format((float)$finData['paid_amt'], 2) ?></div></div>
+      <div class="fin-card"><div class="fin-lbl">ชำระแล้ว (รวม)</div><div class="fin-val" style="color:#2e7d32;">฿<?= number_format((float)$finData['paid_amt'], 2) ?></div></div>
+      <div class="fin-card" style="border-top:3px solid #c2410c;">
+        <div class="fin-lbl">💵 เงินสด</div>
+        <div class="fin-val" style="color:#c2410c;">฿<?= number_format((float)$finData['cash_amt'], 2) ?></div>
+      </div>
+      <div class="fin-card" style="border-top:3px solid #1d4ed8;">
+        <div class="fin-lbl">📱 โอน / QR Code</div>
+        <div class="fin-val" style="color:#1d4ed8;">฿<?= number_format((float)$finData['transfer_amt'], 2) ?></div>
+      </div>
       <div class="fin-card"><div class="fin-lbl">ยังไม่ชำระ</div><div class="fin-val" style="color:#dc2626;">฿<?= number_format((float)$finData['unpaid_amt'], 2) ?></div></div>
       <div class="fin-card"><div class="fin-lbl">รอตรวจสอบ</div><div class="fin-val" style="color:#f59e0b;">฿<?= number_format((float)$finData['waiting_amt'], 2) ?></div></div>
-      <div class="fin-card"><div class="fin-lbl">ตรวจสอบไม่ผ่าน</div><div class="fin-val" style="color:#e65100;">฿<?= number_format((float)$finData['failed_amt'], 2) ?></div></div>
     </div>
   </div>
 </div>

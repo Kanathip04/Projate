@@ -7,6 +7,7 @@ register_shutdown_function(function(){
     $msg = $err ? print_r($err, true) : "No PHP error — possible segfault/OOM";
     file_put_contents(__DIR__ . '/report_crash.log', date('Y-m-d H:i:s') . "\n" . $msg . "\n\n", FILE_APPEND);
 });
+die("PHP reached line 10 OK"); // TEST
 $pageTitle  = "รายงานภาพรวม";
 $activeMenu = "admin_report";
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");

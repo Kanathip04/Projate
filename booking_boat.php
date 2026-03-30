@@ -141,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ajax'])) {
     $stmt = $conn->prepare(
         "INSERT INTO boat_bookings
          (booking_ref, queue_id, full_name, phone, email, queue_name, guests, boat_date, boat_type, price_per_boat, total_amount, daily_queue_no, note, booking_status, payment_status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'unpaid')"
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending')"
     );
 
     if (!$stmt) {

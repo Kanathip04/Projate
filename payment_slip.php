@@ -64,40 +64,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['slip'])) {
         if (!is_dir($dir)) mkdir($dir, 0755, true);
         $fname = 'slip_' . $booking['id'] . '_' . time() . '.' . $ext;
         if (move_uploaded_file($file['tmp_name'], $dir . $fname)) {
-            $slipPath = $dir . $fname;
-            $updStmt = $conn->prepare("UPDATE boat_bookings SET payment_slip=?, payment_status='waiting_verify' WHERE id=?");
-            $updStmt->bind_param("si", $slipPath, $booking['id']);
-            $updStmt->execute();
-            $updStmt->close();
+            $slipPath   = $dir . $fname;
+            $slipHash   = hash('sha256', file_get_contents($slipPath));
+            $uploadedIp = $_SERVER['REMOTE_ADDR'] ?? '';
+            $uploadedUa = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500);
+            $uploadedAt = date('Y-m-d H:i:s');
 
-            $mimeMap  = ['jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp'];
-            $mimeType = $mimeMap[$ext] ?? 'image/jpeg';
-            $slipBase64 = base64_encode(file_get_contents($dir . $fname));
+            // ── ตรวจสลิปซ้ำจาก hash ──
+            $dupStmt = $conn->prepare("SELECT booking_ref FROM payment_slips WHERE slip_hash = ? LIMIT 1");
+            $dupStmt->bind_param("s", $slipHash);
+            $dupStmt->execute();
+            $dupSlip = $dupStmt->get_result()->fetch_assoc();
+            $dupStmt->close();
 
-            $webhookUrl = 'https://kanayhip.app.n8n.cloud/webhook/boat-slip';
-            $payload = json_encode([
-                'booking_ref'   => $booking_ref,
-                'booking_id'    => $booking['id'],
-                'customer_name' => $booking['full_name'],
-                'total_amount'  => $booking['total_amount'],
-                'slip_url'      => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/' . $slipPath,
-                'callback_url'  => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/payment_callback.php',
-                'slip_base64'   => $slipBase64,
-                'slip_mime_type'=> $mimeType,
-            ]);
-            $ch = curl_init($webhookUrl);
-            curl_setopt_array($ch, [
-                CURLOPT_POST           => true,
-                CURLOPT_POSTFIELDS     => $payload,
-                CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT        => 10,
-            ]);
-            curl_exec($ch);
-            curl_close($ch);
-            // Redirect เพื่อป้องกัน browser re-submit form ซ้ำ
-            header("Location: payment_slip.php?ref=" . urlencode($booking_ref));
-            exit;
+            if ($dupSlip) {
+                // สลิปซ้ำ — อัปเดตสถานะทันที ไม่ส่ง n8n
+                $dupNote = "\n[AUTO] สลิปซ้ำกับ " . $dupSlip['booking_ref'] . " [" . date('Y-m-d H:i') . "]";
+                $conn->prepare("UPDATE boat_bookings SET payment_status='duplicate', note=CONCAT(COALESCE(note,''),?) WHERE booking_ref=?")
+                     ->bind_param("ss", $dupNote, $booking_ref);
+                $st = $conn->prepare("UPDATE boat_bookings SET payment_status='duplicate', note=CONCAT(COALESCE(note,''),?) WHERE booking_ref=?");
+                $st->bind_param("ss", $dupNote, $booking_ref);
+                $st->execute(); $st->close();
+                $uploadError = 'สลิปนี้เคยถูกใช้แล้ว (ใน ' . $dupSlip['booking_ref'] . ')';
+            } else {
+                // ── บันทึกลง payment_slips ──
+                $insStmt = $conn->prepare(
+                    "INSERT INTO payment_slips
+                     (booking_id, booking_ref, slip_image_path, slip_hash, verification_status, uploaded_ip, uploaded_ua, uploaded_at)
+                     VALUES (?,?,?,?,'checking',?,?,?)"
+                );
+                $insStmt->bind_param("issssss",
+                    $booking['id'], $booking_ref, $slipPath, $slipHash,
+                    $uploadedIp, $uploadedUa, $uploadedAt
+                );
+                $insStmt->execute();
+                $insStmt->close();
+
+                // ── อัปเดต booking ──
+                $updStmt = $conn->prepare("UPDATE boat_bookings SET payment_slip=?, payment_status='waiting_verify' WHERE id=?");
+                $updStmt->bind_param("si", $slipPath, $booking['id']);
+                $updStmt->execute();
+                $updStmt->close();
+
+                // ── ส่ง webhook ไป n8n ──
+                $mimeMap    = ['jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp'];
+                $mimeType   = $mimeMap[$ext] ?? 'image/jpeg';
+                $slipBase64 = base64_encode(file_get_contents($slipPath));
+                $expiredAt  = date('Y-m-d H:i:s', strtotime($booking['created_at']) + PAY_TIMEOUT_SEC);
+
+                $webhookUrl = 'https://kanayhip.app.n8n.cloud/webhook/boat-slip';
+                $payload = json_encode([
+                    'booking_ref'      => $booking_ref,
+                    'booking_id'       => $booking['id'],
+                    'user_name'        => $booking['full_name'],
+                    'expected_amount'  => (float)$booking['total_amount'],
+                    'amount_tolerance' => 1.00,
+                    'promptpay_id'     => PROMPTPAY_ID,
+                    'booking_created'  => $booking['created_at'],
+                    'expired_at'       => $expiredAt,
+                    'payment_channel'  => 'promptpay',
+                    'slip_hash'        => $slipHash,
+                    'slip_url'         => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/' . $slipPath,
+                    'callback_url'     => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/payment_callback.php',
+                    'slip_base64'      => $slipBase64,
+                    'slip_mime_type'   => $mimeType,
+                ]);
+                $ch = curl_init($webhookUrl);
+                curl_setopt_array($ch, [
+                    CURLOPT_POST           => true,
+                    CURLOPT_POSTFIELDS     => $payload,
+                    CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT        => 10,
+                ]);
+                curl_exec($ch);
+                curl_close($ch);
+
+                header("Location: payment_slip.php?ref=" . urlencode($booking_ref));
+                exit;
+            }
         } else {
             $uploadError = 'อัปโหลดไม่สำเร็จ กรุณาลองใหม่';
         }

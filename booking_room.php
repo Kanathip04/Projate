@@ -615,8 +615,22 @@ a{
                                     <div class="meta-item"><strong>ขนาดห้อง:</strong> <?php echo htmlspecialchars($room['room_size'] ?? '-'); ?></div>
                                 <?php endif; ?>
 
-                                <?php if ($hasBedType): ?>
-                                    <div class="meta-item"><strong>ประเภทเตียง:</strong> <?php echo htmlspecialchars($room['bed_type'] ?? '-'); ?></div>
+                                <?php if ($hasBedType && !empty($room['bed_type'])): ?>
+                                    <?php
+                                        $bt = $room['bed_type'];
+                                        $bedChips = [];
+                                        if (strpos($bt, 'เตียงคู่') !== false)   $bedChips[] = '🛏️ เตียงคู่';
+                                        if (strpos($bt, 'เตียงเดี่ยว') !== false) $bedChips[] = '🛌 เตียงเดี่ยว';
+                                        if (empty($bedChips)) $bedChips[] = '🛏️ ' . $bt;
+                                    ?>
+                                    <div class="meta-item">
+                                        <strong>ประเภทเตียง:</strong>
+                                        <div class="amenity-list">
+                                            <?php foreach ($bedChips as $bc): ?>
+                                                <span class="amenity-chip"><?php echo htmlspecialchars($bc); ?></span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
                                 <?php endif; ?>
 
                                 <?php if ($hasMaxGuests): ?>

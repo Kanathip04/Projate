@@ -290,16 +290,14 @@ include 'admin_layout_top.php';
         <div class="rm-section-label">ความจุ</div>
 
 <?php
-  // Parse bed counts from stored string e.g. "เตียงคู่:2|เตียงเดี่ยว:1"
-  $bedDouble = 0; $bedSingle = 0;
-  if (!empty($editData['bed_type'])) {
-    if (preg_match('/เตียงคู่:(\d+)/', $editData['bed_type'], $m))   $bedDouble = (int)$m[1];
-    if (preg_match('/เตียงเดี่ยว:(\d+)/', $editData['bed_type'], $m)) $bedSingle = (int)$m[1];
-  }
+  $savedBeds = array_filter(array_map('trim', explode('|', $editData['bed_type'] ?? '')));
+  // รองรับทั้งรูปแบบเก่า "เตียงคู่:2" และใหม่ "เตียงคู่"
+  $hasDouble = (strpos($editData['bed_type'] ?? '', 'เตียงคู่') !== false);
+  $hasSingle = (strpos($editData['bed_type'] ?? '', 'เตียงเดี่ยว') !== false);
 ?>
         <input type="hidden" name="bed_type" id="bed_type_hidden" value="<?= htmlspecialchars($editData['bed_type'] ?? '') ?>">
 
-        <div class="rm-row3">
+        <div class="rm-row2">
           <div class="rm-fg">
             <label>จำนวนห้อง</label>
             <input type="number" name="total_rooms" min="1" required
@@ -312,24 +310,22 @@ include 'admin_layout_top.php';
           </div>
         </div>
 
-        <div class="rm-section-label">จำนวนเตียง</div>
-        <div class="rm-row2">
-          <div class="rm-fg">
-            <label>🛏️ เตียงคู่</label>
-            <input type="number" id="bed_double" min="0" placeholder="0"
-                   value="<?= $bedDouble ?>">
-          </div>
-          <div class="rm-fg">
-            <label>🛌 เตียงเดี่ยว</label>
-            <input type="number" id="bed_single" min="0" placeholder="0"
-                   value="<?= $bedSingle ?>">
-          </div>
+        <div class="rm-section-label">ประเภทเตียง</div>
+        <div class="rm-amenity-grid" style="grid-template-columns:1fr 1fr;">
+          <label class="am-chip <?= $hasDouble ? 'checked' : '' ?>" onclick="toggleAmenity(this)">
+            <input type="checkbox" data-bed="เตียงคู่" <?= $hasDouble ? 'checked' : '' ?>>
+            🛏️ เตียงคู่
+          </label>
+          <label class="am-chip <?= $hasSingle ? 'checked' : '' ?>" onclick="toggleAmenity(this)">
+            <input type="checkbox" data-bed="เตียงเดี่ยว" <?= $hasSingle ? 'checked' : '' ?>>
+            🛌 เตียงเดี่ยว
+          </label>
         </div>
 
 <?php
   $amenityList = [
-    ['เตียงคู่','🛏️'], ['แอร์','❄️'], ['TV','📺'],
-    ['Wi-Fi','📶'], ['ตู้เย็น','🧊'], ['ห้องน้ำในตัว','🚿'],
+    ['แอร์','❄️'], ['TV','📺'], ['Wi-Fi','📶'],
+    ['ตู้เย็น','🧊'], ['ห้องน้ำในตัว','🚿'],
     ['เครื่องทำน้ำอุ่น','🔥'], ['ระเบียง','🌅'],
   ];
   $savedAmenities = array_filter(array_map('trim', explode('|', $editData['amenities'] ?? '')));
@@ -411,12 +407,10 @@ include 'admin_layout_top.php';
             <span class="room-meta-chip">🏠 <?= (int)($row['total_rooms'] ?? 0) ?> ห้อง</span>
             <span class="room-meta-chip">👥 สูงสุด <?= (int)($row['max_guests'] ?? 0) ?> คน</span>
 <?php
-              // แสดง chip แยกตาม bed count
               $bt = $row['bed_type'] ?? '';
               $bchips = [];
-              if (preg_match('/เตียงคู่:(\d+)/', $bt, $m)   && (int)$m[1] > 0) $bchips[] = '🛏️ เตียงคู่ '.$m[1].' หลัง';
-              if (preg_match('/เตียงเดี่ยว:(\d+)/', $bt, $m) && (int)$m[1] > 0) $bchips[] = '🛌 เตียงเดี่ยว '.$m[1].' หลัง';
-              if (empty($bchips) && $bt !== '') $bchips[] = '🛏️ '.$bt;
+              if (strpos($bt, 'เตียงคู่') !== false)   $bchips[] = '🛏️ เตียงคู่';
+              if (strpos($bt, 'เตียงเดี่ยว') !== false) $bchips[] = '🛌 เตียงเดี่ยว';
               foreach ($bchips as $chip):
             ?>
             <span class="room-meta-chip"><?= htmlspecialchars($chip) ?></span>
@@ -462,18 +456,14 @@ function previewImg(input) {
   }
 }
 
-// รวม bed counts → bed_type string ก่อน submit
 document.querySelector('form').addEventListener('submit', () => {
-  const d = parseInt(document.getElementById('bed_double').value) || 0;
-  const s = parseInt(document.getElementById('bed_single').value) || 0;
-  const parts = [];
-  if (d > 0) parts.push('เตียงคู่:' + d);
-  if (s > 0) parts.push('เตียงเดี่ยว:' + s);
-  document.getElementById('bed_type_hidden').value = parts.join('|') || '';
+  // รวม bed type จาก checkbox
+  const beds = [...document.querySelectorAll('.am-chip input[data-bed]:checked')].map(cb => cb.dataset.bed);
+  document.getElementById('bed_type_hidden').value = beds.join('|');
 
   // รวม amenities
-  const checked = [...document.querySelectorAll('.am-chip input:checked')].map(cb => cb.value);
-  document.getElementById('amenities_hidden').value = checked.join('|');
+  const amChecked = [...document.querySelectorAll('.am-chip input[value]:checked')].map(cb => cb.value);
+  document.getElementById('amenities_hidden').value = amChecked.join('|');
 });
 
 function toggleAmenity(label) {

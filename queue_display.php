@@ -73,7 +73,7 @@ header{display:flex;align-items:flex-start;justify-content:space-between;flex-wr
 <header>
   <div>
     <h1>🚣 คิววันนี้</h1>
-    <div class="sub"><?= date('วันl ที่ j F Y', strtotime($today)) ?> <span class="refresh-note">🔄 refresh อัตโนมัติทุก 30 วิ</span></div>
+    <div class="sub"><?= date('d/m/Y', strtotime($today)) ?> <span class="refresh-note">🔄 refresh อัตโนมัติทุก 30 วิ</span></div>
   </div>
   <a href="index.php" class="back-btn">← กลับหน้าหลัก</a>
 </header>

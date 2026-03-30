@@ -16,6 +16,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $id = (int)($_POST['id'] ?? 0);
 
+    // ── [ชั่วคราว] ลบข้อมูลทั้งหมด ──
+    if ($action === 'delete_all_temp') {
+        $conn->query("DELETE FROM payment_slips");
+        $conn->query("DELETE FROM boat_bookings");
+        $conn->query("ALTER TABLE boat_bookings AUTO_INCREMENT = 1");
+        header("Location: {$currentPage}?msg=" . urlencode("ลบข้อมูลทั้งหมดเรียบร้อยแล้ว") . "&type=success");
+        exit;
+    }
+
     if ($id > 0) {
         if ($action === 'approve_payment') {
             // คำนวณเลขคิววันนี้

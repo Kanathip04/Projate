@@ -420,31 +420,6 @@ include 'admin_layout_top.php';
 </div>
 <?php endif; ?>
 
-<!-- Stats -->
-<div class="tm-stats">
-  <div class="tm-stat" style="border-left-color:#1d6fad;">
-    <div class="tm-stat-icon">⛺</div>
-    <div>
-      <div class="tm-stat-val"><?= $totalTents ?></div>
-      <div class="tm-stat-lbl">เต็นท์ทั้งหมด</div>
-    </div>
-  </div>
-  <div class="tm-stat" style="border-left-color:var(--success);">
-    <div class="tm-stat-icon">✅</div>
-    <div>
-      <div class="tm-stat-val"><?= $showCount ?></div>
-      <div class="tm-stat-lbl">กำลังแสดง</div>
-    </div>
-  </div>
-  <div class="tm-stat" style="border-left-color:var(--danger);">
-    <div class="tm-stat-icon">🙈</div>
-    <div>
-      <div class="tm-stat-val"><?= $totalTents - $showCount ?></div>
-      <div class="tm-stat-lbl">ซ่อนอยู่</div>
-    </div>
-  </div>
-</div>
-
 <!-- Main Layout -->
 <div class="tm-layout">
 

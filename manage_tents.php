@@ -277,17 +277,20 @@ include 'admin_layout_top.php';
 .eq-note{font-size:.75rem;color:var(--muted);margin-top:2px;}
 .eq-price-cell{font-size:1rem;font-weight:800;color:#16a34a;white-space:nowrap;}
 .eq-unit-cell{font-size:.82rem;color:var(--muted);}
-.eq-actions{display:flex;gap:6px;}
+.eq-actions{display:flex;gap:6px;align-items:center;}
 .eq-btn-edit{
-  padding:5px 12px;border-radius:7px;font-size:.75rem;font-weight:700;
-  background:#eff6ff;color:#1d4ed8;border:none;cursor:pointer;transition:.15s;
+  display:inline-flex;align-items:center;gap:5px;
+  padding:6px 14px;border-radius:8px;font-size:.78rem;font-weight:700;
+  background:var(--ink);color:#fff;border:none;cursor:pointer;
+  text-decoration:none;transition:all .18s;letter-spacing:.02em;
 }
-.eq-btn-edit:hover{background:#dbeafe;}
+.eq-btn-edit:hover{background:#2a2a4a;transform:translateY(-1px);box-shadow:0 4px 10px rgba(26,26,46,.18);}
 .eq-btn-del{
-  padding:5px 12px;border-radius:7px;font-size:.75rem;font-weight:700;
-  background:#fef2f2;color:var(--danger);border:none;cursor:pointer;transition:.15s;
+  display:inline-flex;align-items:center;justify-content:center;
+  width:32px;height:32px;border-radius:8px;font-size:.85rem;
+  background:#fef2f2;color:var(--danger);border:1.5px solid #fecaca;cursor:pointer;transition:all .18s;
 }
-.eq-btn-del:hover{background:#fee2e2;}
+.eq-btn-del:hover{background:var(--danger);color:#fff;border-color:var(--danger);transform:translateY(-1px);}
 .eq-empty-row td{padding:36px;text-align:center;color:var(--muted);font-size:.9rem;}
 
 /* Alert */
@@ -386,11 +389,13 @@ include 'admin_layout_top.php';
           <td style="color:var(--muted);font-size:.8rem;"><?= h($eq['note'] ?: '—') ?></td>
           <td>
             <div class="eq-actions">
-              <a href="?eq_edit=<?= (int)$eq['id'] ?>#eq-section" class="eq-btn-edit">✏️ แก้ไข</a>
+              <a href="?eq_edit=<?= (int)$eq['id'] ?>#eq-section" class="eq-btn-edit">
+                ✏️ แก้ไข
+              </a>
               <form method="POST" class="miniform" onsubmit="return confirm('ลบรายการนี้?')">
                 <input type="hidden" name="action" value="delete_equipment">
                 <input type="hidden" name="eq_id" value="<?= (int)$eq['id'] ?>">
-                <button class="eq-btn-del">🗑</button>
+                <button class="eq-btn-del" title="ลบ">✕</button>
               </form>
             </div>
           </td>

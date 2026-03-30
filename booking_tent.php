@@ -63,6 +63,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'book'
     }
 }
 
+/* === ดึงข้อมูล user จาก session + DB === */
+$user_name  = $_SESSION['user_name']  ?? '';
+$user_email = $_SESSION['user_email'] ?? '';
+$user_phone = '';
+if (!empty($_SESSION['user_id'])) {
+    $uid   = (int)$_SESSION['user_id'];
+    $uStmt = $conn->prepare("SELECT fullname, email, phone FROM users WHERE id=? LIMIT 1");
+    $uStmt->bind_param("i", $uid); $uStmt->execute();
+    $uRow = $uStmt->get_result()->fetch_assoc(); $uStmt->close();
+    if ($uRow) {
+        if (!empty($uRow['fullname'])) $user_name  = $uRow['fullname'];
+        if (!empty($uRow['email']))    $user_email = $uRow['email'];
+        if (!empty($uRow['phone']))    $user_phone = $uRow['phone'];
+    }
+}
+
 /* === ดึงอุปกรณ์ === */
 $equipResult = $conn->query("SELECT * FROM tent_equipment WHERE is_available=1 ORDER BY sort_order, id");
 $equipList = [];
@@ -286,17 +302,17 @@ a{text-decoration:none;}
             <div class="form-row">
               <div class="form-group">
                 <label>ชื่อ-นามสกุล *</label>
-                <input type="text" name="full_name" placeholder="กรอกชื่อ" required>
+                <input type="text" name="full_name" placeholder="กรอกชื่อ" required value="<?= htmlspecialchars($user_name) ?>">
               </div>
               <div class="form-group">
                 <label>เบอร์โทร *</label>
-                <input type="text" name="phone" placeholder="08x-xxx-xxxx" required>
+                <input type="text" name="phone" placeholder="08x-xxx-xxxx" required value="<?= htmlspecialchars($user_phone) ?>">
               </div>
             </div>
             <div class="form-row full">
               <div class="form-group">
                 <label>อีเมล</label>
-                <input type="email" name="email" placeholder="อีเมล (ไม่บังคับ)">
+                <input type="email" name="email" placeholder="อีเมล (ไม่บังคับ)" value="<?= htmlspecialchars($user_email) ?>">
               </div>
             </div>
             <div class="form-row">

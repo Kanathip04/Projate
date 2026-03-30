@@ -377,6 +377,9 @@ body::before {
   <a href="manage_news.php" class="menu-item <?= $activeMenu==='news_manage'?'active':'' ?>">
     <span class="icon">✏️</span><span class="text">จัดการข่าว</span>
   </a>
+  <a href="admin_popup.php" class="menu-item <?= $activeMenu==='popup'?'active':'' ?>">
+    <span class="icon">💬</span><span class="text">จัดการ Popup</span>
+  </a>
   <a href="change_banner.php" class="menu-item <?= $activeMenu==='banner'?'active':'' ?>">
     <span class="icon">🖼️</span><span class="text">เปลี่ยนรูปหน้าเว็บ</span>
   </a>

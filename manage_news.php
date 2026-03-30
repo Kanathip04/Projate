@@ -149,6 +149,11 @@ include 'admin_layout_top.php';
         <div class="badge">Manage News</div>
         <h1>จัดการข่าวสาร</h1>
         <p>เลือกลบข่าวที่ไม่ต้องการออกจากระบบได้จากหน้านี้</p>
+        <div style="margin-top:16px;">
+            <a href="admin_popup.php" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#0d1b2a,#1565c0);color:#fff;padding:10px 22px;border-radius:99px;font-size:.85rem;font-weight:700;text-decoration:none;transition:.2s;box-shadow:0 4px 14px rgba(21,101,192,.25);">
+                💬 ไปที่เมนู Popup
+            </a>
+        </div>
     </div>
 
     <?php if($result && $result->num_rows > 0): ?>

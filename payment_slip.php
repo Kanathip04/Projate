@@ -186,6 +186,7 @@ function promptpayPayload(string $target, float $amount): string
 }
 
 $qrUrl = 'uploads/QRcode.jpg';
+$qrPayload = promptpayPayload(PROMPTPAY_ID, (float)$booking['total_amount']);
 $statusMap = [
     'paid'           => ['label' => 'ชำระแล้ว',          'class' => 'paid'],
     'waiting_verify' => ['label' => 'รอตรวจสอบสลิป',     'class' => 'waiting'],
@@ -476,11 +477,14 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);min-
   <!-- ── QR + Upload ── -->
   <div class="card">
     <div class="qr-wrap">
-      <img src="<?= htmlspecialchars($qrUrl) ?>" class="qr-img" alt="QR PromptPay"
-           onerror="this.style.display='none'">
+      <canvas id="qrCanvas" class="qr-img"></canvas>
       <div class="qr-ppid">พร้อมเพย์: <?= PROMPTPAY_ID ?></div>
       <div class="qr-hint">สแกนด้วยแอปธนาคาร หรือ Mobile Banking</div>
       <div class="qr-amt">฿<?= number_format((float)$booking['total_amount'], 2) ?></div>
+      <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+      <script>
+        QRCode.toCanvas(document.getElementById('qrCanvas'), '<?= addslashes($qrPayload) ?>', {width:180,margin:1}, function(err){});
+      </script>
     </div>
 
     <div class="upload-wrap">

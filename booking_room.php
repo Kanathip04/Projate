@@ -611,9 +611,6 @@ a{
                                     <div class="meta-item"><strong>ประเภทห้อง:</strong> <?php echo htmlspecialchars($room['room_type'] ?? '-'); ?></div>
                                 <?php endif; ?>
 
-                                <?php if ($hasRoomSize): ?>
-                                    <div class="meta-item"><strong>ขนาดห้อง:</strong> <?php echo htmlspecialchars($room['room_size'] ?? '-'); ?></div>
-                                <?php endif; ?>
 
                                 <?php if ($hasBedType && !empty($room['bed_type'])): ?>
                                     <?php

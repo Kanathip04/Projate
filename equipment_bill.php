@@ -221,6 +221,32 @@ a{text-decoration:none;}
 .paid-ico{font-size:3rem;margin-bottom:10px;}
 .paid-title{font-family:'Kanit',sans-serif;font-size:1.15rem;font-weight:900;margin-bottom:6px;}
 .paid-sub{font-size:.82rem;color:var(--muted);}
+
+/* booking confirm */
+.confirm-card{background:var(--card);border-radius:18px;box-shadow:var(--shadow);margin-top:16px;overflow:hidden;border:2px solid var(--green-bd);}
+.confirm-head{background:linear-gradient(135deg,#14532d,#16a34a);padding:18px 22px;text-align:center;}
+.confirm-head .ico{font-size:2rem;margin-bottom:6px;}
+.confirm-head h3{font-family:'Kanit',sans-serif;font-size:1.1rem;font-weight:900;color:#fff;margin-bottom:2px;}
+.confirm-head p{font-size:.78rem;color:rgba(255,255,255,.75);}
+.confirm-ref{background:rgba(255,255,255,.15);border-radius:8px;padding:6px 14px;
+  font-family:'Kanit',sans-serif;font-size:.9rem;font-weight:800;color:#fff;
+  display:inline-block;margin-top:8px;letter-spacing:.05em;}
+.confirm-body{padding:18px 20px;}
+.confirm-row{display:flex;justify-content:space-between;padding:9px 0;
+  border-bottom:1px solid var(--border);font-size:.88rem;}
+.confirm-row:last-child{border-bottom:none;}
+.confirm-row .lbl{color:var(--muted);font-weight:600;}
+.confirm-row .val{font-weight:700;text-align:right;}
+.confirm-items{background:#fafbfd;border-radius:12px;padding:12px 14px;margin:10px 0;}
+.confirm-item{display:flex;justify-content:space-between;font-size:.85rem;padding:4px 0;}
+.confirm-item .iname{color:var(--ink);}
+.confirm-item .iprice{font-weight:700;color:var(--gold-dark);}
+.confirm-total{display:flex;justify-content:space-between;align-items:center;
+  padding-top:10px;border-top:2px solid var(--border);margin-top:4px;}
+.confirm-total .lbl{font-size:.95rem;font-weight:700;}
+.confirm-total .val{font-family:'Kanit',sans-serif;font-size:1.4rem;font-weight:900;color:var(--gold-dark);}
+.confirm-note{background:var(--yellow-bg);border:1px solid var(--yellow-bd);border-radius:10px;
+  padding:10px 14px;font-size:.8rem;color:var(--yellow);text-align:center;margin-top:12px;}
 </style>
 </head>
 <body>
@@ -302,6 +328,53 @@ a{text-decoration:none;}
     </div>
   </div>
 
+  <?php
+  // build confirm card once, reuse for both waiting & paid states
+  ob_start(); ?>
+  <div class="confirm-card">
+    <div class="confirm-head">
+      <div class="ico">🎫</div>
+      <h3>ใบจองเช่าอุปกรณ์</h3>
+      <p>กรุณาแสดงเอกสารนี้แก่เจ้าหน้าที่เมื่อถึงวันเช่า</p>
+      <div class="confirm-ref">หมายเลข #<?= str_pad($id, 5, '0', STR_PAD_LEFT) ?></div>
+    </div>
+    <div class="confirm-body">
+      <div class="confirm-row">
+        <span class="lbl">ชื่อผู้เช่า</span>
+        <span class="val"><?= htmlspecialchars($bk['full_name']) ?></span>
+      </div>
+      <div class="confirm-row">
+        <span class="lbl">เบอร์โทร</span>
+        <span class="val"><?= htmlspecialchars($bk['phone']) ?></span>
+      </div>
+      <div class="confirm-row">
+        <span class="lbl">วันเข้าพัก</span>
+        <span class="val">📅 <?= date('d/m/Y', strtotime($bk['checkin_date'])) ?></span>
+      </div>
+      <div class="confirm-row">
+        <span class="lbl">วันออก</span>
+        <span class="val">📅 <?= date('d/m/Y', strtotime($bk['checkout_date'])) ?> (<?= $nights ?> คืน)</span>
+      </div>
+      <div style="margin:12px 0 4px;font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">รายการอุปกรณ์</div>
+      <div class="confirm-items">
+        <?php foreach ($items as $it): $sub = (float)$it['price'] * (int)$it['qty'] * $nights; ?>
+        <div class="confirm-item">
+          <span class="iname"><?= htmlspecialchars($it['name']) ?> × <?= (int)$it['qty'] ?> <?= htmlspecialchars($it['unit']) ?></span>
+          <span class="iprice">฿<?= number_format($sub) ?></span>
+        </div>
+        <?php endforeach; ?>
+      </div>
+      <div class="confirm-total">
+        <span class="lbl">ยอดรวมทั้งหมด</span>
+        <span class="val">฿<?= number_format($total * $nights) ?></span>
+      </div>
+      <?php if (!empty($bk['note'])): ?>
+      <div class="confirm-note">📝 <?= htmlspecialchars($bk['note']) ?></div>
+      <?php endif; ?>
+    </div>
+  </div>
+  <?php $confirmHtml = ob_get_clean(); ?>
+
   <!-- PAYMENT SECTION -->
   <?php if ($payStatus === 'paid'): ?>
   <div class="card">
@@ -311,6 +384,7 @@ a{text-decoration:none;}
       <div class="paid-sub">เจ้าหน้าที่ยืนยันการชำระของท่านแล้ว กรุณาแจ้งเจ้าหน้าที่เมื่อถึงวันเช่า</div>
     </div>
   </div>
+  <?= $confirmHtml ?>
 
   <?php elseif ($payStatus === 'waiting_verify'): ?>
   <div class="card">
@@ -322,6 +396,7 @@ a{text-decoration:none;}
       <button class="refresh-btn" onclick="location.reload()">🔄 รีเฟรชสถานะ</button>
     </div>
   </div>
+  <?= $confirmHtml ?>
 
   <?php else: ?>
   <!-- QR + UPLOAD -->

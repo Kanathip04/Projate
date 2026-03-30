@@ -148,23 +148,29 @@ if ($reportType === 'daily') {
     }
 }
 
-// Revenue chart (boat only)
-$chartRevenue = [];
+// Revenue chart (boat + room + tent)
+$chartRevenue = []; $chartRevenueRoom = []; $chartRevenueTent = [];
 if ($reportType === 'monthly') {
     $days = (int)date('t', strtotime($dateFrom));
     for ($d = 1; $d <= $days; $d++) {
         $dt = date('Y-m-', strtotime($dateFrom)) . str_pad($d, 2, '0', STR_PAD_LEFT);
-        $chartRevenue[] = (float)$conn->query("SELECT COALESCE(SUM(total_amount),0) s FROM boat_bookings WHERE DATE(created_at)='$dt' AND payment_status='paid' AND archived=0")->fetch_assoc()['s'];
+        $chartRevenue[]     = (float)$conn->query("SELECT COALESCE(SUM(total_amount),0) s FROM boat_bookings WHERE DATE(created_at)='$dt' AND payment_status IN('paid','cash_paid') AND archived=0")->fetch_assoc()['s'];
+        $chartRevenueRoom[] = (float)$conn->query("SELECT COALESCE(SUM(r.price*GREATEST(DATEDIFF(rb.checkout_date,rb.checkin_date),1)),0) s FROM room_bookings rb LEFT JOIN rooms r ON rb.room_id=r.id WHERE DATE(rb.created_at)='$dt' AND rb.booking_status='approved' AND rb.archived=0")->fetch_assoc()['s'];
+        $chartRevenueTent[] = (float)$conn->query("SELECT COALESCE(SUM(te.price_per_night*GREATEST(DATEDIFF(tb.checkout_date,tb.checkin_date),1)),0) s FROM tent_bookings tb LEFT JOIN tents te ON tb.tent_id=te.id WHERE DATE(tb.created_at)='$dt' AND tb.booking_status='approved' AND tb.archived=0")->fetch_assoc()['s'];
     }
 } elseif ($reportType === 'yearly') {
     for ($m = 1; $m <= 12; $m++) {
         $mm = str_pad($m, 2, '0', STR_PAD_LEFT);
         $mStart = "{$yearParam}-{$mm}-01";
         $mEnd   = date('Y-m-t', strtotime($mStart));
-        $chartRevenue[] = (float)$conn->query("SELECT COALESCE(SUM(total_amount),0) s FROM boat_bookings WHERE DATE(created_at) BETWEEN '$mStart' AND '$mEnd' AND payment_status='paid' AND archived=0")->fetch_assoc()['s'];
+        $chartRevenue[]     = (float)$conn->query("SELECT COALESCE(SUM(total_amount),0) s FROM boat_bookings WHERE DATE(created_at) BETWEEN '$mStart' AND '$mEnd' AND payment_status IN('paid','cash_paid') AND archived=0")->fetch_assoc()['s'];
+        $chartRevenueRoom[] = (float)$conn->query("SELECT COALESCE(SUM(r.price*GREATEST(DATEDIFF(rb.checkout_date,rb.checkin_date),1)),0) s FROM room_bookings rb LEFT JOIN rooms r ON rb.room_id=r.id WHERE DATE(rb.created_at) BETWEEN '$mStart' AND '$mEnd' AND rb.booking_status='approved' AND rb.archived=0")->fetch_assoc()['s'];
+        $chartRevenueTent[] = (float)$conn->query("SELECT COALESCE(SUM(te.price_per_night*GREATEST(DATEDIFF(tb.checkout_date,tb.checkin_date),1)),0) s FROM tent_bookings tb LEFT JOIN tents te ON tb.tent_id=te.id WHERE DATE(tb.created_at) BETWEEN '$mStart' AND '$mEnd' AND tb.booking_status='approved' AND tb.archived=0")->fetch_assoc()['s'];
     }
 } else {
-    $chartRevenue[] = $totalRevenue;
+    $chartRevenue[]     = $totalRevenue;
+    $chartRevenueRoom[] = (float)$conn->query("SELECT COALESCE(SUM(r.price*GREATEST(DATEDIFF(rb.checkout_date,rb.checkin_date),1)),0) s FROM room_bookings rb LEFT JOIN rooms r ON rb.room_id=r.id WHERE " . dateWhere('rb.created_at',$dateFrom,$dateTo) . " AND rb.booking_status='approved' AND rb.archived=0")->fetch_assoc()['s'];
+    $chartRevenueTent[] = (float)$conn->query("SELECT COALESCE(SUM(te.price_per_night*GREATEST(DATEDIFF(tb.checkout_date,tb.checkin_date),1)),0) s FROM tent_bookings tb LEFT JOIN tents te ON tb.tent_id=te.id WHERE " . dateWhere('tb.created_at',$dateFrom,$dateTo) . " AND tb.booking_status='approved' AND tb.archived=0")->fetch_assoc()['s'];
 }
 
 // ── Booking list ──
@@ -225,7 +231,9 @@ $jsBoat     = implode(',', $chartBoat);
 $jsRoom     = implode(',', $chartRoom);
 $jsTent     = implode(',', $chartTent);
 $jsVisit    = implode(',', $chartVisit);
-$jsRevenue  = implode(',', $chartRevenue);
+$jsRevenue     = implode(',', $chartRevenue);
+$jsRevenueRoom = implode(',', $chartRevenueRoom);
+$jsRevenueTent = implode(',', $chartRevenueTent);
 
 // ── Period navigation URLs ──
 $yesterday = date('Y-m-d', strtotime('-1 day'));
@@ -766,6 +774,18 @@ $qnavLinks = [
   </div>
 </div>
 
+<!-- Charts row 1b: Room + Tent revenue -->
+<div class="chart-grid">
+  <div class="chart-box">
+    <div class="chart-title">🏨 รายได้ตามช่วงเวลา (ห้องพัก)</div>
+    <div class="chart-wrap"><canvas id="chartRevenueRoom"></canvas></div>
+  </div>
+  <div class="chart-box">
+    <div class="chart-title">⛺ รายได้ตามช่วงเวลา (เต็นท์)</div>
+    <div class="chart-wrap"><canvas id="chartRevenueTent"></canvas></div>
+  </div>
+</div>
+
 <!-- Charts row 2 -->
 <div class="chart-grid">
   <div class="chart-box">
@@ -928,12 +948,14 @@ $qnavLinks = [
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>
-const labels  = [<?= $jsLabels ?>];
-const dBoat   = [<?= $jsBoat ?>];
-const dRoom   = [<?= $jsRoom ?>];
-const dTent   = [<?= $jsTent ?>];
-const dVisit  = [<?= $jsVisit ?>];
-const dRev    = [<?= $jsRevenue ?>];
+const labels    = [<?= $jsLabels ?>];
+const dBoat     = [<?= $jsBoat ?>];
+const dRoom     = [<?= $jsRoom ?>];
+const dTent     = [<?= $jsTent ?>];
+const dVisit    = [<?= $jsVisit ?>];
+const dRev      = [<?= $jsRevenue ?>];
+const dRevRoom  = [<?= $jsRevenueRoom ?>];
+const dRevTent  = [<?= $jsRevenueTent ?>];
 
 const opt = {responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}}};
 
@@ -944,10 +966,22 @@ new Chart(document.getElementById('chartBooking'),{type:'bar',data:{labels,datas
   {label:'เต็นท์', data:dTent,backgroundColor:'rgba(46,125,50,.7)',borderRadius:4},
 ]},options:{...opt,scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}},beginAtZero:true}}}});
 
-// Revenue chart
+const revOpt = {...opt,scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10},callback:v=>'฿'+v.toLocaleString()},beginAtZero:true}}};
+
+// Revenue chart — เรือพาย
 new Chart(document.getElementById('chartRevenue'),{type:'line',data:{labels,datasets:[
-  {label:'รายได้ (฿)',data:dRev,borderColor:'#c9a96e',backgroundColor:'rgba(201,169,110,.12)',fill:true,tension:.3,pointRadius:3}
-]},options:{...opt,scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10},callback:v=>'฿'+v.toLocaleString()},beginAtZero:true}}}});
+  {label:'รายได้เรือพาย (฿)',data:dRev,borderColor:'#1d6fad',backgroundColor:'rgba(29,111,173,.1)',fill:true,tension:.3,pointRadius:3}
+]},options:revOpt});
+
+// Revenue chart — ห้องพัก
+new Chart(document.getElementById('chartRevenueRoom'),{type:'line',data:{labels,datasets:[
+  {label:'รายได้ห้องพัก (฿)',data:dRevRoom,borderColor:'#c9a96e',backgroundColor:'rgba(201,169,110,.1)',fill:true,tension:.3,pointRadius:3}
+]},options:revOpt});
+
+// Revenue chart — เต็นท์
+new Chart(document.getElementById('chartRevenueTent'),{type:'line',data:{labels,datasets:[
+  {label:'รายได้เต็นท์ (฿)',data:dRevTent,borderColor:'#2e7d32',backgroundColor:'rgba(46,125,50,.1)',fill:true,tension:.3,pointRadius:3}
+]},options:revOpt});
 
 // Pie chart
 new Chart(document.getElementById('chartPie'),{type:'doughnut',data:{

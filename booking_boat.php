@@ -36,7 +36,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS `boat_bookings` (
     `boat_type` VARCHAR(100) DEFAULT '',
     `price_per_boat` DECIMAL(10,2) DEFAULT 0,
     `total_amount` DECIMAL(10,2) DEFAULT 0,
-    `payment_status` ENUM('unpaid','pending','waiting_verify','paid','failed','expired') DEFAULT 'unpaid',
+    `payment_status` ENUM('pending','waiting_verify','checking','paid','failed','expired','duplicate','suspicious','manual_review') DEFAULT 'pending',
     `payment_slip` VARCHAR(255) DEFAULT NULL,
     `payment_provider` VARCHAR(50) DEFAULT NULL,
     `provider_txn_id` VARCHAR(100) DEFAULT NULL,
@@ -55,7 +55,7 @@ $conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS `daily_queue_no
 $conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS `booking_ref` VARCHAR(50) DEFAULT NULL AFTER `id`");
 $conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS `price_per_boat` DECIMAL(10,2) DEFAULT 0 AFTER `boat_type`");
 $conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS `total_amount` DECIMAL(10,2) DEFAULT 0 AFTER `price_per_boat`");
-$conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS `payment_status` ENUM('unpaid','pending','waiting_verify','paid','failed','expired') DEFAULT 'unpaid' AFTER `booking_status`");
+$conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS `payment_status` ENUM('pending','waiting_verify','checking','paid','failed','expired','duplicate','suspicious','manual_review') DEFAULT 'pending' AFTER `booking_status`");
 $conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS `payment_slip` VARCHAR(255) DEFAULT NULL AFTER `payment_status`");
 $conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS `payment_provider` VARCHAR(50) DEFAULT NULL AFTER `payment_slip`");
 $conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS `provider_txn_id` VARCHAR(100) DEFAULT NULL AFTER `payment_provider`");

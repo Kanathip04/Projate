@@ -510,7 +510,6 @@ function statusClass($status) {
                 <div class="empty">
                     <h3>ยังไม่มีรายการจอง</h3>
                     <p>เมื่อคุณจองห้องแล้ว รายการทั้งหมดจะแสดงในหน้านี้</p>
-                    <a href="booking_room.php">ไปหน้าจองห้อง</a>
                 </div>
             <?php endif; ?>
         </div>

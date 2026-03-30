@@ -70,15 +70,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['slip'])) {
             $updStmt->execute();
             $updStmt->close();
 
+            $mimeMap  = ['jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp'];
+            $mimeType = $mimeMap[$ext] ?? 'image/jpeg';
+            $slipBase64 = base64_encode(file_get_contents($dir . $fname));
+
             $webhookUrl = 'https://kanayhip.app.n8n.cloud/webhook/boat-slip';
             $payload = json_encode([
                 'booking_ref'   => $booking_ref,
                 'booking_id'    => $booking['id'],
                 'customer_name' => $booking['full_name'],
                 'total_amount'  => $booking['total_amount'],
-                'slip_path'     => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/' . $slipPath,
                 'slip_url'      => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/' . $slipPath,
                 'callback_url'  => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/payment_callback.php',
+                'slip_base64'   => $slipBase64,
+                'slip_mime_type'=> $mimeType,
             ]);
             $ch = curl_init($webhookUrl);
             curl_setopt_array($ch, [

@@ -277,6 +277,10 @@ include 'admin_layout_top.php';
     <div class="pg-sub">จัดการรายการจอง การชำระเงิน และสลิป</div>
   </div>
   <a href="admin_boat_queues.php" class="btn btn-accent" style="height:38px;font-size:.82rem;">+ จัดการคิว</a>
+  <form method="POST" style="display:inline;" onsubmit="return confirm('⚠️ ลบข้อมูลการจองทั้งหมด?\nการกระทำนี้ไม่สามารถย้อนกลับได้!')">
+    <input type="hidden" name="action" value="delete_all_temp">
+    <button type="submit" class="btn" style="height:38px;font-size:.82rem;background:#dc3545;color:#fff;border:none;">🗑 ลบทั้งหมด (ชั่วคราว)</button>
+  </form>
 </div>
 
 <?php if ($message): ?>

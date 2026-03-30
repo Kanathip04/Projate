@@ -10,7 +10,7 @@ if ($conn->connect_error) die("DB Error");
 $today = date('Y-m-d');
 
 $result = $conn->query("
-    SELECT daily_queue_no, booking_ref, user_name, boat_type, num_people,
+    SELECT daily_queue_no, booking_ref, full_name, boat_type, num_people,
            boat_date, approved_at, payment_status, booking_status
     FROM boat_bookings
     WHERE DATE(approved_at) = '$today'
@@ -99,7 +99,7 @@ header{display:flex;align-items:flex-start;justify-content:space-between;flex-wr
     <?php foreach ($queues as $q): ?>
     <div class="card">
       <div class="queue-no">Q<?= str_pad($q['daily_queue_no'], 4, '0', STR_PAD_LEFT) ?></div>
-      <div class="name"><?= htmlspecialchars($q['user_name']) ?></div>
+      <div class="name"><?= htmlspecialchars($q['full_name']) ?></div>
       <div class="detail">
         <span>🚤 <?= htmlspecialchars($q['boat_type'] ?? '-') ?></span>
         <span>👥 <?= (int)$q['num_people'] ?> คน</span>

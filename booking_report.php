@@ -237,49 +237,57 @@ $qnavLinks = [
 ?>
 
 <style>
-/* ── Quick nav bar ── */
-.qnav{background:#fff;border-radius:12px;padding:14px 18px;margin-bottom:14px;
-  box-shadow:0 2px 12px rgba(26,26,46,.06);display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
-.qnav-label{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;
-  letter-spacing:.1em;margin-right:4px;}
-.qnav-btns{display:flex;flex-wrap:wrap;gap:6px;}
+/* ── Toolbar (export + quick nav รวมกัน) ── */
+.rpt-toolbar{background:#fff;border-radius:12px;padding:12px 18px;margin-bottom:12px;
+  box-shadow:0 2px 12px rgba(26,26,46,.06);display:flex;align-items:center;
+  gap:12px;flex-wrap:wrap;}
+.rpt-toolbar-left{display:flex;gap:8px;align-items:center;flex-shrink:0;}
+.toolbar-divider{width:1px;height:28px;background:var(--border);flex-shrink:0;}
+.rpt-toolbar-nav{display:flex;flex-wrap:wrap;gap:6px;flex:1;}
+.rpt-toolbar-type{display:flex;gap:6px;flex-shrink:0;}
+.rpt-ts{font-size:.72rem;color:var(--muted);white-space:nowrap;margin-left:auto;}
+
+/* ── Quick nav buttons ── */
 .qbtn{padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);
   background:#fafaf8;color:var(--muted);font-family:'Sarabun',sans-serif;
   font-size:.78rem;font-weight:600;cursor:pointer;text-decoration:none;
   transition:.15s;white-space:nowrap;}
 .qbtn:hover{border-color:var(--accent);color:var(--accent);background:#fffbf5;}
 .qbtn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
-.qnav-sep{width:1px;height:24px;background:var(--border);margin:0 4px;}
 
 /* ── Period navigator ── */
-.period-nav{background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:14px;
+.period-nav{background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:12px;
   box-shadow:0 2px 12px rgba(26,26,46,.06);display:flex;align-items:center;gap:14px;}
 .pnav-arrow{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);
   background:#fafaf8;display:flex;align-items:center;justify-content:center;
-  cursor:pointer;font-size:1rem;text-decoration:none;color:var(--ink);
-  transition:.15s;flex-shrink:0;}
+  font-size:1rem;text-decoration:none;color:var(--ink);transition:.15s;flex-shrink:0;}
 .pnav-arrow:hover{border-color:var(--accent);color:var(--accent);}
 .pnav-center{flex:1;text-align:center;}
-.pnav-main{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:600;color:var(--ink);}
-.pnav-sub{font-size:.72rem;color:var(--muted);margin-top:2px;}
-.pnav-today{padding:6px 16px;border-radius:20px;border:1.5px solid var(--accent);
+.pnav-main{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--ink);}
+.pnav-sub{font-size:.7rem;color:var(--muted);margin-top:2px;}
+.pnav-back{padding:6px 14px;border-radius:20px;border:1.5px solid var(--accent);
   background:#fffbf5;color:var(--accent);font-family:'Sarabun',sans-serif;
-  font-size:.78rem;font-weight:700;cursor:pointer;text-decoration:none;transition:.15s;}
-.pnav-today:hover{background:var(--accent);color:var(--ink);}
+  font-size:.76rem;font-weight:700;text-decoration:none;transition:.15s;white-space:nowrap;}
+.pnav-back:hover{background:var(--accent);color:var(--ink);}
 
 /* ── Filter ── */
-.rpt-filter{background:#fff;border-radius:12px;padding:14px 18px;margin-bottom:14px;
+.rpt-filter{background:#fff;border-radius:12px;padding:14px 18px;margin-bottom:16px;
   box-shadow:0 2px 12px rgba(26,26,46,.06);display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;}
-.rpt-filter label{font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;
+.rpt-filter label{font-size:.67rem;font-weight:700;color:var(--muted);text-transform:uppercase;
   letter-spacing:.08em;display:block;margin-bottom:3px;}
 .rpt-filter select,.rpt-filter input{padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;
-  font-family:'Sarabun',sans-serif;font-size:.82rem;color:var(--ink);background:#fafaf8;outline:none;
-  transition:.2s;}
+  font-family:'Sarabun',sans-serif;font-size:.82rem;color:var(--ink);background:#fafaf8;outline:none;transition:.2s;}
 .rpt-filter select:focus,.rpt-filter input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(201,169,110,.12);}
 .rpt-filter .btn-group{display:flex;gap:8px;}
 
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px;}
-.kpi-card{background:#fff;border-radius:12px;padding:18px 20px;
+/* ── Section heading ── */
+.sec-hd{font-size:.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.12em;margin:20px 0 10px;display:flex;align-items:center;gap:8px;}
+.sec-hd::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── KPI grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:8px;}
+.kpi-card{background:#fff;border-radius:12px;padding:16px 18px;
   box-shadow:0 2px 12px rgba(26,26,46,.06);position:relative;overflow:hidden;
   border-left:4px solid var(--accent);}
 .kpi-card.blue{border-left-color:#1d6fad;}
@@ -288,44 +296,48 @@ $qnavLinks = [
 .kpi-card.red{border-left-color:#dc2626;}
 .kpi-card.purple{border-left-color:#7c3aed;}
 .kpi-card.teal{border-left-color:#0891b2;}
-.kpi-lbl{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:6px;}
-.kpi-val{font-size:1.7rem;font-weight:800;color:var(--ink);line-height:1;}
-.kpi-sub{font-size:.72rem;color:var(--muted);margin-top:4px;}
-.kpi-icon{position:absolute;right:14px;top:14px;font-size:1.6rem;opacity:.15;}
+.kpi-lbl{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:5px;}
+.kpi-val{font-size:1.65rem;font-weight:800;color:var(--ink);line-height:1;}
+.kpi-sub{font-size:.7rem;color:var(--muted);margin-top:4px;}
+.kpi-icon{position:absolute;right:12px;top:12px;font-size:1.5rem;opacity:.12;}
 
-.svc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:20px;}
-.svc-card{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 2px 12px rgba(26,26,46,.06);}
-.svc-title{font-size:.88rem;font-weight:800;color:var(--ink);margin-bottom:14px;
-  display:flex;align-items:center;gap:8px;}
+/* ── Service grid ── */
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:8px;}
+.svc-card{background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 2px 12px rgba(26,26,46,.06);}
+.svc-title{font-size:.86rem;font-weight:800;color:var(--ink);margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--border);}
 .svc-row{display:flex;justify-content:space-between;align-items:center;
-  padding:7px 0;border-bottom:1px solid var(--border);font-size:.82rem;}
+  padding:6px 0;border-bottom:1px dashed var(--border);font-size:.8rem;}
 .svc-row:last-child{border-bottom:none;}
 .svc-row .lbl{color:var(--muted);}
 .svc-row .val{font-weight:700;color:var(--ink);}
 
-.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
-.chart-grid.single{grid-template-columns:1fr;}
-.chart-box{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 2px 12px rgba(26,26,46,.06);}
-.chart-title{font-size:.82rem;font-weight:700;color:var(--ink);margin-bottom:14px;}
+/* ── Chart grid ── */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;}
+.chart-box{background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 2px 12px rgba(26,26,46,.06);}
+.chart-title{font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:12px;
+  padding-bottom:10px;border-bottom:1px solid var(--border);}
 .chart-wrap{position:relative;height:200px;}
 
-.fin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px;}
-.fin-card{background:#fafaf8;border-radius:10px;padding:14px 16px;border:1px solid var(--border);}
-.fin-lbl{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
-.fin-val{font-size:1.2rem;font-weight:800;color:var(--ink);}
+/* ── Finance ── */
+.fin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:4px;}
+.fin-card{background:#fafaf8;border-radius:10px;padding:13px 15px;border:1px solid var(--border);}
+.fin-lbl{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;}
+.fin-val{font-size:1.15rem;font-weight:800;color:var(--ink);}
 
-.cmp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
-.cmp-card{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 2px 12px rgba(26,26,46,.06);}
-.cmp-period{font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:10px;}
+/* ── Comparison grid ── */
+.cmp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px;}
+.cmp-card{background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 2px 12px rgba(26,26,46,.06);}
+.cmp-period{font-size:.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
 .cmp-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
 .cmp-cur{font-size:1.5rem;font-weight:800;color:var(--ink);}
-.cmp-pct{font-size:.82rem;font-weight:700;padding:3px 8px;border-radius:20px;}
+.cmp-pct{font-size:.8rem;font-weight:700;padding:3px 8px;border-radius:20px;}
 .cmp-pct.up{background:#e8f5e9;color:#2e7d32;}
 .cmp-pct.down{background:#fef2f2;color:#dc2626;}
 .cmp-pct.flat{background:#f5f5f5;color:var(--muted);}
 
-.export-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
-
+/* ── Badges ── */
 .pay-badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:.7rem;font-weight:700;}
 .pay-paid{background:#e8f5e9;color:#2e7d32;}
 .pay-wait{background:#fff3e0;color:#e65100;}
@@ -335,40 +347,42 @@ $qnavLinks = [
 .bk-pending{background:#e3f2fd;color:#1565c0;}
 .bk-cancelled{background:#fef2f2;color:#dc2626;}
 .bk-rejected{background:#fff3e0;color:#e65100;}
-
 .svc-boat{background:rgba(29,111,173,.1);color:#1d6fad;}
 .svc-room{background:rgba(201,169,110,.15);color:#a07c3a;}
 .svc-tent{background:rgba(46,125,50,.12);color:#2e7d32;}
 
 @media print{
-  .rpt-filter,.export-bar,.sidebar,.topbar-actions{display:none!important;}
+  .rpt-toolbar,.rpt-filter,.period-nav,.sidebar,.topbar-actions{display:none!important;}
   .main{margin-left:0!important;width:100%!important;}
   .chart-wrap{height:180px;}
 }
-@media(max-width:900px){.chart-grid{grid-template-columns:1fr;}.cmp-grid{grid-template-columns:1fr;}}
+@media(max-width:960px){
+  .chart-grid{grid-template-columns:1fr;}
+  .cmp-grid{grid-template-columns:1fr;}
+  .rpt-toolbar{flex-direction:column;align-items:flex-start;}
+  .rpt-ts{margin-left:0;}
+}
 </style>
 
-<!-- Export bar -->
-<div class="export-bar no-print">
-  <button onclick="window.print()" class="btn btn-accent"><span>🖨</span> พิมพ์รายงาน</button>
-  <button onclick="exportCSV()" class="btn btn-ghost"><span>📥</span> ดาวน์โหลด CSV</button>
-  <span style="font-size:.78rem;color:var(--muted);align-self:center;">รายงาน<?= $labelRange ?> · ออกเมื่อ <?= date('d/m/Y H:i') ?> น.</span>
-</div>
-
-<!-- Quick navigation shortcuts -->
-<div class="qnav no-print">
-  <span class="qnav-label">ดูรายงาน</span>
-  <div class="qnav-btns">
-    <?php foreach ($qnavLinks as [$qlabel, $qurl, $qactive]): ?>
-    <a href="<?= htmlspecialchars($qurl) ?>" class="qbtn<?= $qactive ? ' active' : '' ?>"><?= $qlabel ?></a>
+<!-- Toolbar: export + quick nav รวมกัน -->
+<div class="rpt-toolbar no-print">
+  <div class="rpt-toolbar-left">
+    <button onclick="window.print()" class="btn btn-accent" style="height:36px;font-size:.8rem;">🖨 พิมพ์</button>
+    <button onclick="exportCSV()" class="btn btn-ghost" style="height:36px;font-size:.8rem;">📥 CSV</button>
+  </div>
+  <div class="toolbar-divider"></div>
+  <div class="rpt-toolbar-nav">
+    <?php foreach ($qnavLinks as $qitem): ?>
+    <a href="<?= htmlspecialchars($qitem[1]) ?>" class="qbtn<?= $qitem[2] ? ' active' : '' ?>"><?= $qitem[0] ?></a>
     <?php endforeach; ?>
   </div>
-  <div class="qnav-sep"></div>
-  <div class="qnav-btns">
+  <div class="toolbar-divider"></div>
+  <div class="rpt-toolbar-type">
     <a href="?type=daily"   class="qbtn<?= $reportType==='daily'  ?' active':'' ?>">รายวัน</a>
     <a href="?type=monthly" class="qbtn<?= $reportType==='monthly'?' active':'' ?>">รายเดือน</a>
     <a href="?type=yearly"  class="qbtn<?= $reportType==='yearly' ?' active':'' ?>">รายปี</a>
   </div>
+  <span class="rpt-ts">รายงาน<?= $labelRange ?> · <?= date('d/m/Y H:i') ?> น.</span>
 </div>
 
 <!-- Period navigator -->
@@ -383,7 +397,7 @@ $qnavLinks = [
     </div>
   </div>
   <?php if (!$isCurrentPeriod): ?>
-  <a href="<?= htmlspecialchars($todayNavUrl) ?>" class="pnav-today">↩ ปัจจุบัน</a>
+  <a href="<?= htmlspecialchars($todayNavUrl) ?>" class="pnav-back">↩ ปัจจุบัน</a>
   <?php endif; ?>
   <a href="<?= htmlspecialchars($nextNavUrl) ?>" class="pnav-arrow" title="ถัดไป">&#8250;</a>
 </div>
@@ -445,7 +459,7 @@ $qnavLinks = [
   </div>
 </form>
 
-<!-- KPI Cards -->
+<div class="sec-hd">ภาพรวม</div>
 <div class="kpi-grid">
   <div class="kpi-card blue">
     <div class="kpi-icon">📋</div>
@@ -491,6 +505,7 @@ $qnavLinks = [
   </div>
 </div>
 
+<div class="sec-hd">กราฟ</div>
 <!-- Charts row 1 -->
 <div class="chart-grid">
   <div class="chart-box">
@@ -515,6 +530,7 @@ $qnavLinks = [
   </div>
 </div>
 
+<div class="sec-hd">แยกตามบริการ</div>
 <!-- Service breakdown -->
 <div class="svc-grid" style="margin-bottom:20px;">
   <div class="svc-card">
@@ -543,6 +559,7 @@ $qnavLinks = [
   </div>
 </div>
 
+<div class="sec-hd">การเงิน</div>
 <!-- Finance -->
 <div class="lm-card" style="margin-bottom:20px;">
   <div class="lm-card-header">
@@ -559,6 +576,7 @@ $qnavLinks = [
   </div>
 </div>
 
+<div class="sec-hd">รายละเอียดการจอง</div>
 <!-- Booking table -->
 <div class="lm-card" style="margin-bottom:20px;">
   <div class="lm-card-header">
@@ -624,6 +642,7 @@ $qnavLinks = [
   </div>
 </div>
 
+<div class="sec-hd">เปรียบเทียบช่วงเวลา</div>
 <!-- Comparison -->
 <div class="cmp-grid" style="margin-bottom:20px;">
   <div class="cmp-card">

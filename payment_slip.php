@@ -28,7 +28,7 @@ if (in_array($booking['payment_status'], ['paid'])) {
 }
 
 // ── ตรวจสอบ timer 3 นาที ──
-define('PAY_TIMEOUT_SEC', 180); // 3 นาที
+define('PAY_TIMEOUT_SEC', 300); // 5 นาที
 $createdAt    = strtotime($booking['created_at']);
 $deadline     = $createdAt + PAY_TIMEOUT_SEC;
 $nowTs        = time();

@@ -12,67 +12,6 @@ $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
 
-/* === สร้างตาราง tents ถ้ายังไม่มี === */
-$conn->query("CREATE TABLE IF NOT EXISTS `tents` (
-    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    `tent_name` VARCHAR(200) NOT NULL,
-    `tent_type` VARCHAR(100) DEFAULT '',
-    `capacity` INT DEFAULT 4,
-    `price_per_night` DECIMAL(10,2) DEFAULT 0,
-    `total_tents` INT DEFAULT 5,
-    `description` TEXT,
-    `image_path` VARCHAR(500) DEFAULT '',
-    `status` ENUM('show','hide') DEFAULT 'show',
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-/* === สร้างตาราง tent_bookings ถ้ายังไม่มี === */
-$conn->query("CREATE TABLE IF NOT EXISTS `tent_bookings` (
-    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    `tent_id` INT UNSIGNED DEFAULT NULL,
-    `full_name` VARCHAR(200) NOT NULL,
-    `phone` VARCHAR(30) NOT NULL,
-    `email` VARCHAR(200) DEFAULT '',
-    `tent_type` VARCHAR(200) DEFAULT '',
-    `guests` INT DEFAULT 1,
-    `checkin_date` DATE DEFAULT NULL,
-    `checkout_date` DATE DEFAULT NULL,
-    `note` TEXT,
-    `booking_status` ENUM('pending','approved','rejected','cancelled') DEFAULT 'pending',
-    `archived` TINYINT(1) DEFAULT 0,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-/* === นับการจองที่อนุมัติแล้วต่อเต็นท์ (รองรับ tent_units JSON) === */
-$approvedMap = [];
-$colChk = $conn->query("SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA='backoffice_db' AND TABLE_NAME='tent_bookings' AND COLUMN_NAME='tent_units'");
-$hasUnitsCol = ($colChk && (int)$colChk->fetch_assoc()['cnt'] > 0);
-
-if ($hasUnitsCol) {
-    $resAp = $conn->query(
-        "SELECT tent_id,
-                SUM(CASE
-                    WHEN tent_units IS NOT NULL AND tent_units != ''
-                    THEN JSON_LENGTH(tent_units)
-                    ELSE 1
-                END) AS approved_total
-         FROM tent_bookings
-         WHERE booking_status='approved'
-         GROUP BY tent_id"
-    );
-} else {
-    $resAp = $conn->query("SELECT tent_id, COUNT(*) AS approved_total FROM tent_bookings WHERE booking_status='approved' GROUP BY tent_id");
-}
-if ($resAp) {
-    while ($r = $resAp->fetch_assoc()) {
-        $approvedMap[(int)$r['tent_id']] = (int)$r['approved_total'];
-    }
-}
-
-/* === ดึงรายการเต็นท์ === */
-$result = $conn->query("SELECT * FROM tents WHERE status='show' ORDER BY id DESC");
-
 /* === ดึงอุปกรณ์ให้เช่า === */
 $conn->query("CREATE TABLE IF NOT EXISTS `tent_equipment` (
     `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -91,7 +30,7 @@ $equipResult = $conn->query("SELECT * FROM tent_equipment WHERE is_available=1 O
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>จองเต็นท์ | สถาบันวิจัยวลัยรุกขเวช</title>
+<title>เช่าอุปกรณ์เต็นท์ | สถาบันวิจัยวลัยรุกขเวช</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -100,9 +39,7 @@ $equipResult = $conn->query("SELECT * FROM tent_equipment WHERE is_available=1 O
 :root{
     --ink:#1a1a2e;--gold:#c9a96e;--gold-dark:#a8864d;
     --bg:#f5f1eb;--card:#ffffff;--muted:#7a7a8c;
-    --border:#e8e4de;--white:#ffffff;
-    --danger:#d92d20;--danger-bg:#fff1f1;
-    --success:#15803d;--success-bg:#ecfdf3;
+    --border:#e8e4de;
     --card-shadow:0 14px 35px rgba(26,26,46,.10);
 }
 body{font-family:'Sarabun','Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);}
@@ -119,64 +56,34 @@ a{text-decoration:none;}
     radial-gradient(circle at 85% 15%,rgba(201,169,110,.08) 0%,transparent 40%);
     pointer-events:none;}
 .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(255,255,255,0) 65%,var(--bg) 100%);pointer-events:none;}
-.hero-inner{width:min(1180px,92%);margin:0 auto;position:relative;z-index:2;}
+.hero-inner{width:min(860px,92%);margin:0 auto;position:relative;z-index:2;}
 .top-nav{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px;}
 .nav-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;color:#fff;background:rgba(201,169,110,0.18);border:1px solid rgba(201,169,110,0.45);backdrop-filter:blur(8px);transition:.25s ease;}
 .nav-btn:hover{background:rgba(201,169,110,0.32);color:var(--gold);}
-.hero-badge{display:inline-block;padding:10px 18px;border:1px solid rgba(201,169,110,.45);background:rgba(201,169,110,.14);backdrop-filter:blur(8px);border-radius:999px;font-size:14px;font-weight:600;color:var(--gold);margin-bottom:18px;}
-.hero h1{font-size:46px;line-height:1.2;margin-bottom:14px;max-width:760px;color:#fff;}
+.hero h1{font-size:46px;line-height:1.2;margin-bottom:14px;color:#fff;}
 .hero h1 span{color:var(--gold);}
-.hero p{font-size:17px;line-height:1.8;color:rgba(255,255,255,.85);max-width:760px;}
-.section{width:min(1180px,92%);margin:-40px auto 60px;position:relative;z-index:5;}
-.section-head{margin-bottom:24px;}
-.section-head h3{font-size:32px;color:var(--ink);margin-bottom:6px;}
-.section-head p{color:var(--muted);line-height:1.7;}
-.tent-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;}
-.tent-card{background:var(--card);border-radius:20px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--card-shadow);transition:.25s ease;}
-.tent-card:hover{transform:translateY(-6px);box-shadow:0 20px 48px rgba(26,26,46,.14);}
-.tent-image-wrap{position:relative;}
-.tent-image{width:100%;height:240px;object-fit:cover;display:block;background:#ddd;}
-.equip-section{background:var(--card);border-radius:20px;border:1px solid var(--border);box-shadow:var(--card-shadow);overflow:hidden;margin-top:36px;}
-.equip-head{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
-.equip-head h3{font-size:20px;font-weight:800;color:var(--ink);margin:0;}
-.equip-head p{font-size:14px;color:var(--muted);margin:4px 0 0;}
+.hero p{font-size:17px;line-height:1.8;color:rgba(255,255,255,.85);}
+.section{width:min(860px,92%);margin:-40px auto 60px;position:relative;z-index:5;}
+.equip-section{background:var(--card);border-radius:20px;border:1px solid var(--border);box-shadow:var(--card-shadow);overflow:hidden;}
+.equip-head{padding:24px 28px;border-bottom:1px solid var(--border);}
+.equip-head h3{font-size:22px;font-weight:800;color:var(--ink);margin:0 0 4px;}
+.equip-head p{font-size:14px;color:var(--muted);margin:0;}
 .equip-table{width:100%;border-collapse:collapse;}
-.equip-table thead th{padding:11px 20px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);text-align:left;font-weight:700;background:#fdfcfa;}
-.equip-table tbody td{padding:14px 20px;font-size:15px;color:var(--ink);border-bottom:1px solid var(--border);}
+.equip-table thead th{padding:12px 22px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);text-align:left;font-weight:700;background:#fdfcfa;}
+.equip-table tbody td{padding:16px 22px;font-size:15px;color:var(--ink);border-bottom:1px solid var(--border);}
 .equip-table tbody tr:last-child td{border-bottom:none;}
 .equip-table tbody tr:hover{background:#fafaf8;}
-.equip-price{font-weight:800;color:var(--gold-dark);}
+.equip-name{font-weight:700;}
+.equip-price{font-weight:800;color:var(--gold-dark);font-size:16px;}
+.equip-unit{color:var(--muted);font-size:14px;}
 .equip-note{font-size:13px;color:var(--muted);}
-.equip-empty{padding:36px;text-align:center;color:var(--muted);}
-.tent-stock-badge{position:absolute;top:16px;left:16px;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;font-size:13px;font-weight:700;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.25);}
-.tent-stock-badge.available{background:rgba(21,128,61,.88);color:#fff;}
-.tent-stock-badge.full{background:rgba(217,45,32,.88);color:#fff;}
-.tent-body{padding:22px;}
-.tent-title{font-size:22px;font-weight:800;margin-bottom:10px;color:var(--ink);}
-.tent-desc{font-size:15px;line-height:1.7;color:var(--muted);margin-bottom:18px;min-height:72px;}
-.booking-summary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
-.summary-pill{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;font-size:13px;font-weight:700;border:1px solid transparent;}
-.summary-pill.total{background:rgba(26,26,46,.07);color:var(--ink);border-color:rgba(26,26,46,.15);}
-.summary-pill.booked{background:rgba(201,169,110,.12);color:var(--gold-dark);border-color:rgba(201,169,110,.35);}
-.summary-pill.left{background:var(--success-bg);color:var(--success);border-color:#d1fadf;}
-.summary-pill.full{background:var(--danger-bg);color:var(--danger);border-color:#fecaca;}
-.tent-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
-.meta-item{background:var(--bg);border:1px solid var(--border);padding:12px 14px;border-radius:14px;font-size:14px;color:var(--muted);}
-.meta-item strong{color:var(--ink);}
-.tent-footer{display:flex;justify-content:flex-end;align-items:center;gap:12px;flex-wrap:wrap;}
-.book-btn{display:inline-flex;align-items:center;justify-content:center;min-width:150px;padding:13px 18px;border-radius:14px;background:var(--ink);color:#fff;font-weight:700;font-size:15px;transition:.2s ease;font-family:'Sarabun',sans-serif;}
-.book-btn:hover{background:var(--gold);color:var(--ink);}
-.book-btn.disabled{background:#9ca3af;cursor:not-allowed;pointer-events:none;}
-.empty-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:60px 25px;text-align:center;color:var(--muted);box-shadow:var(--card-shadow);}
-.empty-box h3{font-size:22px;color:var(--ink);margin-bottom:8px;}
-@media(max-width:768px){
+.equip-num{color:#c4c4cc;font-size:13px;}
+.equip-empty{padding:48px;text-align:center;color:var(--muted);font-size:15px;}
+@media(max-width:600px){
     .hero{padding:50px 16px 100px;}
-    .hero h1{font-size:34px;}
+    .hero h1{font-size:32px;}
     .section{margin-top:-30px;}
-    .tent-image{height:210px;}
-    .tent-meta{grid-template-columns:1fr;}
-    .tent-footer{flex-direction:column;align-items:flex-start;}
-    .book-btn{width:100%;}
+    .equip-table thead th,.equip-table tbody td{padding:12px 14px;}
 }
 </style>
 </head>
@@ -190,91 +97,21 @@ a{text-decoration:none;}
             <a href="booking_room.php" class="nav-btn">จองห้องพัก</a>
             <a href="booking_boat.php" class="nav-btn">จองคิวพายเรือ</a>
         </div>
-        <h1>จองเต็นท์<span>กลางแจ้ง</span></h1>
-        <p>เลือกเต็นท์ที่ต้องการจากรายการด้านล่าง เหมาะสำหรับการพักค้างคืนกลางธรรมชาติ จำนวนเต็นท์จะอัปเดตตามรายการที่อนุมัติแล้ว</p>
+        <h1>เช่า<span>อุปกรณ์เต็นท์</span></h1>
+        <p>รายการอุปกรณ์ที่สามารถเช่าได้ กรุณาแจ้งเจ้าหน้าที่เมื่อต้องการเช่าอุปกรณ์เพิ่มเติม</p>
     </div>
 </section>
 
 <div class="section">
-    <div class="section-head">
-        <h3>⛺ รายการเต็นท์</h3>
-        <p>แสดงจำนวนเต็นท์ทั้งหมด จำนวนที่จองแล้ว และจำนวนคงเหลือ</p>
-    </div>
-
-    <?php if ($result && $result->num_rows > 0): ?>
-        <div class="tent-grid">
-            <?php while ($tent = $result->fetch_assoc()): ?>
-                <?php
-                    $tid        = (int)$tent['id'];
-                    $img        = !empty($tent['image_path']) ? $tent['image_path'] : 'uploads/no-image.png';
-                    $desc       = !empty($tent['description']) ? $tent['description'] : 'ไม่มีรายละเอียดเพิ่มเติม';
-                    $price      = (float)$tent['price_per_night'];
-                    $total      = max(1, (int)$tent['total_tents']);
-                    $booked     = isset($approvedMap[$tid]) ? (int)$approvedMap[$tid] : 0;
-                    $avail      = max(0, $total - $booked);
-                    $isFull     = ($avail <= 0);
-                ?>
-                <div class="tent-card">
-                    <div class="tent-image-wrap">
-                        <img src="<?= htmlspecialchars($img) ?>"
-                             alt="<?= htmlspecialchars($tent['tent_name']) ?>"
-                             class="tent-image"
-                             onerror="this.src='uploads/no-image.png'">
-                        <div class="tent-stock-badge <?= $isFull ? 'full' : 'available' ?>">
-                            <?= $isFull ? 'เต็มแล้ว' : 'ว่าง ' . $avail . '/' . $total ?>
-                        </div>
-                    </div>
-                    <div class="tent-body">
-                        <div class="tent-title"><?= htmlspecialchars($tent['tent_name']) ?></div>
-                        <div class="tent-desc"><?= htmlspecialchars($desc) ?></div>
-
-                        <div class="booking-summary">
-                            <div class="summary-pill total">ทั้งหมด <?= $total ?> หลัง</div>
-                            <div class="summary-pill booked">จองแล้ว <?= $booked ?>/<?= $total ?></div>
-                            <?php if ($isFull): ?>
-                                <div class="summary-pill full">คงเหลือ 0 หลัง</div>
-                            <?php else: ?>
-                                <div class="summary-pill left">คงเหลือ <?= $avail ?> หลัง</div>
-                            <?php endif; ?>
-                        </div>
-
-                        <div class="tent-meta">
-                            <?php if (!empty($tent['tent_type'])): ?>
-                                <div class="meta-item"><strong>ประเภท:</strong> <?= htmlspecialchars($tent['tent_type']) ?></div>
-                            <?php endif; ?>
-                            <div class="meta-item"><strong>รองรับ:</strong> <?= (int)$tent['capacity'] ?> คน</div>
-                        </div>
-
-                        <div class="tent-footer">
-                            <?php if ($isFull): ?>
-                                <span class="book-btn disabled">เต็มแล้ว</span>
-                            <?php else: ?>
-                                <a href="booking_tent_form.php?tent_id=<?= $tid ?>" class="book-btn">จองเต็นท์นี้</a>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-            <?php endwhile; ?>
-        </div>
-    <?php else: ?>
-        <div class="empty-box">
-            <h3>⛺ ยังไม่มีรายการเต็นท์</h3>
-            <p>กรุณาติดต่อเจ้าหน้าที่หรือรอเพิ่มข้อมูลเต็นท์</p>
-        </div>
-    <?php endif; ?>
-
-    <!-- อุปกรณ์ให้เช่า -->
     <div class="equip-section">
         <div class="equip-head">
-            <div>
-                <h3>🏕️ อุปกรณ์ให้เช่า</h3>
-                <p>รายการอุปกรณ์ที่สามารถเช่าเพิ่มเติมได้ กรุณาแจ้งเจ้าหน้าที่เมื่อต้องการเช่า</p>
-            </div>
+            <h3>🏕️ อุปกรณ์ให้เช่า</h3>
+            <p>ราคาต่อคืน / ต่อชิ้น ตามหน่วยที่ระบุ</p>
         </div>
         <table class="equip-table">
             <thead>
                 <tr>
-                    <th>#</th>
+                    <th style="width:44px;">#</th>
                     <th>รายการ</th>
                     <th>ราคา</th>
                     <th>หน่วย</th>
@@ -285,10 +122,10 @@ a{text-decoration:none;}
                 <?php if ($equipResult && $equipResult->num_rows > 0): ?>
                     <?php $i = 1; while ($eq = $equipResult->fetch_assoc()): ?>
                     <tr>
-                        <td style="color:#9ca3af;font-size:13px;"><?= $i++ ?></td>
-                        <td><strong><?= htmlspecialchars($eq['name']) ?></strong></td>
+                        <td class="equip-num"><?= $i++ ?></td>
+                        <td class="equip-name"><?= htmlspecialchars($eq['name']) ?></td>
                         <td class="equip-price">฿<?= number_format((float)$eq['price']) ?></td>
-                        <td style="color:var(--muted);font-size:14px;"><?= htmlspecialchars($eq['unit']) ?></td>
+                        <td class="equip-unit"><?= htmlspecialchars($eq['unit']) ?></td>
                         <td class="equip-note"><?= htmlspecialchars($eq['note'] ?: '—') ?></td>
                     </tr>
                     <?php endwhile; ?>

@@ -969,18 +969,18 @@ new Chart(document.getElementById('chartBooking'),{type:'bar',data:{labels,datas
 const revOpt = {...opt,scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10},callback:v=>'฿'+v.toLocaleString()},beginAtZero:true}}};
 
 // Revenue chart — เรือพาย
-new Chart(document.getElementById('chartRevenue'),{type:'line',data:{labels,datasets:[
-  {label:'รายได้เรือพาย (฿)',data:dRev,borderColor:'#1d6fad',backgroundColor:'rgba(29,111,173,.1)',fill:true,tension:.3,pointRadius:3}
+new Chart(document.getElementById('chartRevenue'),{type:'bar',data:{labels,datasets:[
+  {label:'รายได้เรือพาย (฿)',data:dRev,backgroundColor:'rgba(29,111,173,.75)',borderRadius:4}
 ]},options:revOpt});
 
 // Revenue chart — ห้องพัก
-new Chart(document.getElementById('chartRevenueRoom'),{type:'line',data:{labels,datasets:[
-  {label:'รายได้ห้องพัก (฿)',data:dRevRoom,borderColor:'#c9a96e',backgroundColor:'rgba(201,169,110,.1)',fill:true,tension:.3,pointRadius:3}
+new Chart(document.getElementById('chartRevenueRoom'),{type:'bar',data:{labels,datasets:[
+  {label:'รายได้ห้องพัก (฿)',data:dRevRoom,backgroundColor:'rgba(201,169,110,.75)',borderRadius:4}
 ]},options:revOpt});
 
 // Revenue chart — เต็นท์
-new Chart(document.getElementById('chartRevenueTent'),{type:'line',data:{labels,datasets:[
-  {label:'รายได้เต็นท์ (฿)',data:dRevTent,borderColor:'#2e7d32',backgroundColor:'rgba(46,125,50,.1)',fill:true,tension:.3,pointRadius:3}
+new Chart(document.getElementById('chartRevenueTent'),{type:'bar',data:{labels,datasets:[
+  {label:'รายได้เต็นท์ (฿)',data:dRevTent,backgroundColor:'rgba(46,125,50,.75)',borderRadius:4}
 ]},options:revOpt});
 
 // Pie chart

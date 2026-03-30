@@ -413,7 +413,6 @@ function statusClass($status) {
 <section class="hero">
     <div class="container">
         <div class="top-menu">
-            <a href="booking_room.php">← กลับไปหน้าจองห้อง</a>
             <a href="index.php">หน้าหลัก</a>
         </div>
 

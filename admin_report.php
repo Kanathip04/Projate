@@ -1,4 +1,6 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 $pageTitle  = "รายงานภาพรวม";
 $activeMenu = "admin_report";
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");

@@ -597,16 +597,20 @@ $qnavLinks = [
           <td>
             <?php
             $ps = $r['payment_status'];
-            $cls = match($ps) { 'paid'=>'pay-paid','waiting_verify'=>'pay-wait','failed'=>'pay-fail', default=>'pay-pend' };
-            $lbl = match($ps) { 'paid'=>'ชำระแล้ว','waiting_verify'=>'รอตรวจสอบ','failed'=>'ไม่ผ่าน','approved'=>'อนุมัติ','cancelled'=>'ยกเลิก', default=>'รอดำเนินการ' };
+            $clsMap = ['paid'=>'pay-paid','waiting_verify'=>'pay-wait','failed'=>'pay-fail'];
+            $cls = isset($clsMap[$ps]) ? $clsMap[$ps] : 'pay-pend';
+            $lblMap = ['paid'=>'ชำระแล้ว','waiting_verify'=>'รอตรวจสอบ','failed'=>'ไม่ผ่าน','approved'=>'อนุมัติ','cancelled'=>'ยกเลิก'];
+            $lbl = isset($lblMap[$ps]) ? $lblMap[$ps] : 'รอดำเนินการ';
             ?>
             <span class="pay-badge <?= $cls ?>"><?= $lbl ?></span>
           </td>
           <td>
             <?php
             $bs = $r['booking_status'];
-            $bcls = match($bs) { 'approved'=>'bk-approved','cancelled'=>'bk-cancelled','rejected'=>'bk-cancelled', default=>'bk-pending' };
-            $blbl = match($bs) { 'approved'=>'อนุมัติ','cancelled'=>'ยกเลิก','rejected'=>'ปฏิเสธ', default=>'รอดำเนินการ' };
+            $bclsMap = ['approved'=>'bk-approved','cancelled'=>'bk-cancelled','rejected'=>'bk-cancelled'];
+            $bcls = isset($bclsMap[$bs]) ? $bclsMap[$bs] : 'bk-pending';
+            $blblMap = ['approved'=>'อนุมัติ','cancelled'=>'ยกเลิก','rejected'=>'ปฏิเสธ'];
+            $blbl = isset($blblMap[$bs]) ? $blblMap[$bs] : 'รอดำเนินการ';
             ?>
             <span class="pay-badge <?= $bcls ?>"><?= $blbl ?></span>
           </td>
@@ -626,7 +630,7 @@ $qnavLinks = [
     <div class="cmp-period">วันนี้ vs เมื่อวาน</div>
     <div class="cmp-row">
       <div class="cmp-cur"><?= $cmp['today'] ?></div>
-      <?php $p=pct($cmp['today'],$cmp['yesterday']); $cls=str_starts_with($p,'+')&&$p!=='+0%'?'up':(str_starts_with($p,'-')?'down':'flat'); ?>
+      <?php $p=pct($cmp['today'],$cmp['yesterday']); $cls=($p[0]==='+'&&$p!=='+0%')?'up':($p[0]==='-'?'down':'flat'); ?>
       <span class="cmp-pct <?= $cls ?>"><?= $p ?></span>
     </div>
     <div style="font-size:.75rem;color:var(--muted);">วันนี้ <?= $cmp['today'] ?> / เมื่อวาน <?= $cmp['yesterday'] ?> รายการ</div>
@@ -635,7 +639,7 @@ $qnavLinks = [
     <div class="cmp-period">เดือนนี้ vs เดือนก่อน</div>
     <div class="cmp-row">
       <div class="cmp-cur"><?= $cmp['thisMonth'] ?></div>
-      <?php $p=pct($cmp['thisMonth'],$cmp['lastMonth']); $cls=str_starts_with($p,'+')&&$p!=='+0%'?'up':(str_starts_with($p,'-')?'down':'flat'); ?>
+      <?php $p=pct($cmp['thisMonth'],$cmp['lastMonth']); $cls=($p[0]==='+'&&$p!=='+0%')?'up':($p[0]==='-'?'down':'flat'); ?>
       <span class="cmp-pct <?= $cls ?>"><?= $p ?></span>
     </div>
     <div style="font-size:.75rem;color:var(--muted);">เดือนนี้ <?= $cmp['thisMonth'] ?> / เดือนก่อน <?= $cmp['lastMonth'] ?> รายการ</div>
@@ -644,7 +648,7 @@ $qnavLinks = [
     <div class="cmp-period">ปีนี้ vs ปีก่อน</div>
     <div class="cmp-row">
       <div class="cmp-cur"><?= $cmp['thisYear'] ?></div>
-      <?php $p=pct($cmp['thisYear'],$cmp['lastYear']); $cls=str_starts_with($p,'+')&&$p!=='+0%'?'up':(str_starts_with($p,'-')?'down':'flat'); ?>
+      <?php $p=pct($cmp['thisYear'],$cmp['lastYear']); $cls=($p[0]==='+'&&$p!=='+0%')?'up':($p[0]==='-'?'down':'flat'); ?>
       <span class="cmp-pct <?= $cls ?>"><?= $p ?></span>
     </div>
     <div style="font-size:.75rem;color:var(--muted);">ปีนี้ <?= $cmp['thisYear'] ?> / ปีก่อน <?= $cmp['lastYear'] ?> รายการ</div>

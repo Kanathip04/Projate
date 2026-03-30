@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+mysqli_report(MYSQLI_REPORT_OFF); // ไม่ throw exception จาก MySQL ให้ return false แทน
 $pageTitle  = "รายงานภาพรวม";
 $activeMenu = "admin_report";
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
@@ -165,7 +168,9 @@ if ($serviceType === 'all' || $serviceType === 'tent') {
         WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived=0 ORDER BY created_at DESC LIMIT 50");
     while ($r = $tRows->fetch_assoc()) $bookingRows[] = $r;
 }
-usort($bookingRows ?? [], fn($a,$b) => strtotime($b['created_at']) - strtotime($a['created_at']));
+if (!empty($bookingRows)) {
+    usort($bookingRows, fn($a,$b) => strtotime($b['created_at']) - strtotime($a['created_at']));
+}
 
 // ── Comparison ──
 $prevDay   = date('Y-m-d', strtotime('-1 day', strtotime($today)));

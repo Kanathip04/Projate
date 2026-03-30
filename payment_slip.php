@@ -155,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['slip'])) {
     $stmt2->close();
 }
 
-define('PROMPTPAY_ID', '06111360322');
+define('PROMPTPAY_ID', '0611360322');
 
 function promptpayPayload(string $target, float $amount): string
 {

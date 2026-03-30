@@ -161,9 +161,9 @@ function promptpayPayload(string $target, float $amount): string
 {
     $target = preg_replace('/\D/', '', $target);
     if (strlen($target) === 10 && $target[0] === '0') {
-        $target = '66' . substr($target, 1);
+        $target = '0066' . substr($target, 1);
     }
-    $isPhone   = strlen($target) === 11;
+    $isPhone   = strlen($target) === 13;
     $subTag    = $isPhone ? '01' : '02';
     $subLen    = str_pad(strlen($target), 2, '0', STR_PAD_LEFT);
     $guid      = 'A000000677010111';

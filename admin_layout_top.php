@@ -352,7 +352,7 @@ body::before {
 // กำหนด section ที่ active menu อยู่ใน section ไหน
 $_sectionMap = [
   'overview'  => ['dashboard','report','admin_report','charts'],
-  'booking'   => ['booking','booking_approved','booking_archive','rooms','tent_booking','tent_approved','tent_manage','boat_booking','boat_queue'],
+  'booking'   => ['booking','booking_approved','booking_archive','rooms','tent_booking','tent_approved','tent_manage','tent_stock','boat_booking','boat_queue'],
   'content'   => ['news_add','news_manage','popup','banner','about','survey'],
   'settings'  => ['users','password','profile'],
 ];
@@ -413,6 +413,9 @@ foreach ($_sectionMap as $_sec => $_items) {
     </a>
     <a href="manage_tents.php" class="menu-item <?= $activeMenu==='tent_manage'?'active':'' ?>">
       <span class="icon">🏕️</span><span class="text">จัดการเต็นท์</span>
+    </a>
+    <a href="manage_tent_stock.php" class="menu-item <?= $activeMenu==='tent_stock'?'active':'' ?>">
+      <span class="icon">📦</span><span class="text">จัดเก็บเต็นท์</span>
     </a>
     <span class="menu-sub-label">🚣 พายเรือ</span>
     <a href="admin_boat_bookings.php" class="menu-item <?= $activeMenu==='boat_booking'?'active':'' ?>">

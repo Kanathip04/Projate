@@ -420,6 +420,31 @@ include 'admin_layout_top.php';
 </div>
 <?php endif; ?>
 
+<!-- Stats -->
+<div class="tm-stats">
+  <div class="tm-stat" style="border-left-color:#1d6fad;">
+    <div class="tm-stat-icon">⛺</div>
+    <div>
+      <div class="tm-stat-val"><?= $totalTents ?></div>
+      <div class="tm-stat-lbl">เต็นท์ทั้งหมด</div>
+    </div>
+  </div>
+  <div class="tm-stat" style="border-left-color:var(--success);">
+    <div class="tm-stat-icon">✅</div>
+    <div>
+      <div class="tm-stat-val"><?= $showCount ?></div>
+      <div class="tm-stat-lbl">กำลังแสดง</div>
+    </div>
+  </div>
+  <div class="tm-stat" style="border-left-color:var(--danger);">
+    <div class="tm-stat-icon">🙈</div>
+    <div>
+      <div class="tm-stat-val"><?= $totalTents - $showCount ?></div>
+      <div class="tm-stat-lbl">ซ่อนอยู่</div>
+    </div>
+  </div>
+</div>
+
 <!-- Main Layout -->
 <div class="tm-layout">
 
@@ -442,18 +467,12 @@ include 'admin_layout_top.php';
                  value="<?= h($editTent['tent_name'] ?? '') ?>" required>
         </div>
 
-        <div class="tm-row2">
-          <div class="tm-fg">
-            <label>ประเภทเต็นท์</label>
-            <input type="text" name="tent_type" placeholder="โดม, ครอบครัว..."
-                   value="<?= h($editTent['tent_type'] ?? '') ?>">
-          </div>
-          <div class="tm-fg">
-            <label>ราคา / คืน (฿)</label>
-            <input type="number" name="price_per_night" min="0" step="0.01"
-                   value="<?= number_format((float)($editTent['price_per_night'] ?? 0), 2, '.', '') ?>">
-          </div>
+        <div class="tm-fg">
+          <label>ประเภทเต็นท์</label>
+          <input type="text" name="tent_type" placeholder="โดม, ครอบครัว..."
+                 value="<?= h($editTent['tent_type'] ?? '') ?>">
         </div>
+        <input type="hidden" name="price_per_night" value="<?= number_format((float)($editTent['price_per_night'] ?? 0), 2, '.', '') ?>">
 
         <div class="tm-sec-lbl">ความจุ</div>
 
@@ -532,7 +551,6 @@ include 'admin_layout_top.php';
           <div class="tent-card-name"><?= h($row['tent_name']) ?></div>
           <div class="tent-card-type"><?= h($row['tent_type'] ?: '-') ?></div>
           <div class="tent-card-chips">
-            <span class="t-chip t-chip-price">฿<?= number_format((float)$row['price_per_night'],0) ?>/คืน</span>
             <span class="t-chip">⛺ <?= (int)$row['total_tents'] ?> หลัง</span>
             <span class="t-chip">👥 <?= (int)$row['capacity'] ?> คน</span>
           </div>

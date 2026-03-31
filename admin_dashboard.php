@@ -240,7 +240,7 @@ include "admin_layout_top.php";
   <div class="table-box">
     <div class="table-header">
       <div class="table-title">
-        <h2><span class="live-dot"></span>รายการเข้าชมวันนี้ (<?= date('d/m/Y') ?>)</h2>
+        <h2><span class="live-dot"></span> Walk in (<?= date('d/m/Y') ?>)</h2>
         <p>แสดงข้อมูลผู้เช็คอินทั้งหมดของวันนี้แบบ real-time</p>
       </div>
       <div class="table-actions">

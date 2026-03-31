@@ -78,24 +78,51 @@ if ($conn->connect_error) {
     exit;
 }
 
-// ── ดึง booking ──
-$stmt = $conn->prepare("SELECT * FROM boat_bookings WHERE booking_ref = ? LIMIT 1");
-$stmt->bind_param("s", $booking_ref);
-$stmt->execute();
-$booking = $stmt->get_result()->fetch_assoc();
-$stmt->close();
+// ── ตรวจว่าเป็น equipment booking หรือ boat booking ──
+$isEquipment = (strpos($booking_ref, 'EQUIP-') === 0);
+$equipId = 0;
 
-if (!$booking) {
-    http_response_code(404);
-    echo json_encode(['ok'=>false,'error'=>'Booking not found']);
-    exit;
+if ($isEquipment) {
+    // ── Equipment booking ──
+    $equipId = (int)preg_replace('/\D/', '', $booking_ref);
+    $stmt = $conn->prepare("SELECT * FROM equipment_bookings WHERE id = ? LIMIT 1");
+    $stmt->bind_param("i", $equipId);
+    $stmt->execute();
+    $booking = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$booking) {
+        http_response_code(404);
+        echo json_encode(['ok'=>false,'error'=>'Equipment booking not found']);
+        exit;
+    }
+    // ใช้ id จริงเป็น booking_id สำหรับ payment_slips
+    $booking['booking_ref'] = $booking_ref;
+} else {
+    // ── Boat booking ──
+    $stmt = $conn->prepare("SELECT * FROM boat_bookings WHERE booking_ref = ? LIMIT 1");
+    $stmt->bind_param("s", $booking_ref);
+    $stmt->execute();
+    $booking = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$booking) {
+        http_response_code(404);
+        echo json_encode(['ok'=>false,'error'=>'Booking not found']);
+        exit;
+    }
+
+    // ── บันทึก webhook payload (boat only) ──
+    $conn->query(
+        "UPDATE boat_bookings SET webhook_payload = '" . $conn->real_escape_string($rawBody) . "'" .
+        " WHERE booking_ref = '" . $conn->real_escape_string($booking_ref) . "'"
+    );
 }
 
-// ── บันทึก webhook payload ──
-$conn->query(
-    "UPDATE boat_bookings SET webhook_payload = '" . $conn->real_escape_string($rawBody) . "'" .
-    " WHERE booking_ref = '" . $conn->real_escape_string($booking_ref) . "'"
-);
+// ── Helper: อัปเดต equipment_bookings status ──
+function updateEquipStatus($conn, $id, $status) {
+    $conn->query("UPDATE equipment_bookings SET payment_status='$status', booking_status='approved' WHERE id=$id");
+}
 
 // ── Helper: อัปเดต payment_slips ──
 function updateSlipRecord($conn, $booking_id, $fields) {
@@ -117,12 +144,33 @@ function updateSlipRecord($conn, $booking_id, $fields) {
     $st->close();
 }
 
+// ── Helper: อัปเดต status ตามประเภท booking ──
+function updateBookingStatus($conn, $isEquipment, $equipId, $booking_ref, $status, $note = null) {
+    if ($isEquipment) {
+        $bookingStatus = ($status === 'paid') ? 'approved' : 'pending';
+        if ($note !== null) {
+            $st = $conn->prepare("UPDATE equipment_bookings SET payment_status=?, booking_status=?, note=CONCAT(COALESCE(note,''),?) WHERE id=?");
+            $st->bind_param("sssi", $status, $bookingStatus, $note, $equipId);
+        } else {
+            $st = $conn->prepare("UPDATE equipment_bookings SET payment_status=?, booking_status=? WHERE id=?");
+            $st->bind_param("ssi", $status, $bookingStatus, $equipId);
+        }
+    } else {
+        if ($note !== null) {
+            $st = $conn->prepare("UPDATE boat_bookings SET payment_status=?, note=CONCAT(COALESCE(note,''),?) WHERE booking_ref=?");
+            $st->bind_param("sss", $status, $note, $booking_ref);
+        } else {
+            $st = $conn->prepare("UPDATE boat_bookings SET payment_status=? WHERE booking_ref=?");
+            $st->bind_param("ss", $status, $booking_ref);
+        }
+    }
+    $st->execute(); $st->close();
+}
+
 // ── กรณี AI rate limit / retry ──
 if ($is429 || $retryNeeded || $rejectReason === 'AI_RATE_LIMIT') {
     $note = "\n[AUTO] AI ยืนยันไม่ได้ (rate limit) รอ admin ตรวจสลิปเอง [" . date('Y-m-d H:i') . "]";
-    $st = $conn->prepare("UPDATE boat_bookings SET payment_status='manual_review', note=CONCAT(COALESCE(note,''),?) WHERE booking_ref=?");
-    $st->bind_param("ss", $note, $booking_ref);
-    $st->execute(); $st->close();
+    updateBookingStatus($conn, $isEquipment, $equipId ?? 0, $booking_ref, 'manual_review', $note);
 
     updateSlipRecord($conn, $booking['id'], [
         'verification_status' => 'manual_review',
@@ -136,9 +184,7 @@ if ($is429 || $retryNeeded || $rejectReason === 'AI_RATE_LIMIT') {
 // ── กรณี manual_review (AI อ่านไม่ชัด) ──
 if ($vStatus === 'manual_review') {
     $note = "\n[AUTO] AI อ่านสลิปไม่ชัด (confidence ต่ำ) รอ admin ตรวจ [" . date('Y-m-d H:i') . "]";
-    $st = $conn->prepare("UPDATE boat_bookings SET payment_status='manual_review', note=CONCAT(COALESCE(note,''),?) WHERE booking_ref=?");
-    $st->bind_param("ss", $note, $booking_ref);
-    $st->execute(); $st->close();
+    updateBookingStatus($conn, $isEquipment, $equipId ?? 0, $booking_ref, 'manual_review', $note);
 
     updateSlipRecord($conn, $booking['id'], [
         'verification_status' => 'manual_review',
@@ -163,9 +209,7 @@ if ($slipRefNo) {
 
     if ($dupRef) {
         $note = "\n[AUTO] เลขอ้างอิงซ้ำกับ " . $dupRef['booking_ref'] . " ref:" . $slipRefNo . " [" . date('Y-m-d H:i') . "]";
-        $st = $conn->prepare("UPDATE boat_bookings SET payment_status='duplicate', note=CONCAT(COALESCE(note,''),?) WHERE booking_ref=?");
-        $st->bind_param("ss", $note, $booking_ref);
-        $st->execute(); $st->close();
+        updateBookingStatus($conn, $isEquipment, $equipId ?? 0, $booking_ref, 'duplicate', $note);
 
         updateSlipRecord($conn, $booking['id'], [
             'verification_status' => 'duplicate',
@@ -218,9 +262,7 @@ if ($verified && $slipDatetime) {
                 : "เวลาในสลิป ({$slipFmt}) อยู่ในอนาคต";
 
             $note = "\n[AUTO] ตรวจเวลาไม่ผ่าน: {$reason} [" . date('Y-m-d H:i') . "]";
-            $st = $conn->prepare("UPDATE boat_bookings SET payment_status='failed', note=CONCAT(COALESCE(note,''),?) WHERE booking_ref=?");
-            $st->bind_param("ss", $note, $booking_ref);
-            $st->execute(); $st->close();
+            updateBookingStatus($conn, $isEquipment, $equipId ?? 0, $booking_ref, 'failed', $note);
 
             updateSlipRecord($conn, $booking['id'], [
                 'verification_status' => 'rejected',
@@ -256,10 +298,7 @@ if ($verified) {
         // อ่านชื่อได้ แต่ไม่ตรงกับชื่อที่กำหนด
         $reason = "ชื่อผู้รับ \"{$slipPayeeName}\" ไม่ตรง (ต้องเป็น " . PAYEE_FIRST_NAME . ' ' . PAYEE_LAST_NAME . ")";
         $note   = "\n[AUTO] ชื่อผู้รับไม่ตรง: {$slipPayeeName} [" . date('Y-m-d H:i') . "]";
-
-        $st = $conn->prepare("UPDATE boat_bookings SET payment_status='failed', note=CONCAT(COALESCE(note,''),?) WHERE booking_ref=?");
-        $st->bind_param("ss", $note, $booking_ref);
-        $st->execute(); $st->close();
+        updateBookingStatus($conn, $isEquipment, $equipId ?? 0, $booking_ref, 'failed', $note);
 
         updateSlipRecord($conn, $booking['id'], [
             'verification_status' => 'rejected',
@@ -274,38 +313,58 @@ if ($verified) {
 // ── ตัดสินผล ──
 if ($verified && $amountMatched) {
     // ── ชำระสำเร็จ ──
-    $today  = date('Y-m-d');
-    $cntRes = $conn->query(
-        "SELECT COUNT(*) AS cnt FROM boat_bookings WHERE DATE(approved_at)='$today' AND booking_status='approved'"
-    );
-    $queueNo = (int)($cntRes->fetch_assoc()['cnt'] ?? 0) + 1;
+    if ($isEquipment) {
+        // Equipment booking: อัปเดต equipment_bookings
+        $upStmt = $conn->prepare(
+            "UPDATE equipment_bookings
+             SET payment_status='paid', booking_status='approved',
+                 provider_txn_id=?, paid_at=NOW(), approved_at=NOW()
+             WHERE id=?"
+        );
+        $upStmt->bind_param("si", $txnId, $equipId);
+        $upStmt->execute(); $upStmt->close();
 
-    $upStmt = $conn->prepare(
-        "UPDATE boat_bookings
-         SET payment_status='paid', booking_status='approved',
-             daily_queue_no=?, provider_txn_id=?, paid_at=NOW(), approved_at=NOW()
-         WHERE booking_ref=?"
-    );
-    $upStmt->bind_param("iss", $queueNo, $txnId, $booking_ref);
-    $upStmt->execute(); $upStmt->close();
+        updateSlipRecord($conn, $booking['id'], ['verification_status'=>'paid']);
 
-    updateSlipRecord($conn, $booking['id'], ['verification_status'=>'paid']);
+        echo json_encode([
+            'ok'          => true,
+            'action'      => 'approved',
+            'booking_ref' => $booking_ref,
+            'ticket_url'  => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/queue_ticket.php?ref=' . urlencode($booking_ref),
+        ]);
+    } else {
+        // Boat booking: คำนวณคิวและอัปเดต boat_bookings
+        $today  = date('Y-m-d');
+        $cntRes = $conn->query(
+            "SELECT COUNT(*) AS cnt FROM boat_bookings WHERE DATE(approved_at)='$today' AND booking_status='approved'"
+        );
+        $queueNo = (int)($cntRes->fetch_assoc()['cnt'] ?? 0) + 1;
 
-    $queueLabel = 'Q' . str_pad($queueNo, 4, '0', STR_PAD_LEFT);
-    echo json_encode([
-        'ok'          => true,
-        'action'      => 'approved',
-        'queue_label' => $queueLabel,
-        'booking_ref' => $booking_ref,
-        'ticket_url'  => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/queue_ticket.php?ref=' . urlencode($booking_ref),
-    ]);
+        $upStmt = $conn->prepare(
+            "UPDATE boat_bookings
+             SET payment_status='paid', booking_status='approved',
+                 daily_queue_no=?, provider_txn_id=?, paid_at=NOW(), approved_at=NOW()
+             WHERE booking_ref=?"
+        );
+        $upStmt->bind_param("iss", $queueNo, $txnId, $booking_ref);
+        $upStmt->execute(); $upStmt->close();
+
+        updateSlipRecord($conn, $booking['id'], ['verification_status'=>'paid']);
+
+        $queueLabel = 'Q' . str_pad($queueNo, 4, '0', STR_PAD_LEFT);
+        echo json_encode([
+            'ok'          => true,
+            'action'      => 'approved',
+            'queue_label' => $queueLabel,
+            'booking_ref' => $booking_ref,
+            'ticket_url'  => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/queue_ticket.php?ref=' . urlencode($booking_ref),
+        ]);
+    }
 
 } elseif ($vStatus === 'suspicious') {
     // ── น่าสงสัย ──
     $note = "\n[AUTO] สลิปน่าสงสัย: $rejectReason [" . date('Y-m-d H:i') . "]";
-    $st = $conn->prepare("UPDATE boat_bookings SET payment_status='suspicious', note=CONCAT(COALESCE(note,''),?) WHERE booking_ref=?");
-    $st->bind_param("ss", $note, $booking_ref);
-    $st->execute(); $st->close();
+    updateBookingStatus($conn, $isEquipment, $equipId ?? 0, $booking_ref, 'suspicious', $note);
 
     updateSlipRecord($conn, $booking['id'], [
         'verification_status' => 'suspicious',
@@ -319,11 +378,7 @@ if ($verified && $amountMatched) {
     $failNote = "\n[AUTO] สลิปไม่ผ่าน: " .
         ($rejectReason ?: "ยอดไม่ตรง (฿$slipAmount / ต้องจ่าย ฿{$booking['total_amount']})") .
         " [" . date('Y-m-d H:i') . "]";
-    $upStmt = $conn->prepare(
-        "UPDATE boat_bookings SET payment_status='failed', note=CONCAT(COALESCE(note,''),?) WHERE booking_ref=?"
-    );
-    $upStmt->bind_param("ss", $failNote, $booking_ref);
-    $upStmt->execute(); $upStmt->close();
+    updateBookingStatus($conn, $isEquipment, $equipId ?? 0, $booking_ref, 'failed', $failNote);
 
     updateSlipRecord($conn, $booking['id'], [
         'verification_status' => 'rejected',

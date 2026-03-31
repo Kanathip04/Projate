@@ -764,7 +764,41 @@ $qnavLinks = [
   </div>
 </div>
 
-<?php else: ?>
+<!-- ═══ ข้อมูลเช็คอินผู้เยี่ยมชม ═══ -->
+<div class="sec-hd">ข้อมูลเช็คอินผู้เยี่ยมชม (<?= $labelRange ?>)</div>
+<div class="kpi-grid" style="margin-bottom:12px;">
+  <div class="kpi-card" style="border-left-color:#0d9488;"><div class="kpi-icon">🏛</div><div class="kpi-lbl">เช็คอินรวม</div><div class="kpi-val" style="color:#0d9488;"><?= number_format($touristTotal) ?></div><div class="kpi-sub">คน</div></div>
+  <div class="kpi-card blue"><div class="kpi-icon">🎓</div><div class="kpi-lbl">นักศึกษา</div><div class="kpi-val" style="color:#1d6fad;"><?= number_format($touristStudent) ?></div><div class="kpi-sub">คน</div></div>
+  <div class="kpi-card" style="border-left-color:#7c3aed;"><div class="kpi-icon">👔</div><div class="kpi-lbl">บุคลากร</div><div class="kpi-val" style="color:#7c3aed;"><?= number_format($touristStaff) ?></div><div class="kpi-sub">คน</div></div>
+  <div class="kpi-card" style="border-left-color:#d97706;"><div class="kpi-icon">🌏</div><div class="kpi-lbl">นักท่องเที่ยว</div><div class="kpi-val" style="color:#d97706;"><?= number_format($touristVisitor) ?></div><div class="kpi-sub">คน</div></div>
+</div>
+<div class="stat-card" style="margin-bottom:16px;">
+  <div class="stat-card-hd"><span style="font-size:1.1rem;">📋</span><span class="stat-card-title">รายชื่อผู้เช็คอิน</span><span style="font-size:.72rem;color:var(--muted);margin-left:auto;">แสดงสูงสุด 200 รายการ</span></div>
+  <div style="overflow-x:auto;"><table class="stat-table">
+    <thead><tr><th>#</th><th>ชื่อเล่น</th><th>เพศ</th><th>อายุ</th><th>ประเภท</th><th class="num">วันที่</th><th class="num">เวลา</th></tr></thead>
+    <tbody>
+      <?php if (empty($touristList)): ?>
+      <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">ไม่พบข้อมูลเช็คอิน</td></tr>
+      <?php else: foreach ($touristList as $i2 => $tl2):
+        if ($tl2['user_type'] === 'นักศึกษา') { $tc2 = 'background:#e3f2fd;color:#1565c0;'; }
+        elseif ($tl2['user_type'] === 'บุคลากร') { $tc2 = 'background:#f3e8ff;color:#7c3aed;'; }
+        else { $tc2 = 'background:#fff7ed;color:#d97706;'; }
+      ?><tr>
+        <td style="color:var(--muted);font-size:.76rem;"><?= $i2+1 ?></td>
+        <td style="font-weight:700;"><?= htmlspecialchars($tl2['nickname']) ?></td>
+        <td><?= htmlspecialchars($tl2['gender'] ?? '-') ?></td>
+        <td><?= (int)$tl2['age'] ?> ปี</td>
+        <td><span class="pay-badge" style="<?= $tc2 ?>"><?= htmlspecialchars($tl2['user_type']) ?></span></td>
+        <td class="num"><?= htmlspecialchars($tl2['visit_date']) ?></td>
+        <td class="num"><?= htmlspecialchars($tl2['visit_time'] ?? '-') ?></td>
+      </tr>
+      <?php endforeach; endif; ?>
+    </tbody>
+  </table></div>
+</div>
+
+<?php endif; // end if checkin ?>
+<?php if ($serviceType !== 'checkin'): ?>
 <div class="sec-hd">ภาพรวม — <?= $ctxLabel ?> · <?= $labelRange ?></div>
 <div class="kpi-grid">
   <div class="kpi-card blue">
@@ -824,86 +858,7 @@ $qnavLinks = [
   <?php endif; ?>
 </div>
 
-<!-- ═══ ข้อมูลเช็คอิน (tourists table) ═══ -->
-<div class="sec-hd">ข้อมูลเช็คอินผู้เยี่ยมชม (<?= $labelRange ?>)</div>
-
-<!-- Tourist stat cards -->
-<div class="kpi-grid" style="margin-bottom:12px;">
-  <div class="kpi-card" style="border-left-color:#0d9488;">
-    <div class="kpi-icon">🏛</div>
-    <div class="kpi-lbl">เช็คอินรวม</div>
-    <div class="kpi-val" style="color:#0d9488;"><?= number_format($touristTotal) ?></div>
-    <div class="kpi-sub">คน</div>
-  </div>
-  <div class="kpi-card blue">
-    <div class="kpi-icon">🎓</div>
-    <div class="kpi-lbl">นักศึกษา</div>
-    <div class="kpi-val" style="color:#1d6fad;"><?= number_format($touristStudent) ?></div>
-    <div class="kpi-sub">คน</div>
-  </div>
-  <div class="kpi-card" style="border-left-color:#7c3aed;">
-    <div class="kpi-icon">👔</div>
-    <div class="kpi-lbl">บุคลากร</div>
-    <div class="kpi-val" style="color:#7c3aed;"><?= number_format($touristStaff) ?></div>
-    <div class="kpi-sub">คน</div>
-  </div>
-  <div class="kpi-card" style="border-left-color:#d97706;">
-    <div class="kpi-icon">🌏</div>
-    <div class="kpi-lbl">นักท่องเที่ยว</div>
-    <div class="kpi-val" style="color:#d97706;"><?= number_format($touristVisitor) ?></div>
-    <div class="kpi-sub">คน</div>
-  </div>
-</div>
-
-<!-- Tourist check-in list -->
-<div class="stat-card" style="margin-bottom:16px;">
-  <div class="stat-card-hd">
-    <span style="font-size:1.1rem;">📋</span>
-    <span class="stat-card-title">รายชื่อผู้เช็คอิน</span>
-    <span style="font-size:.72rem;color:var(--muted);margin-left:auto;">แสดงสูงสุด 200 รายการ</span>
-  </div>
-  <div style="overflow-x:auto;">
-    <table class="stat-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>ชื่อเล่น</th>
-          <th>เพศ</th>
-          <th>อายุ</th>
-          <th>ประเภท</th>
-          <th class="num">วันที่</th>
-          <th class="num">เวลา</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php if (empty($touristList)): ?>
-        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">ไม่พบข้อมูลเช็คอิน</td></tr>
-        <?php else: foreach ($touristList as $i => $tl): ?>
-        <tr>
-          <td style="color:var(--muted);font-size:.76rem;"><?= $i+1 ?></td>
-          <td style="font-weight:700;"><?= htmlspecialchars($tl['nickname']) ?></td>
-          <td><?= htmlspecialchars($tl['gender'] ?? '-') ?></td>
-          <td><?= (int)$tl['age'] ?> ปี</td>
-          <td>
-            <?php
-            $typeColor = match($tl['user_type']) {
-                'นักศึกษา' => 'background:#e3f2fd;color:#1565c0;',
-                'บุคลากร'  => 'background:#f3e8ff;color:#7c3aed;',
-                default    => 'background:#fff7ed;color:#d97706;',
-            };
-            ?>
-            <span class="pay-badge" style="<?= $typeColor ?>"><?= htmlspecialchars($tl['user_type']) ?></span>
-          </td>
-          <td class="num"><?= htmlspecialchars($tl['visit_date']) ?></td>
-          <td class="num"><?= htmlspecialchars($tl['visit_time'] ?? '-') ?></td>
-        </tr>
-        <?php endforeach; endif; ?>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<?php endif; // end serviceType === 'checkin' ?>
+<?php endif; // end serviceType !== 'checkin' for KPI grid ?>
 
 <!-- ═══ สถิติจำนวนผู้ใช้งาน ═══ -->
 <?php if ($serviceType !== 'checkin'): ?>

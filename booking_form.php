@@ -243,6 +243,20 @@ a{text-decoration:none;}
 .submit-btn:active{transform:translateY(0);}
 .submit-sub{text-align:center;font-size:.72rem;color:var(--muted);margin-top:10px;}
 
+/* payment cards */
+.pay-card {
+  display:flex; align-items:center; gap:12px;
+  padding:14px 16px; border:2px solid var(--border); border-radius:14px;
+  cursor:pointer; transition:all .2s; background:#f8fafc; user-select:none;
+}
+.pay-card:hover { border-color:var(--gold); background:var(--gold-dim); }
+.pay-card--active {
+  border-color:var(--navy); background:var(--navy); color:#fff;
+  box-shadow:0 4px 14px rgba(13,27,42,.2);
+}
+.pay-card--active .pay-card-sub { color:rgba(255,255,255,.6) !important; }
+.pay-card--active div > div:last-child { color:rgba(255,255,255,.6) !important; }
+
 @media(max-width:860px){
   .layout{grid-template-columns:1fr;}
   .side-panel{position:static;}
@@ -423,13 +437,24 @@ a{text-decoration:none;}
                 <input type="number" name="children" min="0" value="0">
               </div>
             </div>
-            <div class="fg">
+            <div class="fg full">
               <label>วิธีชำระเงิน</label>
-              <div class="fi fi-no-icon"><span class="fi-icon">💳</span>
-                <select name="payment_method" style="padding-left:36px;">
-                  <option value="โอนเงิน">💳 โอนเงิน PromptPay</option>
-                  <option value="ชำระเงินสด">💵 ชำระเงินสด ณ ที่พัก</option>
-                </select>
+              <input type="hidden" name="payment_method" id="paymentMethodInput" value="โอนเงิน">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;">
+                <label class="pay-card pay-card--active" id="payCard_transfer" onclick="selectPay('โอนเงิน')">
+                  <span style="font-size:1.4rem;">💳</span>
+                  <div>
+                    <div style="font-weight:800;font-size:.9rem;">QR Code</div>
+                    <div style="font-size:.75rem;color:var(--muted);">โอนผ่านแอปธนาคาร</div>
+                  </div>
+                </label>
+                <label class="pay-card" id="payCard_cash" onclick="selectPay('ชำระเงินสด')">
+                  <span style="font-size:1.4rem;">💵</span>
+                  <div>
+                    <div style="font-weight:800;font-size:.9rem;">เงินสด</div>
+                    <div style="font-size:.75rem;color:var(--muted);">ชำระ ณ ที่พัก</div>
+                  </div>
+                </label>
               </div>
             </div>
             <div class="fg full">
@@ -446,7 +471,7 @@ a{text-decoration:none;}
           <button type="submit" class="submit-btn" id="submitBtn">
             <span>🏨</span><span>ยืนยันการจองและไปชำระเงิน</span>
           </button>
-          <div class="submit-sub">ระบบจะนำท่านไปหน้าชำระเงิน PromptPay ทันที</div>
+          <div class="submit-sub" id="submitSub">ระบบจะนำท่านไปหน้าชำระเงิน QR Code ทันที</div>
         </div>
 
       </form>
@@ -456,6 +481,16 @@ a{text-decoration:none;}
 </div>
 
 <script>
+function selectPay(method) {
+  document.getElementById('paymentMethodInput').value = method;
+  document.getElementById('payCard_transfer').classList.toggle('pay-card--active', method === 'โอนเงิน');
+  document.getElementById('payCard_cash').classList.toggle('pay-card--active', method === 'ชำระเงินสด');
+  const sub = document.getElementById('submitSub');
+  if (sub) sub.textContent = method === 'โอนเงิน'
+    ? 'ระบบจะนำท่านไปหน้าชำระเงิน QR Code ทันที'
+    : 'ระบบจะรับการจอง และชำระเงินสด ณ ที่พัก';
+}
+
 (function(){
   const PRICE = <?= (float)$room['price'] ?>;
   const cards  = document.querySelectorAll('.uc:not(.ut)');

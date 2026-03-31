@@ -156,6 +156,7 @@ include 'admin_layout_top.php';
         <div class="tk-banner-links">
             <a href="admin_boat_bookings.php" class="tk-banner-link">🚣 รายการทั้งหมด</a>
             <a href="admin_boat_queues.php" class="tk-banner-link">🛶 จัดการคิว</a>
+            <a href="admin_boat_archive_view.php" class="tk-banner-link">📦 จัดเก็บข้อมูล</a>
         </div>
     </div>
 

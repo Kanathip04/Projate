@@ -516,13 +516,12 @@ a{text-decoration:none;}
   <div class="card">
     <div class="wait-box">
       <div class="wait-ico">📤</div>
-      <div class="wait-title">ได้รับสลิปแล้ว รอตรวจสอบ</div>
-      <div class="wait-sub">เจ้าหน้าที่จะตรวจสอบและยืนยันการชำระเงินของท่าน<br>กรุณารอการแจ้งเตือน</div>
+      <div class="wait-title">ได้รับสลิปแล้ว กำลังตรวจสอบ</div>
+      <div class="wait-sub">ระบบ AI กำลังตรวจสอบความถูกต้องของสลิป<br>ใบจองจะออกให้อัตโนมัติเมื่อผ่านการยืนยัน</div>
       <div class="wait-bar"><div class="wait-inner"></div></div>
       <button class="refresh-btn" onclick="location.reload()">🔄 รีเฟรชสถานะ</button>
     </div>
   </div>
-  <?= $confirmHtml ?>
 
   <?php else: ?>
   <!-- QR + UPLOAD -->

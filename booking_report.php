@@ -1132,27 +1132,40 @@ $qnavLinks = [
 <!-- Charts row 1 -->
 <div class="chart-grid">
   <div class="chart-box" style="display:flex;flex-direction:column;justify-content:center;background:#f0fdf4;border:2px solid #bbf7d0;">
-    <div class="chart-title" style="color:#15803d;">🚪 ข้อมูลเช็คอินวันนี้ (<?= date('d/m/Y') ?>)</div>
-    <?php $grandTodayCheckin = $totalCheckinToday + $touristTodayCount; ?>
+    <?php
+      // ใช้ข้อมูลช่วงวันที่ที่เลือก (Period) ไม่ใช่ hardcode วันนี้
+      $widgetBoat    = $boatCheckinPeriod;
+      $widgetRoom    = $roomCheckinPeriod;
+      $widgetTent    = $tentCheckinPeriod;
+      $widgetWalkin  = $touristTotal; // จาก tourists table ช่วงที่เลือก
+      $widgetTotal   = $widgetBoat + $widgetRoom + $widgetTent + $widgetWalkin;
+      // label ช่วงเวลา
+      if ($dateFrom === $dateTo) {
+          $widgetLabel = date('d/m/Y', strtotime($dateFrom));
+      } else {
+          $widgetLabel = date('d/m/Y', strtotime($dateFrom)) . ' – ' . date('d/m/Y', strtotime($dateTo));
+      }
+    ?>
+    <div class="chart-title" style="color:#15803d;">🚪 ข้อมูลเช็คอิน (<?= htmlspecialchars($widgetLabel) ?>)</div>
     <div style="text-align:center;padding:18px 0 10px;">
-      <div style="font-size:3rem;font-weight:800;color:#16a34a;line-height:1;"><?= number_format($grandTodayCheckin) ?></div>
+      <div style="font-size:3rem;font-weight:800;color:#16a34a;line-height:1;"><?= number_format($widgetTotal) ?></div>
       <div style="font-size:.95rem;color:#6b7280;margin-top:4px;">คนทั้งหมด</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 16px;">
       <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid #d1fae5;">
-        <div style="font-size:1.5rem;font-weight:700;color:#0d9488;"><?= number_format($boatCheckinToday) ?></div>
+        <div style="font-size:1.5rem;font-weight:700;color:#0d9488;"><?= number_format($widgetBoat) ?></div>
         <div style="font-size:.8rem;color:#6b7280;">⛵ เรือพาย</div>
       </div>
       <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid #d1fae5;">
-        <div style="font-size:1.5rem;font-weight:700;color:#7c3aed;"><?= number_format($roomCheckinToday) ?></div>
+        <div style="font-size:1.5rem;font-weight:700;color:#7c3aed;"><?= number_format($widgetRoom) ?></div>
         <div style="font-size:.8rem;color:#6b7280;">🏠 ห้องพัก</div>
       </div>
       <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid #d1fae5;">
-        <div style="font-size:1.5rem;font-weight:700;color:#d97706;"><?= number_format($tentCheckinToday) ?></div>
+        <div style="font-size:1.5rem;font-weight:700;color:#d97706;"><?= number_format($widgetTent) ?></div>
         <div style="font-size:.8rem;color:#6b7280;">⛺ เต็นท์</div>
       </div>
       <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid #d1fae5;">
-        <div style="font-size:1.5rem;font-weight:700;color:#db2777;"><?= number_format($touristTodayCount) ?></div>
+        <div style="font-size:1.5rem;font-weight:700;color:#db2777;"><?= number_format($widgetWalkin) ?></div>
         <div style="font-size:.8rem;color:#6b7280;">🧍 walk-in</div>
       </div>
     </div>

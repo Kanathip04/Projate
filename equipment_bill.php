@@ -195,6 +195,18 @@ if ($payStatus === 'paid' && !isset($_GET['uploaded'])) {
     header("Location: equipment_ticket.php?id=$id");
     exit;
 }
+
+// ── Timer 5 นาที ──
+define('PAY_TIMEOUT_SEC', 300);
+$createdAt   = strtotime($bk['created_at']);
+$deadline    = $createdAt + PAY_TIMEOUT_SEC;
+$nowTs       = time();
+$secondsLeft = max(0, $deadline - $nowTs);
+$isExpired   = ($secondsLeft === 0 && !in_array($payStatus, ['paid','waiting_verify','manual_review']));
+if ($isExpired && $payStatus === 'unpaid') {
+    $conn->query("UPDATE equipment_bookings SET payment_status='failed' WHERE id=$id AND payment_status='unpaid'");
+    $payStatus = 'failed';
+}
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -217,6 +229,25 @@ if ($payStatus === 'paid' && !isset($_GET['uploaded'])) {
 body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
 a{text-decoration:none;}
 .page{max-width:540px;margin:0 auto;padding:24px 16px 56px;}
+
+/* timer */
+.timer-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--blue-bg);border:1.5px solid var(--blue-bd);border-radius:14px;
+  padding:12px 16px;margin-bottom:16px;}
+.timer-bar.urgent{border-color:var(--red-bd);background:var(--red-bg);}
+.timer-label{font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:4px;}
+.timer-track{height:5px;background:var(--border);border-radius:4px;width:180px;overflow:hidden;}
+.timer-fill{height:100%;background:var(--blue);border-radius:4px;transition:width 1s linear;}
+.timer-fill.urgent{background:var(--red);}
+.timer-count{font-family:'Kanit',sans-serif;font-size:1.15rem;font-weight:900;color:var(--blue);white-space:nowrap;}
+.timer-count.urgent{color:var(--red);}
+.expired-card{background:var(--red-bg);border:1.5px solid var(--red-bd);border-radius:14px;
+  padding:32px 20px;text-align:center;margin-bottom:16px;}
+.exp-ico{font-size:2.5rem;margin-bottom:10px;}
+.exp-title{font-family:'Kanit',sans-serif;font-size:1.1rem;font-weight:900;color:var(--red);margin-bottom:6px;}
+.exp-sub{font-size:.83rem;color:var(--muted);line-height:1.7;margin-bottom:14px;}
+.rebook-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 22px;
+  background:var(--ink);color:#fff;border-radius:10px;font-weight:700;font-size:.85rem;}
 
 /* nav */
 .top-bar{display:flex;align-items:center;gap:10px;margin-bottom:24px;}
@@ -531,7 +562,27 @@ a{text-decoration:none;}
     </div>
   </div>
 
+  <?php elseif ($isExpired): ?>
+  <!-- หมดเวลา -->
+  <div class="expired-card">
+    <div class="exp-ico">⏰</div>
+    <div class="exp-title">หมดเวลาชำระเงินแล้ว</div>
+    <div class="exp-sub">การจองนี้หมดอายุเนื่องจากไม่ได้ชำระเงินภายใน 5 นาที<br>กรุณาจองใหม่อีกครั้ง</div>
+    <a href="booking_tent.php" class="rebook-btn">⛺ จองใหม่อีกครั้ง</a>
+  </div>
+
   <?php else: ?>
+  <!-- Timer bar -->
+  <div class="timer-bar" id="timerBar">
+    <div>
+      <div class="timer-label">⏱ เวลาชำระเงิน</div>
+      <div class="timer-track">
+        <div class="timer-fill" id="timerFill" style="width:100%"></div>
+      </div>
+    </div>
+    <div class="timer-count" id="timerCount">5:00</div>
+  </div>
+
   <!-- QR + UPLOAD -->
   <div class="card">
     <div class="qr-section">
@@ -572,6 +623,31 @@ a{text-decoration:none;}
 </div>
 
 <script>
+// ── Countdown timer ──
+(function(){
+  const total = <?= PAY_TIMEOUT_SEC ?>;
+  let left  = <?= $secondsLeft ?>;
+  const countEl = document.getElementById('timerCount');
+  const fillEl  = document.getElementById('timerFill');
+  const barEl   = document.getElementById('timerBar');
+  if (!countEl) return;
+  function update() {
+    if (left <= 0) { location.reload(); return; }
+    const m = Math.floor(left / 60);
+    const s = left % 60;
+    countEl.textContent = m + ':' + String(s).padStart(2,'0');
+    fillEl.style.width = (left / total * 100) + '%';
+    if (left <= 60) {
+      countEl.classList.add('urgent');
+      fillEl.classList.add('urgent');
+      barEl.classList.add('urgent');
+    }
+    left--;
+  }
+  update();
+  setInterval(update, 1000);
+})();
+
 const inp = document.getElementById('slipInp');
 const prev = document.getElementById('prevImg');
 const dz = document.getElementById('dz');

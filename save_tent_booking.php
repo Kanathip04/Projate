@@ -78,6 +78,9 @@ $stmt2->bind_param("issssissssss",
 
 if ($stmt2->execute()):
     $booking_id = $stmt2->insert_id;
+    $seqRes3 = $conn->query("SELECT COUNT(*) AS seq FROM tent_bookings WHERE DATE(created_at) = CURDATE() AND id <= $booking_id");
+    $dailySeq3 = (int)($seqRes3 ? $seqRes3->fetch_assoc()['seq'] : 1);
+    $displayRef = 'TENT-' . date('Ymd') . '-' . str_pad($dailySeq3, 3, '0', STR_PAD_LEFT);
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -160,7 +163,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh;disp
         <div class="checkmark">✓</div>
         <h1>ส่งคำขอจองสำเร็จ</h1>
         <p>ระบบบันทึกข้อมูลการจองเรียบร้อยแล้ว</p>
-        <div class="booking-ref">หมายเลขการจอง #<?= str_pad($booking_id, 5, '0', STR_PAD_LEFT) ?></div>
+        <div class="booking-ref">หมายเลขการจอง <?= htmlspecialchars($displayRef) ?></div>
     </div>
 
     <div class="card-body">

@@ -59,6 +59,12 @@ $st->bind_param("i", $id); $st->execute();
 $bk = $st->get_result()->fetch_assoc(); $st->close();
 if (!$bk) { header("Location: booking_tent.php"); exit; }
 
+/* === เลขใบเสร็จ รีเซ็ตทุกวัน === */
+$_bkDate  = date('Ymd', strtotime($bk['created_at']));
+$_seqRes  = $conn->query("SELECT COUNT(*) AS seq FROM equipment_bookings WHERE DATE(created_at) = DATE('" . $conn->real_escape_string($bk['created_at']) . "') AND id <= $id");
+$_dailySeq = (int)($_seqRes ? $_seqRes->fetch_assoc()['seq'] : 1);
+$bookingRef = 'EQUIP-' . $_bkDate . '-' . str_pad($_dailySeq, 3, '0', STR_PAD_LEFT);
+
 define('PROMPTPAY_ID', '0611360322');
 
 /* === อัปโหลดสลิป === */
@@ -87,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['slip'])) {
                 @unlink($slipPath);
                 $uploadError = 'สลิปนี้เคยถูกใช้แล้ว กรุณาใช้สลิปใหม่';
             } else {
-                $bookingRef = 'EQUIP-' . str_pad($id, 5, '0', STR_PAD_LEFT);
+                // $bookingRef already computed above
                 $totalPay   = (float)$bk['total_price'];
                 // คำนวณคืน
                 $ni = 1;
@@ -198,7 +204,7 @@ if ($payStatus === 'paid' && !isset($_GET['uploaded'])) {
 
 /* ── ถ้าชำระเงินสด → แสดงใบจองให้นำไปยื่นพนักงาน ── */
 if (($bk['payment_method'] ?? '') === 'เงินสด'):
-    $bookingRef2 = 'EQUIP-' . str_pad($id, 5, '0', STR_PAD_LEFT);
+    $bookingRef2 = $bookingRef; // รูปแบบวันที่ EQUIP-YYYYMMDD-XXX
     $totalCash   = $total * $nights;
     $tentUnits   = json_decode($bk['tent_units'] ?? '[]', true) ?: [];
 ?>
@@ -569,7 +575,7 @@ a{text-decoration:none;}
   <!-- BILL CARD -->
   <div class="card">
     <div class="bill-head">
-      <div class="bill-ref">หมายเลขคำขอ #<?= str_pad($id, 5, '0', STR_PAD_LEFT) ?></div>
+      <div class="bill-ref">หมายเลขคำขอ <?= htmlspecialchars($bookingRef) ?></div>
       <div class="bill-name"><?= htmlspecialchars($bk['full_name']) ?></div>
       <div class="bill-dates">
         📅 <?= date('d/m/Y', strtotime($bk['checkin_date'])) ?> → <?= date('d/m/Y', strtotime($bk['checkout_date'])) ?>
@@ -645,7 +651,7 @@ a{text-decoration:none;}
       <div class="ico">🎫</div>
       <h3>ใบจองเช่าอุปกรณ์</h3>
       <p>กรุณาแสดงเอกสารนี้แก่เจ้าหน้าที่เมื่อถึงวันเช่า</p>
-      <div class="confirm-ref">หมายเลข #<?= str_pad($id, 5, '0', STR_PAD_LEFT) ?></div>
+      <div class="confirm-ref">หมายเลข <?= htmlspecialchars($bookingRef) ?></div>
     </div>
     <div class="confirm-body">
       <div class="confirm-row">

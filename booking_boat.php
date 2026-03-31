@@ -183,7 +183,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ajax'])) {
     $booking_id = $stmt->insert_id;
     $stmt->close();
 
-    $booking_ref = 'BK' . date('Ymd') . str_pad($booking_id, 6, '0', STR_PAD_LEFT);
+    $seqResBoat = $conn->query("SELECT COUNT(*) AS seq FROM boat_bookings WHERE DATE(created_at) = CURDATE() AND id <= $booking_id");
+    $dailySeqBoat = (int)($seqResBoat ? $seqResBoat->fetch_assoc()['seq'] : 1);
+    $booking_ref = 'BK' . date('Ymd') . '-' . str_pad($dailySeqBoat, 3, '0', STR_PAD_LEFT);
 
     $ustmt = $conn->prepare("UPDATE boat_bookings SET booking_ref = ? WHERE id = ?");
     $ustmt->bind_param("si", $booking_ref, $booking_id);

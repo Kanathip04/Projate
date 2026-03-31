@@ -182,7 +182,9 @@ if ($stmt->execute()) {
     $booking_id = $stmt->insert_id;
 
     /* === อัปเดต booking_ref, room_price, total_price === */
-    $booking_ref_val = 'ROOM-' . str_pad($booking_id, 5, '0', STR_PAD_LEFT);
+    $seqResRoom = $conn->query("SELECT COUNT(*) AS seq FROM room_bookings WHERE DATE(created_at) = CURDATE() AND id <= $booking_id");
+    $dailySeqRoom = (int)($seqResRoom ? $seqResRoom->fetch_assoc()['seq'] : 1);
+    $booking_ref_val = 'ROOM-' . date('Ymd') . '-' . str_pad($dailySeqRoom, 3, '0', STR_PAD_LEFT);
     $room_price_val  = (float)($_POST['room_price'] ?? 0);
 
     /* คำนวณจำนวนคืน */
@@ -386,7 +388,7 @@ if ($stmt->execute()) {
             <div class="checkmark">✓</div>
             <h1>ส่งคำขอจองสำเร็จ</h1>
             <p>ระบบบันทึกข้อมูลการจองเรียบร้อยแล้ว</p>
-            <div class="booking-ref">หมายเลขการจอง #<?= str_pad($booking_id, 5, '0', STR_PAD_LEFT) ?></div>
+            <div class="booking-ref">หมายเลขการจอง <?= htmlspecialchars($booking_ref_val) ?></div>
         </div>
 
         <!-- detail card -->

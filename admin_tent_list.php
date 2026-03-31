@@ -8,61 +8,30 @@ if ($conn->connect_error) die("DB Error: " . $conn->connect_error);
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
-$conn->query("CREATE TABLE IF NOT EXISTS `tents` (
-    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    `tent_name` VARCHAR(200) NOT NULL,
-    `tent_type` VARCHAR(100) DEFAULT '',
-    `capacity` INT DEFAULT 4,
-    `price_per_night` DECIMAL(10,2) DEFAULT 0,
-    `total_tents` INT DEFAULT 5,
-    `description` TEXT,
-    `image_path` VARCHAR(500) DEFAULT '',
-    `status` ENUM('show','hide') DEFAULT 'show',
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-$conn->query("CREATE TABLE IF NOT EXISTS `tent_bookings` (
-    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    `tent_id` INT UNSIGNED DEFAULT NULL,
-    `full_name` VARCHAR(200) NOT NULL,
-    `phone` VARCHAR(30) NOT NULL,
-    `email` VARCHAR(200) DEFAULT '',
-    `tent_type` VARCHAR(200) DEFAULT '',
-    `guests` INT DEFAULT 1,
-    `checkin_date` DATE DEFAULT NULL,
-    `checkout_date` DATE DEFAULT NULL,
-    `note` TEXT,
-    `booking_status` ENUM('pending','approved','rejected','cancelled') DEFAULT 'pending',
-    `archived` TINYINT(1) DEFAULT 0,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
 $currentPage = basename($_SERVER['PHP_SELF']);
 $message = ''; $message_type = 'success';
 
+// ---------------------------------------------------------------------------
+// POST handlers
+// ---------------------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $id = (int)($_POST['id'] ?? 0);
 
     if ($action === 'approve' && $id > 0) {
-        $st = $conn->prepare("UPDATE tent_bookings SET booking_status='approved' WHERE id=?");
+        $st = $conn->prepare("UPDATE equipment_bookings SET payment_status='paid', booking_status='approved', approved_at=NOW() WHERE id=?");
         $st->bind_param("i", $id); $st->execute(); $st->close();
         header("Location: admin_tent_approved.php?msg=" . urlencode("อนุมัติรายการเรียบร้อยแล้ว") . "&type=success"); exit;
     }
     if ($action === 'reject' && $id > 0) {
-        $st = $conn->prepare("UPDATE tent_bookings SET booking_status='rejected' WHERE id=?");
+        $st = $conn->prepare("UPDATE equipment_bookings SET payment_status='failed' WHERE id=?");
         $st->bind_param("i", $id); $st->execute(); $st->close();
         $message = "ปฏิเสธรายการเรียบร้อยแล้ว";
     }
     if ($action === 'delete' && $id > 0) {
-        $st = $conn->prepare("DELETE FROM tent_bookings WHERE id=?");
+        $st = $conn->prepare("DELETE FROM equipment_bookings WHERE id=?");
         $st->bind_param("i", $id); $st->execute(); $st->close();
         $message = "ลบรายการเรียบร้อยแล้ว";
-    }
-    if ($action === 'archive' && $id > 0) {
-        $st = $conn->prepare("UPDATE tent_bookings SET archived=1 WHERE id=?");
-        $st->bind_param("i", $id); $st->execute(); $st->close();
-        $message = "จัดเก็บรายการเรียบร้อยแล้ว";
     }
     header("Location: {$currentPage}?msg=" . urlencode($message) . "&type=" . urlencode($message_type)); exit;
 }
@@ -70,20 +39,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (isset($_GET['msg'])) { $message = $_GET['msg']; $message_type = $_GET['type'] ?? 'success'; }
 $search = trim($_GET['search'] ?? '');
 
-$rs = $conn->query("SELECT COUNT(*) t, SUM(booking_status='pending') p, SUM(booking_status='approved') a, SUM(booking_status='rejected') r FROM tent_bookings WHERE archived=0");
+// ---------------------------------------------------------------------------
+// Stats — query equipment_bookings
+// ---------------------------------------------------------------------------
+$rs = $conn->query("
+    SELECT
+        COUNT(*) AS t,
+        SUM(payment_status IN ('unpaid','waiting_verify','manual_review')) AS p,
+        SUM(payment_status = 'paid') AS a,
+        SUM(payment_status = 'failed') AS r
+    FROM equipment_bookings
+");
 $st_row = $rs->fetch_assoc();
 $stat_total    = (int)$st_row['t'];
 $stat_pending  = (int)$st_row['p'];
 $stat_approved = (int)$st_row['a'];
 $stat_rejected = (int)$st_row['r'];
 
-$where = "WHERE archived=0 AND booking_status IN ('pending','rejected','cancelled')";
+// ---------------------------------------------------------------------------
+// List — show unpaid / waiting_verify / manual_review / failed only
+// ---------------------------------------------------------------------------
+$where = "WHERE payment_status IN ('unpaid','waiting_verify','manual_review','failed')";
 $params = []; $types = "";
 if ($search !== '') {
-    $where .= " AND (full_name LIKE ? OR phone LIKE ? OR email LIKE ? OR tent_type LIKE ?)";
-    $like = "%{$search}%"; $params = [$like,$like,$like,$like]; $types = "ssss";
+    $where .= " AND (full_name LIKE ? OR phone LIKE ? OR email LIKE ?)";
+    $like = "%{$search}%"; $params = [$like, $like, $like]; $types = "sss";
 }
-$stmt = $conn->prepare("SELECT * FROM tent_bookings {$where} ORDER BY id DESC");
+$stmt = $conn->prepare("SELECT * FROM equipment_bookings {$where} ORDER BY id DESC");
 if (!empty($params)) $stmt->bind_param($types, ...$params);
 $stmt->execute(); $result = $stmt->get_result();
 
@@ -153,6 +135,7 @@ include 'admin_layout_top.php';
 .tk-badge-approved{background:#f0fdf4;color:#166534;}.tk-badge-approved::before{background:var(--success);}
 .tk-badge-rejected{background:#fef2f2;color:#991b1b;}.tk-badge-rejected::before{background:var(--danger);}
 .tk-badge-cancelled{background:#f3f4f6;color:#374151;}.tk-badge-cancelled::before{background:#9ca3af;}
+.tk-badge-review{background:#fff7ed;color:#9a3412;}.tk-badge-review::before{background:#f97316;}
 .tk-empty{padding:48px 24px;text-align:center;}
 .tk-empty-icon{font-size:2.2rem;margin-bottom:10px;opacity:.35;}
 .tk-empty-text{font-size:.83rem;color:var(--muted);line-height:1.7;}
@@ -184,12 +167,12 @@ include 'admin_layout_top.php';
         <div class="tk-stat">
             <div class="tk-stat-label">รายการทั้งหมด</div>
             <div class="tk-stat-value"><?= $stat_total ?></div>
-            <div class="tk-stat-sub">ไม่รวมที่จัดเก็บแล้ว</div>
+            <div class="tk-stat-sub">ทั้งหมดในระบบ</div>
         </div>
         <div class="tk-stat">
             <div class="tk-stat-label">รออนุมัติ</div>
             <div class="tk-stat-value" style="color:#d97706"><?= $stat_pending ?></div>
-            <div class="tk-stat-sub">รอแอดมินอนุมัติ</div>
+            <div class="tk-stat-sub">รอแอดมินตรวจสอบ</div>
         </div>
         <div class="tk-stat">
             <div class="tk-stat-label">อนุมัติแล้ว</div>
@@ -207,7 +190,7 @@ include 'admin_layout_top.php';
         <div class="tk-card-header">
             <div>
                 <div class="tk-card-title">รายการที่ต้องจัดการ</div>
-                <div class="tk-card-sub">แสดงเฉพาะรายการรออนุมัติ / ปฏิเสธ / ยกเลิก</div>
+                <div class="tk-card-sub">แสดงเฉพาะรายการรออนุมัติ / ปฏิเสธ (ไม่แสดงรายการที่ชำระแล้ว)</div>
             </div>
             <span class="tk-count"><?= $result->num_rows ?> รายการ</span>
         </div>
@@ -216,7 +199,7 @@ include 'admin_layout_top.php';
             <div class="tk-search">
                 <div class="tk-search-wrap">
                     <input type="text" name="search" class="tk-search-input"
-                           placeholder="ค้นหาชื่อ, เบอร์โทร, อีเมล, ประเภทเต็นท์..."
+                           placeholder="ค้นหาชื่อ, เบอร์โทร, อีเมล..."
                            value="<?= h($search) ?>">
                 </div>
                 <button type="submit" class="tk-btn tk-btn-primary">ค้นหา</button>
@@ -233,55 +216,90 @@ include 'admin_layout_top.php';
                         <th style="width:46px;">#</th>
                         <th>ผู้จอง</th>
                         <th>ติดต่อ</th>
-                        <th>เต็นท์</th>
+                        <th>เต็นท์ / ราคา</th>
                         <th>วันเข้า–ออก</th>
                         <th>สถานะ</th>
                         <th>วันที่จอง</th>
-                        <th style="width:230px;">จัดการ</th>
+                        <th style="width:240px;">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if ($result && $result->num_rows > 0): ?>
                         <?php while ($row = $result->fetch_assoc()): ?>
                             <?php
-                                $badgeMap = ['pending'=>'tk-badge-pending','approved'=>'tk-badge-approved','rejected'=>'tk-badge-rejected','cancelled'=>'tk-badge-cancelled'];
-                                $labelMap = ['pending'=>'รออนุมัติ','approved'=>'อนุมัติแล้ว','rejected'=>'ไม่อนุมัติ','cancelled'=>'ยกเลิก'];
-                                $st = $row['booking_status'] ?? 'pending';
+                                // Map payment_status to badge class and label
+                                $ps = $row['payment_status'] ?? 'unpaid';
+                                $badgeMap = [
+                                    'unpaid'         => 'tk-badge-cancelled',
+                                    'waiting_verify' => 'tk-badge-pending',
+                                    'manual_review'  => 'tk-badge-review',
+                                    'failed'         => 'tk-badge-rejected',
+                                    'paid'           => 'tk-badge-approved',
+                                ];
+                                $labelMap = [
+                                    'unpaid'         => 'ยังไม่ชำระ',
+                                    'waiting_verify' => 'รอตรวจสลิป',
+                                    'manual_review'  => 'รอ admin ตรวจ',
+                                    'failed'         => 'ไม่ผ่าน',
+                                    'paid'           => 'ชำระแล้ว',
+                                ];
+
+                                // Parse items_json to display product names
+                                $items = [];
+                                if (!empty($row['items_json'])) {
+                                    $decoded = json_decode($row['items_json'], true);
+                                    if (is_array($decoded)) {
+                                        foreach ($decoded as $item) {
+                                            $name = $item['name'] ?? ($item['tent_name'] ?? '');
+                                            $qty  = (int)($item['qty'] ?? ($item['quantity'] ?? 1));
+                                            $unit = $item['unit'] ?? 'หลัง';
+                                            if ($name) {
+                                                $items[] = h($name) . ' &times; ' . $qty . ' ' . h($unit);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Determine if this row is still pending (can approve/reject)
+                                $isPending = in_array($ps, ['unpaid', 'waiting_verify', 'manual_review']);
                             ?>
                             <tr>
                                 <td style="color:var(--muted);font-size:.76rem;"><?= (int)$row['id'] ?></td>
                                 <td>
                                     <div class="tk-name"><?= h($row['full_name']) ?></div>
-                                    <div class="tk-meta"><?= (int)$row['guests'] ?> คน · <?= h($row['tent_type']) ?></div>
                                 </td>
                                 <td>
                                     <div><?= h($row['phone']) ?></div>
                                     <div class="tk-meta"><?= h($row['email']) ?></div>
                                 </td>
                                 <td>
-                                  <?= h($row['tent_type']) ?>
-                                  <?php $units = !empty($row['tent_units']) ? json_decode($row['tent_units'], true) : []; ?>
-                                  <?php if (!empty($units)): ?>
-                                    <div class="unit-pills">
-                                      <?php foreach ($units as $u): ?>
-                                        <span class="unit-pill">🔑 หน่วยที่ <?= (int)$u ?></span>
-                                      <?php endforeach; ?>
-                                    </div>
-                                  <?php endif; ?>
+                                    <?php if (!empty($items)): ?>
+                                        <div class="unit-pills">
+                                            <?php foreach ($items as $itemStr): ?>
+                                                <span class="unit-pill"><?= $itemStr ?></span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <span style="color:var(--muted);font-size:.76rem;">-</span>
+                                    <?php endif; ?>
+                                    <?php if (!empty($row['total_price'])): ?>
+                                        <div class="tk-meta">฿ <?= number_format((float)$row['total_price'], 2) ?></div>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <div style="font-size:.79rem;">📅 <?= h($row['checkin_date']) ?></div>
                                     <div style="font-size:.79rem;color:var(--muted);">→ <?= h($row['checkout_date']) ?></div>
                                 </td>
                                 <td>
-                                    <span class="tk-badge <?= $badgeMap[$st] ?? 'tk-badge-pending' ?>">
-                                        <?= $labelMap[$st] ?? $st ?>
+                                    <span class="tk-badge <?= $badgeMap[$ps] ?? 'tk-badge-pending' ?>">
+                                        <?= $labelMap[$ps] ?? h($ps) ?>
                                     </span>
                                 </td>
-                                <td style="font-size:.76rem;color:var(--muted);"><?= h(substr($row['created_at'],0,16)) ?></td>
+                                <td style="font-size:.76rem;color:var(--muted);"><?= h(substr($row['created_at'], 0, 16)) ?></td>
                                 <td>
                                     <div class="tk-actions">
-                                        <?php if ($st === 'pending'): ?>
+                                        <!-- Approve / Reject — only for pending statuses -->
+                                        <?php if ($isPending): ?>
                                             <form method="POST" class="tk-inline" onsubmit="return confirm('ยืนยันอนุมัติรายการนี้?')">
                                                 <input type="hidden" name="action" value="approve">
                                                 <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
@@ -293,11 +311,20 @@ include 'admin_layout_top.php';
                                                 <button class="tk-btn tk-btn-danger" style="padding:6px 11px;font-size:.74rem;">✗ ปฏิเสธ</button>
                                             </form>
                                         <?php endif; ?>
-                                        <form method="POST" class="tk-inline" onsubmit="return confirm('จัดเก็บรายการนี้?')">
-                                            <input type="hidden" name="action" value="archive">
-                                            <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                                            <button class="tk-btn tk-btn-warning" style="padding:6px 11px;font-size:.74rem;">📦 จัดเก็บ</button>
-                                        </form>
+
+                                        <!-- View bill -->
+                                        <a href="equipment_bill.php?id=<?= (int)$row['id'] ?>"
+                                           class="tk-btn tk-btn-ghost" style="padding:6px 11px;font-size:.74rem;"
+                                           target="_blank">📄 ดูบิล</a>
+
+                                        <!-- View slip — only when paid -->
+                                        <?php if ($ps === 'paid'): ?>
+                                            <a href="equipment_ticket.php?id=<?= (int)$row['id'] ?>"
+                                               class="tk-btn tk-btn-warning" style="padding:6px 11px;font-size:.74rem;"
+                                               target="_blank">🧾 ดูสลิป</a>
+                                        <?php endif; ?>
+
+                                        <!-- Delete -->
                                         <form method="POST" class="tk-inline" onsubmit="return confirm('ยืนยันการลบ?')">
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
@@ -312,7 +339,7 @@ include 'admin_layout_top.php';
                             <div class="tk-empty">
                                 <div class="tk-empty-icon">⛺</div>
                                 <div class="tk-empty-text">
-                                    <?= $search ? 'ไม่พบรายการที่ตรงกับ "'.h($search).'"' : 'ไม่พบรายการที่ต้องจัดการ' ?>
+                                    <?= $search ? 'ไม่พบรายการที่ตรงกับ "' . h($search) . '"' : 'ไม่พบรายการที่ต้องจัดการ' ?>
                                 </div>
                             </div>
                         </td></tr>

@@ -16,30 +16,47 @@ define('PAYEE_LAST_NAME',    'คุ้มชาติตา');
  * รองรับ: "สุรัชฎา คุ้มชาติตา", "น.ส. สุรัชฎา คุ้มชาติตา", "น.ส สุรัชฎา คุ้มชาติตา", ฯลฯ
  */
 /**
- * Normalize Thai combining characters ให้อยู่ในลำดับ NFC
- * แก้ปัญหา: AI อาจส่ง tone mark + sara u ในลำดับสลับกัน
- * เช่น "คุ้" = ค+ุ+้ (ถูก) หรือ ค+้+ุ (ผิดลำดับ) → ตามองเห็นเหมือนกันแต่ byte ต่างกัน
+ * Normalize Thai combining characters
+ * - ลบ zero-width characters (invisible chars ที่ AI อาจแทรกมา)
+ * - swap tone+sara ที่ลำดับสลับกัน (คุ้ vs คุ้)
  */
 function thaiNormalize(string $s): string {
-    // สลับ tone mark (U+0E48–0E4B) ที่อยู่ก่อน sara u/uu (U+0E38–0E39) → ให้ sara ขึ้นก่อน
+    $s = preg_replace('/[\x{200B}\x{200C}\x{200D}\x{FEFF}\x{00A0}]/u', '', $s);
     $s = preg_replace('/([\x{0E48}\x{0E49}\x{0E4A}\x{0E4B}])([\x{0E38}\x{0E39}])/u', '$2$1', $s);
-    // ใช้ PHP Normalizer เพิ่มเติม ถ้า intl extension ติดตั้งอยู่
     if (class_exists('Normalizer')) {
         $s = \Normalizer::normalize($s, \Normalizer::NFC) ?: $s;
     }
     return $s;
 }
 
+/**
+ * ดึงเฉพาะพยัญชนะไทย (U+0E01–0E2E)
+ * ใช้เปรียบเทียบเมื่อ encoding สระ/วรรณยุกต์ต่างกัน
+ */
+function thaiConsonants(string $s): string {
+    preg_match_all('/[\x{0E01}-\x{0E2E}]/u', $s, $m);
+    return implode('', $m[0]);
+}
+
 function isPayeeNameValid(string $name): bool {
     if ($name === '') return false;
     $name = thaiNormalize($name);
-    // ตัด prefix คำนำหน้า (น.ส., นางสาว, นาย, นาง, ฯลฯ)
+    // ตัด prefix คำนำหน้า
     $norm  = preg_replace('/^(น\.ส\.?\s*|นางสาว\s*|นาย\s*|นาง\s*|Mr\.?\s*|Ms\.?\s*|Mrs\.?\s*)/u', '', trim($name));
     $norm  = preg_replace('/\s+/u', ' ', $norm);
     $first = thaiNormalize(PAYEE_FIRST_NAME);
     $last  = thaiNormalize(PAYEE_LAST_NAME);
-    return mb_strpos($norm, $first) !== false
-        && mb_strpos($norm, $last)  !== false;
+
+    // รอบที่ 1: เปรียบเทียบแบบ exact (หลัง normalize)
+    if (mb_strpos($norm, $first) !== false && mb_strpos($norm, $last) !== false) {
+        return true;
+    }
+    // รอบที่ 2: fallback — เปรียบเทียบเฉพาะพยัญชนะ (ไม่สนสระ/วรรณยุกต์ที่ AI encode ต่างกัน)
+    $normC  = thaiConsonants($norm);
+    $firstC = thaiConsonants($first);
+    $lastC  = thaiConsonants($last);
+    return mb_strpos($normC, $firstC) !== false
+        && mb_strpos($normC, $lastC)  !== false;
 }
 
 $rawBody = file_get_contents('php://input');

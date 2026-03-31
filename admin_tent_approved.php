@@ -154,7 +154,7 @@ include 'admin_layout_top.php';
                 </thead>
                 <tbody>
                     <?php if ($result && $result->num_rows > 0): ?>
-                        <?php while ($row = $result->fetch_assoc()): ?>
+                        <?php $no = 1; while ($row = $result->fetch_assoc()): ?>
                             <?php
                             $items = json_decode($row['items_json'] ?? '[]', true) ?: [];
                             $nights = 1;
@@ -166,7 +166,7 @@ include 'admin_layout_top.php';
                             $total = (float)$row['total_price'] * $nights;
                             ?>
                             <tr>
-                                <td style="color:var(--muted);font-size:.76rem;"><?= (int)$row['id'] ?></td>
+                                <td style="color:var(--muted);font-size:.76rem;"><?= $no++ ?></td>
                                 <td>
                                     <div class="tk-name"><?= h($row['full_name']) ?></div>
                                 </td>

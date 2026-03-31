@@ -116,7 +116,7 @@ include 'admin_layout_top.php';
 .bk-btn-warning{background:#fffbeb;color:var(--warning);border:1.5px solid #fde68a;}.bk-btn-warning:hover{background:#fef3c7;}
 .bk-btn-danger{background:#fef2f2;color:var(--danger);border:1.5px solid #fca5a5;}.bk-btn-danger:hover{background:#fee2e2;}
 .bk-table-wrap{overflow-x:auto;}
-.bk-table{width:100%;border-collapse:collapse;min-width:860px;}
+.bk-table{width:100%;border-collapse:collapse;min-width:1100px;}
 .bk-table thead th{padding:11px 14px;font-size:0.67rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border);text-align:left;font-weight:700;background:#fdfcfa;}
 .bk-table tbody td{padding:13px 14px;font-size:0.83rem;color:var(--ink);border-bottom:1px solid var(--border);vertical-align:middle;}
 .bk-table tbody tr:last-child td{border-bottom:none;}
@@ -135,6 +135,11 @@ include 'admin_layout_top.php';
 .bk-empty-text{font-size:0.83rem;color:var(--muted);line-height:1.7;}
 .unit-pills{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;}
 .unit-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:0.65rem;font-weight:700;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.28);color:#15803d;}
+.bill-ref{font-size:.78rem;font-weight:700;color:#15803d;white-space:nowrap;}
+.price-meta{font-size:.75rem;color:var(--muted);margin-top:3px;}
+.pm-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:.7rem;font-weight:700;margin-top:5px;}
+.pm-cash{background:#f0fdf4;color:#15803d;border:1px solid #86efac;}
+.pm-transfer{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;}
 </style>
 
 <div class="bk-wrap">
@@ -195,32 +200,50 @@ include 'admin_layout_top.php';
       <table class="bk-table">
         <thead>
           <tr>
-            <th style="width:46px;">#</th>
+            <th style="width:44px;">#</th>
+            <th>เลขที่บิล</th>
             <th>ผู้จอง</th>
             <th>ติดต่อ</th>
-            <th>ห้องพัก</th>
+            <th>ห้องพัก / ราคา</th>
             <th>วันเข้า–ออก</th>
             <th>สถานะ</th>
             <th>วันที่จอง</th>
-            <th style="width:240px;">จัดการ</th>
+            <th style="width:160px;">จัดการ</th>
           </tr>
         </thead>
         <tbody>
           <?php if ($result && $result->num_rows > 0): ?>
-            <?php $rowNum = 0; while ($row = $result->fetch_assoc()): $rowNum++; ?>
+            <?php $rowNum = 0; while ($row = $result->fetch_assoc()): $rowNum++;
+              // เลขที่บิล
+              $_bkDate = date('Ymd', strtotime($row['created_at']));
+              $_seqR = $conn->query("SELECT COUNT(*) AS seq FROM room_bookings WHERE DATE(created_at)=DATE('".$conn->real_escape_string($row['created_at'])."') AND id<=".(int)$row['id']);
+              $_seq  = (int)($_seqR ? $_seqR->fetch_assoc()['seq'] : 1);
+              $_billRef = 'ROOM-'.$_bkDate.'-'.str_pad($_seq,3,'0',STR_PAD_LEFT);
+              // คำนวณคืน
+              $nights = 1;
+              if (!empty($row['checkin_date']) && !empty($row['checkout_date'])) {
+                  $d1 = new DateTime($row['checkin_date']);
+                  $d2 = new DateTime($row['checkout_date']);
+                  $nights = max(1, (int)$d1->diff($d2)->days);
+              }
+              // room units
+              $units = !empty($row['room_units']) ? json_decode($row['room_units'], true) : [];
+              // payment method
+              $pm = trim($row['payment_method'] ?? '');
+            ?>
               <tr>
                 <td style="color:var(--muted);font-size:0.76rem;"><?= $rowNum ?></td>
+                <td><span class="bill-ref"><?= h($_billRef) ?></span></td>
                 <td>
                   <div class="bk-name"><?= h($row['full_name']) ?></div>
-                  <div class="bk-meta"><?= (int)$row['guests'] ?> คน</div>
+                  <div class="bk-meta">👥 <?= (int)$row['guests'] ?> คน</div>
                 </td>
                 <td>
                   <div><?= h($row['phone']) ?></div>
                   <div class="bk-meta"><?= h($row['email']) ?></div>
                 </td>
                 <td>
-                  <?= h($row['room_type']) ?>
-                  <?php $units = !empty($row['room_units']) ? json_decode($row['room_units'], true) : []; ?>
+                  <div style="font-weight:700;font-size:.84rem;"><?= h($row['room_type']) ?> · สถาบันวิจัยลุ่มน้ำโขง</div>
                   <?php if (!empty($units)): ?>
                     <div class="unit-pills">
                       <?php foreach ($units as $u): ?>
@@ -228,10 +251,20 @@ include 'admin_layout_top.php';
                       <?php endforeach; ?>
                     </div>
                   <?php endif; ?>
+                  <?php if (!empty($row['total_price'])): ?>
+                    <div class="price-meta">฿ <?= number_format((float)$row['total_price'], 2) ?></div>
+                  <?php endif; ?>
+                  <?php if ($pm !== ''):
+                    $isCash = ($pm === 'เงินสด');
+                  ?>
+                    <span class="pm-pill <?= $isCash?'pm-cash':'pm-transfer' ?>">
+                      <?= $isCash?'💵':'🏦' ?> <?= h($pm) ?>
+                    </span>
+                  <?php endif; ?>
                 </td>
                 <td>
                   <div style="font-size:0.79rem;">📅 <?= h($row['checkin_date']) ?></div>
-                  <div style="font-size:0.79rem;color:var(--muted);">→ <?= h($row['checkout_date']) ?></div>
+                  <div style="font-size:0.79rem;color:var(--muted);">→ <?= h($row['checkout_date']) ?> (<?= $nights ?> คืน)</div>
                 </td>
                 <td>
                   <span class="bk-badge <?= statusBadge($row['booking_status']) ?>">
@@ -261,7 +294,7 @@ include 'admin_layout_top.php';
               </tr>
             <?php endwhile; ?>
           <?php else: ?>
-            <tr><td colspan="8">
+            <tr><td colspan="9">
               <div class="bk-empty">
                 <div class="bk-empty-icon">✅</div>
                 <div class="bk-empty-text">

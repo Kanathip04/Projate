@@ -142,11 +142,11 @@ include 'admin_layout_top.php';
                 <thead>
                     <tr>
                         <th style="width:46px;">#</th>
-                        <th>ผู้เช่า</th>
+                        <th>เลขที่บิล</th>
+                        <th>ผู้จอง</th>
                         <th>ติดต่อ</th>
-                        <th>อุปกรณ์</th>
+                        <th>อุปกรณ์ / ราคา</th>
                         <th>วันเข้า–ออก</th>
-                        <th>ยอดรวม</th>
                         <th>สถานะ</th>
                         <th>วันที่จอง</th>
                         <th style="width:220px;">จัดการ</th>
@@ -156,17 +156,37 @@ include 'admin_layout_top.php';
                     <?php if ($result && $result->num_rows > 0): ?>
                         <?php $no = 1; while ($row = $result->fetch_assoc()): ?>
                             <?php
-                            $items = json_decode($row['items_json'] ?? '[]', true) ?: [];
+                            // เลขที่บิล
+                            $_bkDate = date('Ymd', strtotime($row['created_at']));
+                            $_seqR   = $conn->query("SELECT COUNT(*) AS seq FROM equipment_bookings WHERE DATE(created_at) = DATE('" . $conn->real_escape_string($row['created_at']) . "') AND id <= " . (int)$row['id']);
+                            $_seq    = (int)($_seqR ? $_seqR->fetch_assoc()['seq'] : 1);
+                            $_billRef = 'EQUIP-' . $_bkDate . '-' . str_pad($_seq, 3, '0', STR_PAD_LEFT);
+
+                            // อุปกรณ์
+                            $items = [];
+                            if (!empty($row['items_json'])) {
+                                $decoded = json_decode($row['items_json'], true);
+                                if (is_array($decoded)) {
+                                    foreach ($decoded as $item) {
+                                        $name = $item['name'] ?? ($item['tent_name'] ?? '');
+                                        $qty  = (int)($item['qty'] ?? ($item['quantity'] ?? 1));
+                                        $unit = $item['unit'] ?? 'ชิ้น';
+                                        if ($name) $items[] = h($name) . ' &times;' . $qty . ' ' . h($unit);
+                                    }
+                                }
+                            }
+
+                            // คืน
                             $nights = 1;
                             if (!empty($row['checkin_date']) && !empty($row['checkout_date'])) {
                                 $d1 = new DateTime($row['checkin_date']);
                                 $d2 = new DateTime($row['checkout_date']);
                                 $nights = max(1, (int)$d1->diff($d2)->days);
                             }
-                            $total = (float)$row['total_price'] * $nights;
                             ?>
                             <tr>
-                                <td style="color:var(--muted);font-size:.76rem;"><?= $no++ ?></td>
+                                <td style="color:var(--muted);font-size:.76rem;font-weight:700;"><?= $no++ ?></td>
+                                <td style="font-size:.78rem;font-weight:700;color:#15803d;white-space:nowrap;"><?= h($_billRef) ?></td>
                                 <td>
                                     <div class="tk-name"><?= h($row['full_name']) ?></div>
                                 </td>
@@ -175,21 +195,23 @@ include 'admin_layout_top.php';
                                     <div class="tk-meta"><?= h($row['email'] ?? '') ?></div>
                                 </td>
                                 <td>
-                                  <?php if (!empty($items)): ?>
-                                    <div class="item-pills">
-                                      <?php foreach ($items as $it): ?>
-                                        <span class="item-pill">🎒 <?= h($it['name']) ?> ×<?= (int)$it['qty'] ?></span>
-                                      <?php endforeach; ?>
-                                    </div>
-                                  <?php else: ?>
-                                    <span style="color:var(--muted);font-size:.75rem;">-</span>
-                                  <?php endif; ?>
+                                    <?php if (!empty($items)): ?>
+                                        <div class="item-pills">
+                                            <?php foreach ($items as $itemStr): ?>
+                                                <span class="item-pill">🎒 <?= $itemStr ?></span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <span style="color:var(--muted);font-size:.75rem;">-</span>
+                                    <?php endif; ?>
+                                    <?php if (!empty($row['total_price'])): ?>
+                                        <div class="tk-meta">฿ <?= number_format((float)$row['total_price'], 2) ?></div>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <div style="font-size:.79rem;">📅 <?= h($row['checkin_date']) ?></div>
                                     <div style="font-size:.79rem;color:var(--muted);">→ <?= h($row['checkout_date']) ?> (<?= $nights ?> คืน)</div>
                                 </td>
-                                <td style="font-weight:700;color:#92400e;">฿<?= number_format($total, 2) ?></td>
                                 <td><span class="badge-approved">ชำระแล้ว</span></td>
                                 <td style="font-size:.76rem;color:var(--muted);"><?= h(substr($row['created_at'],0,16)) ?></td>
                                 <td>

@@ -871,14 +871,6 @@ $qnavLinks = [
     <div class="kpi-val" style="color:#0d9488;"><?= number_format($totalCheckinPeriod) ?></div>
     <div class="kpi-sub">คน (อนุมัติแล้วเท่านั้น)</div>
   </div>
-  <?php if ($serviceType === 'all'): ?>
-  <div class="kpi-card purple">
-    <div class="kpi-icon">🏆</div>
-    <div class="kpi-lbl">บริการยอดนิยม</div>
-    <div class="kpi-val" style="font-size:1rem;margin-top:6px;"><?= $mostBooked ?></div>
-    <div class="kpi-sub"><?= $maxSvc ?> รายการ</div>
-  </div>
-  <?php endif; ?>
 </div>
 
 <?php endif; // end serviceType !== 'checkin' for KPI grid ?>

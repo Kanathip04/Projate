@@ -94,7 +94,12 @@ $availCount = $total_rooms - count($takenUnits);
 
 $roomImg = '';
 foreach (['image_path','image'] as $col) {
-    if (!empty($room[$col])) { $roomImg = $room[$col]; break; }
+    if (!empty($room[$col])) {
+        $candidate = $room[$col];
+        // ตรวจว่าไฟล์มีจริงใน server
+        $localPath = __DIR__ . '/' . ltrim($candidate, '/');
+        if (file_exists($localPath)) { $roomImg = $candidate; break; }
+    }
 }
 $pricePerNight = (float)$room['price'];
 $capacity      = (int)($room['capacity'] ?? 2);
@@ -264,7 +269,8 @@ a{text-decoration:none;}
       <div class="room-card">
         <?php if ($roomImg): ?>
           <img src="<?= htmlspecialchars($roomImg) ?>" alt="<?= htmlspecialchars($room['room_name']) ?>" class="room-img"
-               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+               onerror="this.style.display='none';document.getElementById('room-img-ph-<?= $room_id ?>').style.display='flex';">
+          <div class="room-img-ph" id="room-img-ph-<?= $room_id ?>" style="display:none;">🏨</div>
         <?php else: ?>
           <div class="room-img-ph">🏨</div>
         <?php endif; ?>

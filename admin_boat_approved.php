@@ -186,34 +186,34 @@ include 'admin_layout_top.php';
 .tk-alert-icon{font-size:1.1rem;flex-shrink:0;}
 
 /* ── Stats ── */
-.tk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.tk-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:28px;}
 .tk-stat{
-  background:var(--card);border-radius:16px;padding:22px 20px 18px;
+  background:var(--card);border-radius:18px;padding:24px 22px 20px;
   box-shadow:var(--shadow-sm);border:1px solid var(--border);
-  display:flex;align-items:flex-start;gap:16px;position:relative;overflow:hidden;
+  display:flex;align-items:flex-start;gap:18px;position:relative;overflow:hidden;
+  transition:transform .2s,box-shadow .2s;
 }
+.tk-stat:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(26,26,46,.12);}
 .tk-stat::after{
-  content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0;
+  content:'';position:absolute;top:0;left:0;right:0;height:4px;border-radius:18px 18px 0 0;
 }
 .tk-stat:nth-child(1)::after{background:linear-gradient(90deg,var(--gold),#e8c97a);}
 .tk-stat:nth-child(2)::after{background:linear-gradient(90deg,#f59e0b,#fbbf24);}
 .tk-stat:nth-child(3)::after{background:linear-gradient(90deg,#22c55e,#4ade80);}
-.tk-stat:nth-child(4)::after{background:linear-gradient(90deg,#ef4444,#f87171);}
 .tk-stat-icon{
-  width:44px;height:44px;border-radius:12px;
-  display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;
+  width:48px;height:48px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;
+  box-shadow:inset 0 1px 2px rgba(255,255,255,.6);
 }
 .tk-stat:nth-child(1) .tk-stat-icon{background:var(--gold-light);}
 .tk-stat:nth-child(2) .tk-stat-icon{background:#fef3c7;}
 .tk-stat:nth-child(3) .tk-stat-icon{background:#dcfce7;}
-.tk-stat:nth-child(4) .tk-stat-icon{background:#fee2e2;}
 .tk-stat-body{flex:1;min-width:0;}
-.tk-stat-label{font-size:.67rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;font-weight:700;}
-.tk-stat-value{font-size:2rem;font-weight:800;line-height:1;color:var(--ink);}
+.tk-stat-label{font-size:.67rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;font-weight:700;}
+.tk-stat-value{font-size:2.2rem;font-weight:800;line-height:1;color:var(--ink);}
 .tk-stat:nth-child(2) .tk-stat-value{color:#d97706;}
 .tk-stat:nth-child(3) .tk-stat-value{color:#16a34a;}
-.tk-stat:nth-child(4) .tk-stat-value{color:#dc2626;}
-.tk-stat-sub{font-size:.7rem;color:var(--muted);margin-top:5px;}
+.tk-stat-sub{font-size:.71rem;color:var(--muted);margin-top:6px;}
 
 /* ── Card ── */
 .tk-card{background:var(--card);border-radius:18px;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:24px;}
@@ -336,7 +336,8 @@ include 'admin_layout_top.php';
 }
 .tk-btn-ticket:hover{background:#dcfce7;transform:translateY(-1px);}
 
-@media(max-width:900px){.tk-stats{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:900px){.tk-stats{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:680px){.tk-stats{grid-template-columns:1fr 1fr;}}
 @media(max-width:600px){.tk-stats{grid-template-columns:1fr 1fr;}.tk-table{display:block;overflow-x:auto;}.tk-banner{padding:22px 20px;}.tk-banner h1{font-size:1.25rem;}}
 </style>
 
@@ -388,14 +389,6 @@ include 'admin_layout_top.php';
         <div class="tk-stat-label">อนุมัติแล้ว</div>
         <div class="tk-stat-value"><?= $stat_approved ?></div>
         <div class="tk-stat-sub">ผ่านการอนุมัติ</div>
-      </div>
-    </div>
-    <div class="tk-stat">
-      <div class="tk-stat-icon">🚫</div>
-      <div class="tk-stat-body">
-        <div class="tk-stat-label">ปฏิเสธ</div>
-        <div class="tk-stat-value"><?= $stat_rejected ?></div>
-        <div class="tk-stat-sub">ไม่ผ่านการอนุมัติ</div>
       </div>
     </div>
   </div>

@@ -250,11 +250,6 @@ include 'admin_layout_top.php';
                                     <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
                                     <button class="tk-btn tk-btn-success" style="width:100%;">✓ อนุมัติ</button>
                                 </form>
-                                <form method="POST" onsubmit="return confirm('ปฏิเสธรายการนี้?')">
-                                    <input type="hidden" name="action" value="reject">
-                                    <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                                    <button class="tk-btn tk-btn-danger" style="width:100%;">✗ ปฏิเสธ</button>
-                                </form>
                                 <?php if ($row['payment_status'] === 'cash_pending'): ?>
                                 <form method="POST" onsubmit="return confirm('ยืนยันลบรายการ รอชำระสด นี้?')">
                                     <input type="hidden" name="action" value="delete">

@@ -211,9 +211,9 @@ include 'admin_layout_top.php';
                 <tbody>
                 <?php if ($result->num_rows === 0): ?>
                     <tr><td colspan="8" class="tk-empty">ไม่มีรายการรออนุมัติ</td></tr>
-                <?php else: while ($row = $result->fetch_assoc()): ?>
+                <?php else: $rowNum = 1; while ($row = $result->fetch_assoc()): ?>
                     <tr>
-                        <td style="color:var(--muted);font-size:.78rem;"><?= (int)$row['id'] ?></td>
+                        <td style="color:var(--muted);font-size:.78rem;font-weight:700;"><?= $rowNum++ ?></td>
                         <td>
                             <div class="bk-name"><?= h($row['full_name']) ?></div>
                             <div class="bk-sub"><?= h($row['phone']) ?></div>

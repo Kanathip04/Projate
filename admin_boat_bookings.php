@@ -380,6 +380,8 @@ include 'admin_layout_top.php';
   <table class="lm-table">
     <thead>
       <tr>
+        <th style="width:46px;">#</th>
+        <th>เลขที่บิล</th>
         <th>ผู้จอง</th>
         <th>Ref / คิว</th>
         <th>วันที่ / เวลา</th>
@@ -393,10 +395,10 @@ include 'admin_layout_top.php';
     </thead>
     <tbody>
     <?php if ($result->num_rows === 0): ?>
-      <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:36px;">ไม่มีรายการที่ตรงกัน</td></tr>
+      <tr><td colspan="11" style="text-align:center;color:var(--muted);padding:36px;">ไม่มีรายการที่ตรงกัน</td></tr>
     <?php endif; ?>
 
-    <?php while ($row = $result->fetch_assoc()):
+    <?php $rowNum = 1; while ($row = $result->fetch_assoc()):
       $units = json_decode($row['boat_units'] ?? '[]', true) ?: [];
       $bCls = ['pending'=>'bk-badge-pending','approved'=>'bk-badge-approved','rejected'=>'bk-badge-rejected','cancelled'=>'bk-badge-cancelled'];
       $bLbl = ['pending'=>'รออนุมัติ','approved'=>'อนุมัติแล้ว','rejected'=>'ไม่อนุมัติ','cancelled'=>'ยกเลิก'];
@@ -406,6 +408,8 @@ include 'admin_layout_top.php';
       $ps = $row['payment_status'] ?? 'unpaid';
     ?>
     <tr>
+      <td style="color:var(--muted);font-size:.76rem;font-weight:700;text-align:center;"><?= $rowNum++ ?></td>
+      <td style="font-size:.78rem;font-weight:700;color:#15803d;white-space:nowrap;"><?= h($row['booking_ref'] ?? '—') ?></td>
       <!-- ผู้จอง -->
       <td>
         <div class="bk-td-name"><?= h($row['full_name']) ?></div>

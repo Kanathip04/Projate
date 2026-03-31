@@ -8,8 +8,11 @@ header('Content-Type: application/json; charset=utf-8');
 
 define('CALLBACK_SECRET',    'wrbri_n8n_secret_2026');
 define('SLIP_MAX_AGE_SEC',   420);   // ยอมรับสลิปย้อนหลังได้ไม่เกิน 7 นาที (5 นาที + buffer 2 นาที)
-define('PAYEE_FIRST_NAME',   'สุรัชฎา');
-define('PAYEE_LAST_NAME',    'คุ้มชาติตา');
+// ใช้ explicit Unicode code points เพื่อป้องกันปัญหา encoding ของไฟล์ PHP
+// สุรัชฎา = ส(0E2A) ุ(0E38) ร(0E23) ั(0E31) ช(0E0A) ฎ(0E0E) า(0E32)
+define('PAYEE_FIRST_NAME', "\u{0E2A}\u{0E38}\u{0E23}\u{0E31}\u{0E0A}\u{0E0E}\u{0E32}");
+// คุ้มชาติตา = ค(0E04) ุ(0E38) ้(0E49) ม(0E21) ช(0E0A) า(0E32) ต(0E15) ิ(0E34) ต(0E15) า(0E32)
+define('PAYEE_LAST_NAME',  "\u{0E04}\u{0E38}\u{0E49}\u{0E21}\u{0E0A}\u{0E32}\u{0E15}\u{0E34}\u{0E15}\u{0E32}");
 
 /**
  * ตรวจชื่อผู้รับเงินในสลิป
@@ -315,31 +318,40 @@ if ($verified && $slipDatetime) {
 // ══════════════════════════════════════════════
 if ($verified) {
     if ($slipPayeeName === '') {
-        // AI อ่านชื่อผู้รับไม่ได้ → ส่ง manual_review แทนการผ่านอัตโนมัติ
-        $note = "\n[AUTO] AI อ่านชื่อผู้รับไม่ได้ รอ admin ตรวจสอบชื่อด้วยตนเอง [" . date('Y-m-d H:i') . "]";
-        $st = $conn->prepare("UPDATE boat_bookings SET payment_status='manual_review', note=CONCAT(COALESCE(note,''),?) WHERE booking_ref=?");
-        $st->bind_param("ss", $note, $booking_ref);
-        $st->execute(); $st->close();
-
+        // AI อ่านชื่อผู้รับไม่ได้ → manual_review
+        $note = "\n[AUTO] AI อ่านชื่อผู้รับไม่ได้ รอ admin ตรวจสอบ [" . date('Y-m-d H:i') . "]";
+        updateBookingStatus($conn, $isEquipment, $equipId, $booking_ref, 'manual_review', $note);
         updateSlipRecord($conn, $booking['id'], [
             'verification_status' => 'manual_review',
-            'verification_reason' => 'AI อ่านชื่อผู้รับไม่ได้ ต้องตรวจสอบด้วยมือ',
+            'verification_reason' => 'AI อ่านชื่อผู้รับไม่ได้',
         ]);
-
-        echo json_encode(['ok'=>true,'action'=>'manual_review','reject_reason'=>'ระบบอ่านชื่อผู้รับไม่ได้ รอ admin ตรวจสอบ']);
+        echo json_encode(['ok'=>true,'action'=>'manual_review']);
         $conn->close(); exit;
 
     } elseif (!isPayeeNameValid($slipPayeeName)) {
-        // อ่านชื่อได้ แต่ไม่ตรงกับชื่อที่กำหนด
-        $reason = "ชื่อผู้รับ \"{$slipPayeeName}\" ไม่ตรง (ต้องเป็น " . PAYEE_FIRST_NAME . ' ' . PAYEE_LAST_NAME . ")";
-        $note   = "\n[AUTO] ชื่อผู้รับไม่ตรง: {$slipPayeeName} [" . date('Y-m-d H:i') . "]";
-        updateBookingStatus($conn, $isEquipment, $equipId ?? 0, $booking_ref, 'failed', $note);
+        // ชื่อไม่ผ่าน PHP check
+        $reason = "ชื่อผู้รับ \"{$slipPayeeName}\" ไม่ตรง";
+        $note   = "\n[AUTO] {$reason} [" . date('Y-m-d H:i') . "]";
 
+        if ($amountMatched) {
+            // AI บอก verified+amount matched แต่ชื่อไม่ผ่าน PHP check
+            // → น่าจะเป็นปัญหา Unicode encoding → ส่ง manual_review แทน reject
+            $note = "\n[AUTO] AI ยืนยันแล้ว แต่ PHP ตรวจชื่อไม่ผ่าน (encoding?) รอ admin ยืนยัน: {$slipPayeeName} [" . date('Y-m-d H:i') . "]";
+            updateBookingStatus($conn, $isEquipment, $equipId, $booking_ref, 'manual_review', $note);
+            updateSlipRecord($conn, $booking['id'], [
+                'verification_status' => 'manual_review',
+                'verification_reason' => 'PHP ตรวจชื่อไม่ผ่าน (อาจเป็น encoding) รอ admin',
+            ]);
+            echo json_encode(['ok'=>true,'action'=>'manual_review','note'=>$reason]);
+            $conn->close(); exit;
+        }
+
+        // AI ไม่ได้ยืนยัน + ชื่อไม่ผ่าน → reject
+        updateBookingStatus($conn, $isEquipment, $equipId, $booking_ref, 'failed', $note);
         updateSlipRecord($conn, $booking['id'], [
             'verification_status' => 'rejected',
             'verification_reason' => $reason,
         ]);
-
         echo json_encode(['ok'=>false,'action'=>'rejected','reject_reason'=>$reason]);
         $conn->close(); exit;
     }

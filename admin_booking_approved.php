@@ -28,6 +28,10 @@ $message = ''; $message_type = 'success';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
+    if ($action === 'archive_all') {
+        $conn->query("UPDATE room_bookings SET archived=1 WHERE booking_status='approved' AND archived=0");
+        header("Location: admin_booking_archive.php?msg=".urlencode("จัดเก็บข้อมูลเรียบร้อยแล้ว")."&type=success"); exit;
+    }
     if ($action === 'set_pending') {
         $id = (int)($_POST['id'] ?? 0);
         if ($id > 0) {
@@ -143,6 +147,10 @@ include 'admin_layout_top.php';
     <div class="bk-banner-links">
       <a href="admin_booking_list.php"    class="bk-banner-link">← รายการรออนุมัติ</a>
       <a href="admin_booking_archive.php" class="bk-banner-link">🗂 รายการย้อนหลัง</a>
+      <form method="POST" style="display:inline;" onsubmit="return confirm('ยืนยันจัดเก็บข้อมูลที่อนุมัติแล้วทั้งหมด?')">
+        <input type="hidden" name="action" value="archive_all">
+        <button type="submit" class="bk-banner-link" style="cursor:pointer;">📦 จัดเก็บข้อมูล</button>
+      </form>
     </div>
   </div>
 

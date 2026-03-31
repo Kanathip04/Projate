@@ -49,6 +49,7 @@ $rs = $conn->query("
         SUM(payment_status = 'paid') AS a,
         SUM(payment_status = 'failed') AS r
     FROM equipment_bookings
+    WHERE payment_method = 'เงินสด'
 ");
 $st_row = $rs->fetch_assoc();
 $stat_total    = (int)$st_row['t'];
@@ -57,9 +58,9 @@ $stat_approved = (int)$st_row['a'];
 $stat_rejected = (int)$st_row['r'];
 
 // ---------------------------------------------------------------------------
-// List — show unpaid / waiting_verify / manual_review / failed only
+// List — เฉพาะเงินสด รอการอนุมัติ
 // ---------------------------------------------------------------------------
-$where = "WHERE payment_status IN ('unpaid','waiting_verify','manual_review','failed')";
+$where = "WHERE payment_method = 'เงินสด' AND payment_status IN ('unpaid','waiting_verify','manual_review','failed')";
 $params = []; $types = "";
 if ($search !== '') {
     $where .= " AND (full_name LIKE ? OR phone LIKE ? OR email LIKE ?)";

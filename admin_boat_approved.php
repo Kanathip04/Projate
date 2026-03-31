@@ -42,23 +42,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = "ลบรายการเรียบร้อยแล้ว";
     }
     if ($action === 'archive_approved') {
-        // ดึงทุก booking ที่อนุมัติแล้วและยังไม่ถูก archive แยกกลุ่มตามวันที่อนุมัติ
-        $dates = $conn->query("SELECT DISTINCT DATE(approved_at) AS d FROM boat_bookings WHERE booking_status='approved' AND (archived IS NULL OR archived=0) AND approved_at IS NOT NULL ORDER BY d ASC");
-        while ($dateRow = $dates->fetch_assoc()) {
-            $archDate = $dateRow['d'];
-            $bkRes = $conn->query("SELECT * FROM boat_bookings WHERE DATE(approved_at)='$archDate' AND booking_status='approved' AND (archived IS NULL OR archived=0) ORDER BY daily_queue_no ASC");
-            $bkRows = []; $totalRev = 0;
-            while ($bk = $bkRes->fetch_assoc()) {
-                $bkRows[] = $bk;
-                $totalRev += (float)($bk['total_amount'] ?? 0);
+        // ดึงทุก booking ที่อนุมัติแล้วและยังไม่ถูก archive
+        // ใช้ COALESCE เพื่อรองรับ booking ที่ approved_at อาจเป็น NULL
+        $bkAll = $conn->query("SELECT * FROM boat_bookings WHERE booking_status='approved' AND (archived IS NULL OR archived=0) ORDER BY COALESCE(approved_at, paid_at, created_at) ASC, daily_queue_no ASC");
+
+        // จัดกลุ่มตามวันที่
+        $byDate = [];
+        while ($bk = $bkAll->fetch_assoc()) {
+            $d = !empty($bk['approved_at'])
+                ? date('Y-m-d', strtotime($bk['approved_at']))
+                : (!empty($bk['paid_at'])
+                    ? date('Y-m-d', strtotime($bk['paid_at']))
+                    : date('Y-m-d'));
+            $byDate[$d][] = $bk;
+        }
+
+        foreach ($byDate as $archDate => $newRows) {
+            // ดึง archive เดิมของวันนี้ (ถ้ามี) เพื่อ merge ไม่ให้ข้อมูลเก่าหาย
+            $existRes = $conn->query("SELECT bookings_json FROM boat_queue_daily_archive WHERE archive_date='$archDate'");
+            $existRows = [];
+            if ($existRes && $existRes->num_rows > 0) {
+                $existRows = json_decode($existRes->fetch_assoc()['bookings_json'] ?? '[]', true) ?: [];
             }
-            if (empty($bkRows)) continue;
-            $json = json_encode($bkRows, JSON_UNESCAPED_UNICODE);
-            $cnt  = count($bkRows);
+            // Merge: เพิ่มเฉพาะ booking ที่ยังไม่อยู่ใน archive
+            $existIds = array_column($existRows, 'id');
+            foreach ($newRows as $bk) {
+                if (!in_array((int)$bk['id'], array_map('intval', $existIds))) {
+                    $existRows[] = $bk;
+                }
+            }
+            usort($existRows, fn($a,$b) => ((int)($a['daily_queue_no'] ?? 0)) - ((int)($b['daily_queue_no'] ?? 0)));
+
+            $totalRev = array_sum(array_map(fn($r) => (float)($r['total_amount'] ?? 0), $existRows));
+            $cnt  = count($existRows);
+            $json = json_encode($existRows, JSON_UNESCAPED_UNICODE);
+
             $archIns = $conn->prepare("INSERT INTO boat_queue_daily_archive (archive_date,total_queues,total_revenue,bookings_json) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE total_queues=VALUES(total_queues),total_revenue=VALUES(total_revenue),bookings_json=VALUES(bookings_json),archived_at=NOW()");
             $archIns->bind_param("siis", $archDate, $cnt, $totalRev, $json);
             $archIns->execute(); $archIns->close();
         }
+
         $conn->query("UPDATE boat_bookings SET archived=1 WHERE booking_status='approved' AND (archived IS NULL OR archived=0)");
         header("Location: admin_boat_archive_view.php"); exit;
     }

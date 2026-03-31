@@ -24,7 +24,7 @@ if ($search !== '') {
     $where .= " AND (nickname LIKE '%$safe%' OR user_type LIKE '%$safe%')";
 }
 
-$sql    = "SELECT id, nickname, user_type, visit_date, visit_time, created_at FROM tourists $where ORDER BY id DESC";
+$sql    = "SELECT id, nickname, gender, age, user_type, visit_date, visit_time, created_at FROM tourists $where ORDER BY id DESC";
 $result = $conn->query($sql);
 if (!$result) die("SQL Error: " . $conn->error);
 
@@ -227,10 +227,13 @@ include "admin_layout_top.php";
     <div style="overflow-x:auto;">
       <table class="lm-table">
         <thead>
-          <th>#</th>
+          <tr>
+            <th>#</th>
             <th>ชื่อเล่น</th>
+            <th>เพศ</th>
+            <th>อายุ</th>
             <th>ประเภท</th>
-            <th>เวลา</th>
+            <th>เวลาเข้า</th>
             <th>จัดการ</th>
           </tr>
         </thead>
@@ -248,10 +251,13 @@ include "admin_layout_top.php";
                 $ts2 = strtotime($row['visit_time']);
                 if ($ts2) $t = date('H:i', $ts2);
               }
+              $genderIcon = ($row['gender'] === 'ชาย') ? '👨' : (($row['gender'] === 'หญิง') ? '👩' : '');
               ?>
               <tr>
                 <td><?= $n++ ?></td>
                 <td><strong><?= htmlspecialchars($row['nickname']) ?></strong></td>
+                <td><?= $genderIcon ?> <?= htmlspecialchars($row['gender'] ?? '-') ?></td>
+                <td><?= (int)($row['age'] ?? 0) ?> ปี</td>
                 <td><span class="badge <?= $badgeClass ?>"><?= htmlspecialchars($row['user_type']) ?></span></td>
                 <td><?= $t ?></td>
                 <td>
@@ -262,7 +268,7 @@ include "admin_layout_top.php";
               </tr>
             <?php endwhile; ?>
           <?php else: ?>
-            <tr><td colspan="5" class="empty-row">ยังไม่มีข้อมูลสำหรับวันนี้</td></tr>
+            <tr><td colspan="7" class="empty-row">ยังไม่มีข้อมูลสำหรับวันนี้</td></tr>
           <?php endif; ?>
         </tbody>
       </table>

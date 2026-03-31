@@ -414,7 +414,7 @@ a{text-decoration:none;}
         <?php endif; ?>
         <div class=”rc-avail <?= $isFull ? 'full' : 'ok' ?>”>
           <?php if (!$isFull): ?><span class=”dot”></span><?php endif; ?>
-          <?= $isFull ? 'ห้องเต็ม' : “ว่าง {$availableRooms}/{$totalRooms}” ?>
+          <?= $isFull ? 'ห้องเต็ม' : ('ว่าง '.$availableRooms.'/'.$totalRooms) ?>
         </div>
         <div class=”rc-price”>฿<?= number_format($roomPrice) ?> / คืน</div>
       </div>
@@ -457,7 +457,7 @@ a{text-decoration:none;}
         <div class=”rc-stock”>
           <div class=”stock-nums”>
             <span>จองแล้ว <?= $approvedCount ?> / <?= $totalRooms ?> ห้อง</span>
-            <span><?= $isFull ? 'เต็ม' : “คงเหลือ {$availableRooms} ห้อง” ?></span>
+            <span><?= $isFull ? 'เต็ม' : ('คงเหลือ '.$availableRooms.' ห้อง') ?></span>
           </div>
           <div class=”stock-bar”>
             <div class=”stock-fill <?= $fillCls ?>” style=”width:<?= min(100,$fillPct) ?>%”></div>

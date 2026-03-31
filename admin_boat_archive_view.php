@@ -6,19 +6,28 @@ $conn->set_charset("utf8mb4");
 if ($conn->connect_error) die("DB Error");
 function h($s){return htmlspecialchars((string)$s,ENT_QUOTES,'UTF-8');}
 
-$date = trim($_GET['date'] ?? date('Y-m-d', strtotime('-1 day')));
-
-$stmt = $conn->prepare("SELECT * FROM boat_queue_daily_archive WHERE archive_date=? LIMIT 1");
-$stmt->bind_param("s",$date); $stmt->execute();
-$arch = $stmt->get_result()->fetch_assoc(); $stmt->close();
-
 $thMonths=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-$d=(int)date('d',strtotime($date));$m=(int)date('m',strtotime($date));$y=(int)date('Y',strtotime($date))+543;
-$thDate="$d {$thMonths[$m]} $y";
 
-$bookings = $arch ? json_decode($arch['bookings_json'], true) : [];
+// ถ้ามี date param → แสดงรายละเอียดวันนั้น
+// ถ้าไม่มี → แสดงรายการ archive ทั้งหมด
+$date     = trim($_GET['date'] ?? '');
+$viewMode = ($date !== '');
+$arch     = null; $bookings = []; $thDate = '';
 
-$pageTitle="Archive: $thDate"; $activeMenu="boat_archive";
+if ($viewMode) {
+    $stmt = $conn->prepare("SELECT * FROM boat_queue_daily_archive WHERE archive_date=? LIMIT 1");
+    $stmt->bind_param("s",$date); $stmt->execute();
+    $arch = $stmt->get_result()->fetch_assoc(); $stmt->close();
+    $d=(int)date('d',strtotime($date));$m=(int)date('m',strtotime($date));$y=(int)date('Y',strtotime($date))+543;
+    $thDate="$d {$thMonths[$m]} $y";
+    $bookings = $arch ? json_decode($arch['bookings_json'], true) : [];
+    $pageTitle="Archive: $thDate";
+} else {
+    $allArchives = $conn->query("SELECT archive_date, total_queues, total_revenue, archived_at FROM boat_queue_daily_archive ORDER BY archive_date DESC");
+    $pageTitle="จัดเก็บข้อมูลคิว";
+}
+
+$activeMenu="boat_archive";
 include 'admin_layout_top.php';
 ?>
 <style>
@@ -50,12 +59,15 @@ table.at tr:last-child td{border-bottom:none;}
 </style>
 <div class="main">
 <div class="arch-wrap">
+
+<?php if ($viewMode): ?>
+  <!-- ════ โหมดรายละเอียดวันที่เลือก ════ -->
   <div class="arch-banner">
     <div>
       <h1>🗄️ Archive: <?= $thDate ?></h1>
       <p>ข้อมูลคิวพายเรือที่จัดเก็บ</p>
     </div>
-    <a href="admin_boat_queues.php" class="btn btn-ghost">← กลับ</a>
+    <a href="admin_boat_approved.php" class="btn btn-ghost">← กลับ</a>
   </div>
 
   <?php if ($arch): ?>
@@ -109,6 +121,50 @@ table.at tr:last-child td{border-bottom:none;}
   <?php else: ?>
     <div class="empty-state" style="background:#fff;border-radius:14px;padding:60px;">ไม่พบข้อมูล archive สำหรับวันที่ <?= $thDate ?></div>
   <?php endif; ?>
+
+<?php else: ?>
+  <!-- ════ โหมดรายการ archive ทั้งหมด ════ -->
+  <div class="arch-banner">
+    <div>
+      <h1>📦 จัดเก็บข้อมูลคิว</h1>
+      <p>ประวัติข้อมูลคิวพายเรือที่จัดเก็บแล้ว</p>
+    </div>
+    <a href="admin_boat_approved.php" class="btn btn-ghost">← กลับ</a>
+  </div>
+
+  <div class="list-card">
+    <div class="list-header"><div class="list-title">รายการที่จัดเก็บแล้ว</div></div>
+    <?php if (!$allArchives || $allArchives->num_rows === 0): ?>
+      <div class="empty-state">ยังไม่มีข้อมูลที่จัดเก็บ</div>
+    <?php else: ?>
+    <div style="overflow-x:auto;">
+    <table class="at">
+      <thead>
+        <tr><th>#</th><th>วันที่</th><th>จำนวนคิว</th><th>รายได้รวม</th><th>เวลาจัดเก็บ</th><th>รายละเอียด</th></tr>
+      </thead>
+      <tbody>
+      <?php $no=1; while ($ar = $allArchives->fetch_assoc()):
+        $ad=(int)date('d',strtotime($ar['archive_date']));
+        $am=(int)date('m',strtotime($ar['archive_date']));
+        $ay=(int)date('Y',strtotime($ar['archive_date']))+543;
+        $arThDate="$ad {$thMonths[$am]} $ay";
+      ?>
+        <tr>
+          <td style="color:var(--muted);font-size:.76rem;"><?= $no++ ?></td>
+          <td style="font-weight:700;"><?= $arThDate ?></td>
+          <td><span style="font-weight:700;color:var(--blue);"><?= (int)$ar['total_queues'] ?></span> คิว</td>
+          <td style="font-weight:700;color:var(--green);">฿<?= number_format((float)$ar['total_revenue']) ?></td>
+          <td style="font-size:.76rem;color:var(--muted);"><?= date('d/m/Y H:i', strtotime($ar['archived_at'])) ?></td>
+          <td><a href="?date=<?= urlencode($ar['archive_date']) ?>" style="color:var(--blue);font-weight:700;font-size:.8rem;text-decoration:none;">ดูรายละเอียด →</a></td>
+        </tr>
+      <?php endwhile; ?>
+      </tbody>
+    </table>
+    </div>
+    <?php endif; ?>
+  </div>
+<?php endif; ?>
+
 </div>
 </div>
 <?php include 'admin_layout_bottom.php'; ?>

@@ -148,209 +148,207 @@ $stmt->execute(); $result = $stmt->get_result();
 
 
 $pageTitle = "จัดการคิวพายเรือ"; $activeMenu = "boat_queue";
+
+/* ── สถิติ ── */
+$statRes = $conn->query("SELECT
+    COUNT(*) AS total,
+    SUM(status='show') AS open_count,
+    SUM(status='hide') AS closed_count,
+    SUM(queue_date = '$today') AS today_count
+    FROM boat_queues");
+$stat = $statRes->fetch_assoc();
+
 include 'admin_layout_top.php';
 ?>
-
 <style>
-:root{
-  --navy:#0d1b2a;--navy2:#1a3a5c;--blue:#1565c0;--blue2:#1976d2;
-  --gold:#c9a96e;--gold-dim:rgba(201,169,110,.12);
-  --ink:#0d1b2a;--muted:#5f7281;--bg:#f0f5fc;
-  --card:#fff;--border:#e0eaf5;
-  --green:#15803d;--green-bg:#ecfdf3;--green-bdr:#a7e8bb;
-  --red:#dc2626;--red-bg:#fef2f2;
-  --radius:14px;
-}
-.bq-wrap{padding-bottom:60px;}
+:root{--gold:#c9a96e;--ink:#1a1a2e;--bg:#f5f1eb;--card:#fff;--muted:#7a7a8c;--border:#e8e4de;--danger:#dc2626;--success:#16a34a;--warning:#d97706;--blue:#1565c0;}
+.bq-wrap{padding:0 0 56px;animation:bqUp .35s ease both;}
+@keyframes bqUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
 /* BANNER */
-.bq-banner{
-  border-radius:var(--radius);padding:24px 28px;margin-bottom:22px;
-  background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 60%,#1565c0 100%);
-  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
-  position:relative;overflow:hidden;
-}
-.bq-banner::before{content:'';position:absolute;width:260px;height:260px;border-radius:50%;
-  background:radial-gradient(circle,rgba(29,111,173,.15) 0%,transparent 70%);top:-80px;right:-40px;}
-.bq-banner-left h1{font-family:'Kanit',sans-serif;font-size:1.45rem;font-weight:800;color:#fff;margin:0 0 4px;}
-.bq-banner-left p{font-size:.8rem;color:rgba(255,255,255,.7);margin:0;}
-.bq-banner-right{display:flex;gap:8px;flex-wrap:wrap;position:relative;z-index:1;}
+.bq-banner{border-radius:18px;padding:26px 32px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:linear-gradient(135deg,#0d1b2a 0%,#1a3a5c 60%,#1565c0 100%);position:relative;overflow:hidden;}
+.bq-banner::before{content:'';position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.05);top:-90px;right:-50px;pointer-events:none;}
+.bq-banner h1{font-family:'Playfair Display',serif;font-style:italic;font-size:1.5rem;color:#fff;margin:0 0 4px;}
+.bq-banner p{font-size:.8rem;color:rgba(255,255,255,.7);margin:0;}
+.bq-banner-links{display:flex;gap:10px;position:relative;z-index:1;}
+.bq-banner-link{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:.76rem;font-weight:700;text-decoration:none;border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;transition:all .2s;}
+.bq-banner-link:hover{background:rgba(255,255,255,.2);transform:translateY(-1px);}
 
 /* ALERT */
-.bq-alert{border-radius:10px;padding:11px 16px;margin-bottom:18px;font-size:.85rem;font-weight:600;
-  display:flex;align-items:center;gap:8px;}
-.bq-alert-success{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bdr);}
-.bq-alert-danger{background:var(--red-bg);color:var(--red);border:1px solid #fca5a5;}
+.bq-alert{border-radius:12px;padding:12px 18px;margin-bottom:18px;font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:8px;}
+.bq-alert-success{background:#f0fdf4;border:1.5px solid #86efac;color:var(--success);}
+.bq-alert-danger{background:#fef2f2;border:1.5px solid #fca5a5;color:var(--danger);}
+
+/* STATS */
+.bq-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+.bq-stat{background:var(--card);border-radius:14px;padding:18px 20px;box-shadow:0 2px 10px rgba(26,26,46,.06);border-top:3px solid var(--border);transition:transform .2s;}
+.bq-stat:hover{transform:translateY(-2px);}
+.bq-stat:nth-child(1){border-top-color:var(--gold);}
+.bq-stat:nth-child(2){border-top-color:var(--success);}
+.bq-stat:nth-child(3){border-top-color:var(--danger);}
+.bq-stat:nth-child(4){border-top-color:var(--blue);}
+.bq-stat-label{font-size:.67rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;font-weight:700;}
+.bq-stat-value{font-size:1.85rem;font-weight:800;color:var(--ink);line-height:1;}
+.bq-stat-sub{font-size:.7rem;color:var(--muted);margin-top:3px;}
 
 /* FORM CARD */
-.form-card{
-  background:var(--card);border-radius:var(--radius);
-  box-shadow:0 2px 12px rgba(13,27,42,.07);
-  margin-bottom:20px;overflow:hidden;
-}
-.form-card-header{
-  background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);
-  padding:16px 22px;
-  display:flex;align-items:center;gap:10px;
-}
-.form-card-header h2{font-family:'Kanit',sans-serif;font-size:1rem;font-weight:800;color:#fff;margin:0;}
-.form-card-body{padding:22px 22px 20px;}
-
-.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
-.form-grid .full{grid-column:1/-1;}
-.fg{display:flex;flex-direction:column;gap:5px;}
-.fg label{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
-.fg input,.fg textarea,.fg select{
-  font-family:'Sarabun',sans-serif;font-size:.88rem;
-  border:1.5px solid var(--border);border-radius:8px;
-  padding:9px 12px;color:var(--ink);background:#fafbfd;
-  outline:none;transition:border-color .2s,box-shadow .2s;
-}
-.fg input:focus,.fg textarea:focus,.fg select:focus{
-  border-color:var(--blue);box-shadow:0 0 0 3px rgba(21,101,192,.1);
-}
-.fg textarea{min-height:72px;resize:vertical;}
-.fg-hint{font-size:.72rem;color:var(--muted);margin-top:3px;}
-.img-preview{max-width:120px;border-radius:8px;margin-top:6px;border:1px solid var(--border);display:none;}
-.form-actions{display:flex;gap:10px;padding-top:6px;}
+.bq-form-card{background:var(--card);border-radius:18px;box-shadow:0 2px 12px rgba(26,26,46,.07);margin-bottom:20px;overflow:hidden;}
+.bq-form-hd{background:linear-gradient(135deg,#0d1b2a 0%,#1a3a5c 100%);padding:16px 24px;display:flex;align-items:center;gap:10px;}
+.bq-form-hd h2{font-family:'Playfair Display',serif;font-size:1rem;font-style:italic;color:#fff;margin:0;}
+.bq-form-body{padding:24px;}
+.bq-form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+.bq-form-grid .full{grid-column:1/-1;}
+.bfg{display:flex;flex-direction:column;gap:5px;}
+.bfg label{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;}
+.bfg input,.bfg textarea{font-family:'Sarabun',sans-serif;font-size:.88rem;border:1.5px solid var(--border);border-radius:10px;padding:9px 13px;color:var(--ink);background:#fdfcfa;outline:none;transition:border-color .2s,box-shadow .2s;}
+.bfg input:focus,.bfg textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,169,110,.12);}
+.bfg textarea{min-height:76px;resize:vertical;}
+.bfg-hint{font-size:.7rem;color:var(--muted);margin-top:3px;}
+.img-preview{max-width:110px;border-radius:9px;margin-top:6px;border:1px solid var(--border);display:none;}
 
 /* STATUS TOGGLE */
-.toggle-wrap{display:flex;gap:8px;}
-.toggle-btn{
-  flex:1;padding:9px;border-radius:8px;border:2px solid var(--border);
-  cursor:pointer;text-align:center;font-size:.83rem;font-weight:700;
-  transition:all .2s;background:#fafbfd;color:var(--muted);
-}
-.toggle-btn.active-open{border-color:var(--green);background:var(--green-bg);color:var(--green);}
-.toggle-btn.active-close{border-color:var(--red);background:var(--red-bg);color:var(--red);}
+.status-wrap{display:flex;gap:8px;}
+.status-btn{flex:1;padding:9px 8px;border-radius:10px;border:2px solid var(--border);cursor:pointer;text-align:center;font-size:.82rem;font-weight:700;transition:all .2s;background:#fdfcfa;color:var(--muted);user-select:none;}
+.status-btn.s-open{border-color:var(--success);background:#f0fdf4;color:var(--success);}
+.status-btn.s-close{border-color:var(--danger);background:#fef2f2;color:var(--danger);}
 
-/* QUEUE TABLE */
-.list-card{background:var(--card);border-radius:var(--radius);box-shadow:0 2px 12px rgba(13,27,42,.07);overflow:hidden;margin-bottom:20px;}
-.list-card-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-.list-card-title{font-family:'Kanit',sans-serif;font-size:.95rem;font-weight:800;color:var(--ink);}
-.search-bar{display:flex;gap:8px;align-items:center;}
-.search-bar input{border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;font-family:'Sarabun',sans-serif;font-size:.83rem;outline:none;background:#fafbfd;}
-.search-bar input:focus{border-color:var(--blue);}
+.bq-form-actions{display:flex;gap:10px;padding-top:8px;}
 
-table.bq-table{width:100%;border-collapse:collapse;}
-table.bq-table th{padding:10px 14px;text-align:left;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1.5px solid var(--border);background:#f8fbff;}
-table.bq-table td{padding:11px 14px;border-bottom:1px solid #f0f5fc;font-size:.85rem;color:var(--ink);vertical-align:middle;}
-table.bq-table tr:last-child td{border-bottom:none;}
-table.bq-table tr:hover td{background:#f8fbff;}
-.q-img{width:56px;height:44px;object-fit:cover;border-radius:8px;background:var(--border);}
-.q-img-ph{width:56px;height:44px;border-radius:8px;background:linear-gradient(135deg,var(--navy),var(--blue2));display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
-.badge-open{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bdr);border-radius:99px;padding:3px 10px;font-size:.7rem;font-weight:700;}
-.badge-close{background:var(--red-bg);color:var(--red);border:1px solid #fca5a5;border-radius:99px;padding:3px 10px;font-size:.7rem;font-weight:700;}
-.action-btns{display:flex;gap:5px;flex-wrap:nowrap;}
+/* TABLE CARD */
+.bq-list-card{background:var(--card);border-radius:18px;box-shadow:0 2px 12px rgba(26,26,46,.07);overflow:hidden;}
+.bq-list-hd{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.bq-list-title{font-size:.9rem;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px;}
+.bq-list-title::before{content:'';display:inline-block;width:3px;height:14px;background:var(--blue);border-radius:2px;}
+.bq-count{background:#eff6ff;color:var(--blue);font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;}
+.bq-search{display:flex;gap:8px;align-items:center;}
+.bq-search input{border:1.5px solid var(--border);border-radius:8px;padding:7px 12px 7px 32px;font-family:'Sarabun',sans-serif;font-size:.82rem;outline:none;background:#fdfcfa url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%237a7a8c' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.868-3.834zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E") no-repeat 10px center;}
+.bq-search input:focus{border-color:var(--gold);}
 
-/* ARCHIVE SECTION */
-.archive-card{background:var(--card);border-radius:var(--radius);box-shadow:0 2px 12px rgba(13,27,42,.07);overflow:hidden;}
-.archive-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.archive-title{font-family:'Kanit',sans-serif;font-size:.95rem;font-weight:800;color:var(--ink);}
-.archive-row{padding:11px 20px;border-bottom:1px solid #f0f5fc;display:flex;align-items:center;gap:12px;font-size:.85rem;}
-.archive-row:last-child{border-bottom:none;}
-.arch-date{font-weight:700;color:var(--ink);min-width:90px;}
-.arch-count{background:var(--blue-lt,#e3f2fd);color:var(--blue);border-radius:99px;padding:2px 10px;font-size:.72rem;font-weight:700;}
-.arch-rev{color:var(--green);font-weight:600;}
-.arch-time{font-size:.72rem;color:var(--muted);margin-left:auto;}
-.arch-btn{background:transparent;border:1.5px solid var(--border);border-radius:8px;padding:4px 10px;font-size:.75rem;cursor:pointer;color:var(--muted);}
-.arch-btn:hover{border-color:var(--blue);color:var(--blue);}
+table.bq-tbl{width:100%;border-collapse:collapse;min-width:700px;}
+table.bq-tbl th{padding:10px 14px;text-align:left;font-size:.67rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid var(--border);background:#fdfcfa;}
+table.bq-tbl td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:.84rem;color:var(--ink);vertical-align:middle;}
+table.bq-tbl tr:last-child td{border-bottom:none;}
+table.bq-tbl tr:hover td{background:#fdfcfa;}
 
-/* BTN overrides */
-.btn{display:inline-flex;align-items:center;gap:5px;border-radius:99px;padding:8px 18px;font-size:.82rem;font-weight:700;text-decoration:none;border:none;cursor:pointer;transition:all .2s;font-family:'Sarabun',sans-serif;}
-.btn-primary{background:var(--blue);color:#fff;}
-.btn-primary:hover{background:#0d47a1;}
-.btn-navy{background:var(--navy);color:#fff;}
-.btn-navy:hover{background:#1a3a5c;}
-.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--muted);}
-.btn-ghost:hover{border-color:var(--blue);color:var(--blue);}
-.btn-danger{background:var(--red);color:#fff;}
-.btn-danger:hover{background:#b91c1c;}
-.btn-sm{padding:5px 12px;font-size:.78rem;border-radius:8px;}
-.btn-success{background:var(--green);color:#fff;}
-.btn-success:hover{background:#166534;}
+.q-img{width:52px;height:42px;object-fit:cover;border-radius:8px;}
+.q-img-ph{width:52px;height:42px;border-radius:8px;background:linear-gradient(135deg,#0d1b2a,#1565c0);display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
+.badge-open{background:#f0fdf4;color:#166534;border:1px solid #86efac;border-radius:99px;padding:3px 10px;font-size:.69rem;font-weight:700;display:inline-flex;align-items:center;gap:4px;}
+.badge-open::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--success);}
+.badge-close{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;border-radius:99px;padding:3px 10px;font-size:.69rem;font-weight:700;display:inline-flex;align-items:center;gap:4px;}
+.badge-close::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--danger);}
+.badge-today{background:#eff6ff;color:var(--blue);border:1px solid #bfdbfe;border-radius:99px;padding:2px 7px;font-size:.65rem;font-weight:700;margin-left:4px;}
 
-.empty-state{text-align:center;padding:40px;color:var(--muted);font-size:.88rem;}
+.act-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border:none;border-radius:7px;font-family:'Sarabun',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer;text-decoration:none;transition:all .2s;white-space:nowrap;}
+.act-btn:hover{transform:translateY(-1px);}
+.act-edit{background:#f1f5f9;color:#334155;border:1.5px solid #e2e8f0;}
+.act-edit:hover{border-color:var(--gold);color:#92400e;}
+.act-open{background:#f0fdf4;color:var(--success);border:1.5px solid #86efac;}
+.act-open:hover{background:#dcfce7;}
+.act-close{background:#fef2f2;color:var(--danger);border:1.5px solid #fca5a5;}
+.act-close:hover{background:#fee2e2;}
+.act-del{background:#fafafa;color:#94a3b8;border:1.5px solid #e2e8f0;}
+.act-del:hover{color:var(--danger);border-color:#fca5a5;}
 
-@media(max-width:640px){
-  .bq-banner{flex-direction:column;padding:18px 16px;}
-  .form-grid{grid-template-columns:1fr;}
-  .form-grid .full,.form-grid .half{grid-column:1/-1;}
-  .form-card-body{padding:16px;}
-  table.bq-table th:nth-child(1),table.bq-table td:nth-child(1){display:none;}
-}
+/* SUBMIT BTN */
+.submit-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 22px;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;transition:all .2s;background:linear-gradient(135deg,#0d1b2a,#1565c0);color:#fff;box-shadow:0 3px 10px rgba(13,27,42,.2);}
+.submit-btn:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(13,27,42,.28);}
+.cancel-btn{display:inline-flex;align-items:center;gap:5px;padding:10px 18px;border:1.5px solid var(--border);border-radius:10px;font-family:'Sarabun',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;background:#fff;color:var(--muted);text-decoration:none;transition:all .2s;}
+.cancel-btn:hover{border-color:var(--danger);color:var(--danger);}
+
+.bq-empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:.88rem;}
+.bq-empty-icon{font-size:2.5rem;margin-bottom:10px;opacity:.3;}
+
+@media(max-width:900px){.bq-stats{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:640px){.bq-form-grid{grid-template-columns:1fr;}.bq-stats{grid-template-columns:1fr 1fr;}}
 </style>
 
-<div class="main">
 <div class="bq-wrap">
 
   <!-- BANNER -->
   <div class="bq-banner">
-    <div class="bq-banner-left">
+    <div style="position:relative;z-index:1;">
       <h1>🚣 จัดการคิวพายเรือ</h1>
-      <p>เพิ่ม / แก้ไข / เปิด-ปิดการจอง · คิวรีเซ็ตทุกเที่ยงคืน</p>
+      <p>เพิ่ม / แก้ไข / เปิด-ปิดการจอง · ปิดการจองอัตโนมัติทุกเที่ยงคืน</p>
     </div>
-    <div class="bq-banner-right">
-      <a href="admin_boat_bookings.php" class="btn btn-ghost btn-sm" style="border-color:rgba(255,255,255,.3);color:#fff;">📋 รายการจอง</a>
+    <div class="bq-banner-links">
+      <a href="admin_boat_bookings.php" class="bq-banner-link">📋 รายการจอง</a>
     </div>
   </div>
 
   <?php if ($message): ?>
   <div class="bq-alert bq-alert-<?= $message_type === 'success' ? 'success' : 'danger' ?>">
-    <?= $message_type === 'success' ? '✅' : '⚠️' ?> <?= h($message) ?>
+    <?= $message_type === 'success' ? '✓' : '✗' ?> <?= h($message) ?>
   </div>
   <?php endif; ?>
 
-  <!-- ═══ FORM ═══ -->
-  <div class="form-card">
-    <div class="form-card-header">
-      <span style="font-size:1.2rem;"><?= $editQueue ? '✏️' : '➕' ?></span>
+  <!-- STATS -->
+  <div class="bq-stats">
+    <div class="bq-stat">
+      <div class="bq-stat-label">คิวทั้งหมด</div>
+      <div class="bq-stat-value"><?= (int)$stat['total'] ?></div>
+      <div class="bq-stat-sub">ในระบบ</div>
+    </div>
+    <div class="bq-stat">
+      <div class="bq-stat-label">เปิดการจอง</div>
+      <div class="bq-stat-value" style="color:var(--success);"><?= (int)$stat['open_count'] ?></div>
+      <div class="bq-stat-sub">รับจองอยู่</div>
+    </div>
+    <div class="bq-stat">
+      <div class="bq-stat-label">ปิดการจอง</div>
+      <div class="bq-stat-value" style="color:var(--danger);"><?= (int)$stat['closed_count'] ?></div>
+      <div class="bq-stat-sub">ปิดแล้ว / หมดเวลา</div>
+    </div>
+    <div class="bq-stat">
+      <div class="bq-stat-label">คิววันนี้</div>
+      <div class="bq-stat-value" style="color:var(--blue);"><?= (int)$stat['today_count'] ?></div>
+      <div class="bq-stat-sub"><?= date('d/m/Y') ?></div>
+    </div>
+  </div>
+
+  <!-- FORM -->
+  <div class="bq-form-card">
+    <div class="bq-form-hd">
+      <span style="font-size:1.1rem;"><?= $editQueue ? '✏️' : '➕' ?></span>
       <h2><?= $editQueue ? 'แก้ไขคิว: ' . h($editQueue['queue_name']) : 'เพิ่มคิวพายเรือใหม่' ?></h2>
     </div>
-    <div class="form-card-body">
-      <form method="POST" enctype="multipart/form-data" id="queueForm">
+    <div class="bq-form-body">
+      <form method="POST" enctype="multipart/form-data">
         <input type="hidden" name="action" value="<?= $editQueue ? 'edit' : 'add' ?>">
-        <?php if ($editQueue): ?>
-          <input type="hidden" name="id" value="<?= (int)$editQueue['id'] ?>">
-        <?php endif; ?>
+        <?php if ($editQueue): ?><input type="hidden" name="id" value="<?= (int)$editQueue['id'] ?>"><?php endif; ?>
         <input type="hidden" name="image_path_current" value="<?= h($editQueue['image_path'] ?? '') ?>" id="imgPathCurrent">
 
-        <div class="form-grid">
-          <div class="fg">
+        <div class="bq-form-grid">
+          <div class="bfg">
             <label>ชื่อคิว *</label>
             <input type="text" name="queue_name" required value="<?= h($editQueue['queue_name'] ?? '') ?>" placeholder="เช่น รอบเช้า / ทัวร์ชมธรรมชาติ">
           </div>
-          <div class="fg">
+          <div class="bfg">
             <label>วันที่ *</label>
             <input type="date" name="queue_date" required value="<?= h($editQueue['queue_date'] ?? date('Y-m-d')) ?>">
           </div>
-          <div class="fg">
+          <div class="bfg">
             <label>ราคา / ลำ (บาท · 0 = ฟรี)</label>
             <input type="number" name="price_per_boat" min="0" step="1" value="<?= (int)($editQueue['price_per_boat'] ?? 0) ?>">
           </div>
-          <div class="fg">
+          <div class="bfg">
             <label>สถานะการจอง</label>
             <input type="hidden" name="status" id="statusInput" value="<?= h($editQueue['status'] ?? 'show') ?>">
-            <div class="toggle-wrap">
-              <div class="toggle-btn <?= ($editQueue['status'] ?? 'show') === 'show' ? 'active-open' : '' ?>" onclick="setStatus('show',this)">
-                🟢 เปิดการจอง
-              </div>
-              <div class="toggle-btn <?= ($editQueue['status'] ?? 'show') === 'hide' ? 'active-close' : '' ?>" onclick="setStatus('hide',this)">
-                🔴 ปิดการจอง
-              </div>
+            <div class="status-wrap">
+              <div class="status-btn <?= ($editQueue['status'] ?? 'show') === 'show' ? 's-open' : '' ?>" onclick="setStatus('show',this)">● เปิดการจอง</div>
+              <div class="status-btn <?= ($editQueue['status'] ?? 'show') === 'hide' ? 's-close' : '' ?>" onclick="setStatus('hide',this)">● ปิดการจอง</div>
             </div>
           </div>
-          <div class="fg full">
+          <div class="bfg full">
             <label>คำอธิบาย</label>
             <textarea name="description" placeholder="รายละเอียดเพิ่มเติม..."><?= h($editQueue['description'] ?? '') ?></textarea>
           </div>
-          <div class="fg full">
+          <div class="bfg full">
             <label>ประเภทเรือ (คั่นด้วยจุลภาค)</label>
             <input type="text" name="boat_types" value="<?= h($editQueue['boat_types'] ?? 'เรือพาย,เรือคายัค,เรือบด') ?>" placeholder="เรือพาย,เรือคายัค,เรือบด">
-            <div class="fg-hint">ลูกค้าจะเห็นตัวเลือกเรือตามที่กำหนด</div>
+            <div class="bfg-hint">ลูกค้าจะเห็นตัวเลือกเรือตามที่กำหนด</div>
           </div>
-          <div class="fg full">
-            <label>รูปภาพ (jpg/png/webp)</label>
+          <div class="bfg full">
+            <label>รูปภาพ (JPG/PNG/WEBP)</label>
             <input type="file" name="image_file" accept="image/*" onchange="previewImg(this)">
             <?php if (!empty($editQueue['image_path'])): ?>
               <img src="<?= h($editQueue['image_path']) ?>" class="img-preview" id="imgPreview" style="display:block;" alt="">
@@ -360,42 +358,47 @@ table.bq-table tr:hover td{background:#f8fbff;}
           </div>
         </div>
 
-        <div class="form-actions">
-          <button class="btn btn-primary" type="submit">
+        <div class="bq-form-actions">
+          <button class="submit-btn" type="submit">
             <?= $editQueue ? '💾 บันทึกการแก้ไข' : '➕ เพิ่มคิว' ?>
           </button>
           <?php if ($editQueue): ?>
-            <a href="<?= $currentPage ?>" class="btn btn-ghost">ยกเลิก</a>
+            <a href="<?= $currentPage ?>" class="cancel-btn">✕ ยกเลิก</a>
           <?php endif; ?>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ═══ TABLE ═══ -->
-  <div class="list-card">
-    <div class="list-card-header">
-      <div class="list-card-title">คิวทั้งหมด (<?= $result->num_rows ?>)</div>
-      <form method="GET" class="search-bar">
-        <input type="text" name="search" placeholder="🔍 ค้นหาชื่อคิว..." value="<?= h($search) ?>">
-        <button class="btn btn-ghost btn-sm" type="submit">ค้นหา</button>
-        <?php if ($search): ?><a href="<?= $currentPage ?>" class="btn btn-ghost btn-sm">ล้าง</a><?php endif; ?>
+  <!-- TABLE -->
+  <div class="bq-list-card">
+    <div class="bq-list-hd">
+      <div class="bq-list-title">
+        คิวทั้งหมด
+        <span class="bq-count"><?= $result->num_rows ?> รายการ</span>
+      </div>
+      <form method="GET" class="bq-search">
+        <input type="text" name="search" placeholder="ค้นหาชื่อคิว..." value="<?= h($search) ?>">
+        <button class="act-btn act-edit" type="submit">ค้นหา</button>
+        <?php if ($search): ?><a href="<?= $currentPage ?>" class="act-btn act-edit">ล้าง</a><?php endif; ?>
       </form>
     </div>
     <div style="overflow-x:auto;">
-      <table class="bq-table">
+      <table class="bq-tbl">
         <thead>
           <tr>
-            <th>#</th><th>รูป</th><th>ชื่อคิว</th><th>วันที่</th><th>ราคา/ลำ</th><th>การจอง</th><th>สถานะ</th><th>จัดการ</th>
+            <th>#</th><th>รูป</th><th>ชื่อคิว</th><th>วันที่</th><th>ราคา/ลำ</th><th>การจอง</th><th>สถานะ</th><th style="width:180px;">จัดการ</th>
           </tr>
         </thead>
         <tbody>
         <?php if ($result->num_rows === 0): ?>
-          <tr><td colspan="8" class="empty-state">📋 ยังไม่มีคิว กรุณาเพิ่มคิวใหม่</td></tr>
+          <tr><td colspan="8">
+            <div class="bq-empty"><div class="bq-empty-icon">🚣</div>ยังไม่มีคิว กรุณาเพิ่มคิวใหม่ด้านบน</div>
+          </td></tr>
         <?php endif; ?>
-        <?php while ($row = $result->fetch_assoc()): ?>
+        <?php $rowNo = 1; while ($row = $result->fetch_assoc()): ?>
           <tr>
-            <td style="color:var(--muted);font-size:.78rem;"><?= (int)$row['id'] ?></td>
+            <td style="color:var(--muted);font-size:.76rem;font-weight:700;"><?= $rowNo++ ?></td>
             <td>
               <?php if (!empty($row['image_path'])): ?>
                 <img src="<?= h($row['image_path']) ?>" class="q-img" alt="" onerror="this.style.display='none'">
@@ -404,45 +407,50 @@ table.bq-table tr:hover td{background:#f8fbff;}
               <?php endif; ?>
             </td>
             <td>
-              <div style="font-weight:700;font-size:.88rem;"><?= h($row['queue_name']) ?></div>
+              <div style="font-weight:700;font-size:.87rem;"><?= h($row['queue_name']) ?></div>
               <?php if (!empty($row['description'])): ?>
-              <div style="font-size:.75rem;color:var(--muted);margin-top:2px;"><?= h(mb_substr($row['description'],0,40)) ?>…</div>
+              <div style="font-size:.73rem;color:var(--muted);margin-top:2px;"><?= h(mb_substr($row['description'],0,45)) ?>…</div>
               <?php endif; ?>
             </td>
-            <td><?= date('d/m/Y', strtotime($row['queue_date'])) ?></td>
+            <td style="white-space:nowrap;">
+              <?= date('d/m/Y', strtotime($row['queue_date'])) ?>
+              <?php if ($row['queue_date'] === $today): ?>
+                <span class="badge-today">วันนี้</span>
+              <?php endif; ?>
+            </td>
             <td>
               <?php if ((float)$row['price_per_boat'] > 0): ?>
                 <span style="font-weight:700;color:var(--blue);">฿<?= number_format((float)$row['price_per_boat']) ?></span>
               <?php else: ?>
-                <span style="color:var(--green);font-weight:600;">ฟรี</span>
+                <span style="color:var(--success);font-weight:600;">ฟรี</span>
               <?php endif; ?>
             </td>
             <td>
               <span style="font-weight:700;"><?= (int)$row['booking_count'] ?></span>
-              <span style="font-size:.75rem;color:var(--muted);"> รายการ</span>
+              <span style="font-size:.73rem;color:var(--muted);"> รายการ</span>
             </td>
             <td>
               <?php if ($row['status'] === 'show'): ?>
-                <span class="badge-open">🟢 เปิดจอง</span>
+                <span class="badge-open">เปิดจอง</span>
               <?php else: ?>
-                <span class="badge-close">🔴 ปิดจอง</span>
+                <span class="badge-close">ปิดจอง</span>
               <?php endif; ?>
             </td>
             <td>
-              <div class="action-btns">
-                <a href="?edit_id=<?= $row['id'] ?>" class="btn btn-ghost btn-sm">✏️</a>
+              <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+                <a href="?edit_id=<?= $row['id'] ?>" class="act-btn act-edit">✏️</a>
                 <form method="POST" style="display:inline;">
                   <input type="hidden" name="action" value="toggle">
                   <input type="hidden" name="id" value="<?= $row['id'] ?>">
                   <input type="hidden" name="cur_status" value="<?= h($row['status']) ?>">
-                  <button class="btn btn-sm <?= $row['status']==='show'?'btn-danger':'btn-success' ?>" type="submit">
-                    <?= $row['status']==='show'?'🔴 ปิด':'🟢 เปิด' ?>
+                  <button class="act-btn <?= $row['status']==='show'?'act-close':'act-open' ?>" type="submit">
+                    <?= $row['status']==='show'?'ปิด':'เปิด' ?>
                   </button>
                 </form>
                 <form method="POST" style="display:inline;" onsubmit="return confirm('ลบคิวนี้?')">
                   <input type="hidden" name="action" value="delete">
                   <input type="hidden" name="id" value="<?= $row['id'] ?>">
-                  <button class="btn btn-ghost btn-sm" style="color:var(--red);" type="submit">🗑</button>
+                  <button class="act-btn act-del" type="submit">🗑</button>
                 </form>
               </div>
             </td>
@@ -453,26 +461,22 @@ table.bq-table tr:hover td{background:#f8fbff;}
     </div>
   </div>
 
-
-</div>
 </div>
 
 <script>
 function previewImg(input) {
-    const preview = document.getElementById('imgPreview');
+    const p = document.getElementById('imgPreview');
     if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
-        reader.readAsDataURL(input.files[0]);
+        const r = new FileReader();
+        r.onload = e => { p.src = e.target.result; p.style.display = 'block'; };
+        r.readAsDataURL(input.files[0]);
         document.getElementById('imgPathCurrent').value = '';
     }
 }
 function setStatus(val, el) {
     document.getElementById('statusInput').value = val;
-    document.querySelectorAll('.toggle-btn').forEach(b => {
-        b.classList.remove('active-open','active-close');
-    });
-    el.classList.add(val === 'show' ? 'active-open' : 'active-close');
+    document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('s-open','s-close'));
+    el.classList.add(val === 'show' ? 's-open' : 's-close');
 }
 </script>
 

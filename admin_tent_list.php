@@ -8,6 +8,9 @@ if ($conn->connect_error) die("DB Error: " . $conn->connect_error);
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
+// เพิ่ม column archived ถ้ายังไม่มี
+$conn->query("ALTER TABLE equipment_bookings ADD COLUMN IF NOT EXISTS archived TINYINT(1) DEFAULT 0");
+
 $currentPage = basename($_SERVER['PHP_SELF']);
 $message = ''; $message_type = 'success';
 
@@ -27,6 +30,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $st = $conn->prepare("UPDATE equipment_bookings SET payment_status='failed' WHERE id=?");
         $st->bind_param("i", $id); $st->execute(); $st->close();
         $message = "ปฏิเสธรายการเรียบร้อยแล้ว";
+    }
+    if ($action === 'archive' && $id > 0) {
+        $st = $conn->prepare("UPDATE equipment_bookings SET archived=1 WHERE id=?");
+        $st->bind_param("i", $id); $st->execute(); $st->close();
+        $message = "จัดเก็บรายการเรียบร้อยแล้ว";
     }
     if ($action === 'delete' && $id > 0) {
         $st = $conn->prepare("DELETE FROM equipment_bookings WHERE id=?");
@@ -49,7 +57,7 @@ $rs = $conn->query("
         SUM(payment_status = 'paid') AS a,
         SUM(payment_status = 'failed') AS r
     FROM equipment_bookings
-    WHERE payment_method = 'เงินสด'
+    WHERE payment_method = 'เงินสด' AND (archived IS NULL OR archived = 0)
 ");
 $st_row = $rs->fetch_assoc();
 $stat_total    = (int)$st_row['t'];
@@ -60,7 +68,7 @@ $stat_rejected = (int)$st_row['r'];
 // ---------------------------------------------------------------------------
 // List — เฉพาะเงินสด รอการอนุมัติ
 // ---------------------------------------------------------------------------
-$where = "WHERE payment_method = 'เงินสด' AND payment_status IN ('unpaid','waiting_verify','manual_review','failed')";
+$where = "WHERE payment_method = 'เงินสด' AND payment_status IN ('unpaid','waiting_verify','manual_review','failed') AND (archived IS NULL OR archived = 0)";
 $params = []; $types = "";
 if ($search !== '') {
     $where .= " AND (full_name LIKE ? OR phone LIKE ? OR email LIKE ?)";
@@ -324,6 +332,13 @@ include 'admin_layout_top.php';
                                                class="tk-btn tk-btn-warning" style="padding:6px 11px;font-size:.74rem;"
                                                target="_blank">🧾 ดูสลิป</a>
                                         <?php endif; ?>
+
+                                        <!-- Archive -->
+                                        <form method="POST" class="tk-inline" onsubmit="return confirm('จัดเก็บรายการนี้?')">
+                                            <input type="hidden" name="action" value="archive">
+                                            <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
+                                            <button class="tk-btn tk-btn-ghost" style="padding:6px 11px;font-size:.74rem;">📦 จัดเก็บ</button>
+                                        </form>
 
                                         <!-- Delete -->
                                         <form method="POST" class="tk-inline" onsubmit="return confirm('ยืนยันการลบ?')">

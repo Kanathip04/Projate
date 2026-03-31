@@ -33,9 +33,16 @@ $conn->query("CREATE TABLE IF NOT EXISTS `equipment_bookings` (
     `items_json` TEXT,
     `total_price` DECIMAL(10,2) DEFAULT 0,
     `note` TEXT,
+    `payment_method` VARCHAR(50) DEFAULT 'โอนเงิน',
     `booking_status` ENUM('pending','approved','rejected','cancelled') DEFAULT 'pending',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+/* เพิ่ม payment_method ถ้ายังไม่มี (กรณีตารางมีอยู่แล้ว) */
+$chk = $conn->query("SELECT COUNT(*) AS c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='backoffice_db' AND TABLE_NAME='equipment_bookings' AND COLUMN_NAME='payment_method'");
+if ($chk && (int)$chk->fetch_assoc()['c'] === 0) {
+    $conn->query("ALTER TABLE equipment_bookings ADD COLUMN payment_method VARCHAR(50) DEFAULT 'โอนเงิน'");
+}
 
 $message = ''; $message_type = 'success';
 
@@ -46,13 +53,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'book'
     $email        = trim($_POST['email'] ?? '');
     $checkin      = trim($_POST['checkin_date'] ?? '');
     $checkout     = trim($_POST['checkout_date'] ?? '');
-    $items_json   = trim($_POST['items_json'] ?? '');
-    $total_price  = (float)($_POST['total_price'] ?? 0);
-    $note         = trim($_POST['note'] ?? '');
+    $items_json     = trim($_POST['items_json'] ?? '');
+    $total_price    = (float)($_POST['total_price'] ?? 0);
+    $note           = trim($_POST['note'] ?? '');
+    $payment_method = in_array(trim($_POST['payment_method'] ?? ''), ['โอนเงิน','เงินสด'])
+                        ? trim($_POST['payment_method']) : 'โอนเงิน';
 
     if ($full_name && $phone && $checkin && $checkout && $items_json) {
-        $st = $conn->prepare("INSERT INTO equipment_bookings (full_name,phone,email,checkin_date,checkout_date,items_json,total_price,note) VALUES (?,?,?,?,?,?,?,?)");
-        $st->bind_param("ssssssds", $full_name, $phone, $email, $checkin, $checkout, $items_json, $total_price, $note);
+        $st = $conn->prepare("INSERT INTO equipment_bookings (full_name,phone,email,checkin_date,checkout_date,items_json,total_price,note,payment_method) VALUES (?,?,?,?,?,?,?,?,?)");
+        $st->bind_param("ssssssdss", $full_name, $phone, $email, $checkin, $checkout, $items_json, $total_price, $note, $payment_method);
         $st->execute();
         $newId = $conn->insert_id;
         $st->close();
@@ -208,6 +217,20 @@ a{text-decoration:none;}
 .submit-btn:hover{background:var(--gold);color:var(--ink);}
 .submit-btn:disabled{background:#9ca3af;cursor:not-allowed;}
 
+/* payment method */
+.pay-label{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;margin-top:16px;}
+.pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;}
+.pay-card{
+  display:flex;align-items:center;gap:10px;
+  padding:13px 14px;border-radius:12px;
+  border:2px solid var(--border);background:#fafafa;
+  cursor:pointer;transition:.18s;
+}
+.pay-card.active{border-color:var(--ink);background:rgba(13,27,42,.05);}
+.pay-card-icon{font-size:22px;flex-shrink:0;}
+.pay-card-title{font-size:14px;font-weight:800;color:var(--ink);}
+.pay-card-sub{font-size:11px;color:var(--muted);}
+
 @media(max-width:860px){
   .layout{grid-template-columns:1fr;}
   .cart-sticky{position:static;}
@@ -296,6 +319,7 @@ a{text-decoration:none;}
           <input type="hidden" name="action" value="book">
           <input type="hidden" name="items_json" id="itemsJson">
           <input type="hidden" name="total_price" id="totalPriceInput">
+          <input type="hidden" name="payment_method" id="paymentMethodInput" value="โอนเงิน">
 
           <div class="form-section">
             <h4>ข้อมูลผู้เช่า</h4>
@@ -331,6 +355,26 @@ a{text-decoration:none;}
                 <textarea name="note" placeholder="หมายเหตุ..."></textarea>
               </div>
             </div>
+
+            <!-- วิธีชำระเงิน -->
+            <div class="pay-label">วิธีชำระเงิน</div>
+            <div class="pay-grid">
+              <div class="pay-card active" id="pay-transfer" onclick="selectPay('โอนเงิน')">
+                <div class="pay-card-icon">🏦</div>
+                <div>
+                  <div class="pay-card-title">โอนเงิน</div>
+                  <div class="pay-card-sub">ผ่าน QR Code / PromptPay</div>
+                </div>
+              </div>
+              <div class="pay-card" id="pay-cash" onclick="selectPay('เงินสด')">
+                <div class="pay-card-icon">💵</div>
+                <div>
+                  <div class="pay-card-title">เงินสด</div>
+                  <div class="pay-card-sub">จ่ายกับเจ้าหน้าที่</div>
+                </div>
+              </div>
+            </div>
+
             <button type="submit" class="submit-btn" id="submitBtn" disabled>เลือกอุปกรณ์ก่อนจอง</button>
           </div>
         </form>
@@ -431,6 +475,12 @@ function prepareSubmit() {
   document.getElementById('itemsJson').value = JSON.stringify(items);
   document.getElementById('totalPriceInput').value = total;
   return true;
+}
+
+function selectPay(method) {
+  document.getElementById('paymentMethodInput').value = method;
+  document.getElementById('pay-transfer').classList.toggle('active', method === 'โอนเงิน');
+  document.getElementById('pay-cash').classList.toggle('active', method === 'เงินสด');
 }
 
 // Set min date to today

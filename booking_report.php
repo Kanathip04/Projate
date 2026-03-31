@@ -128,6 +128,28 @@ $tentGuestToday = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM tent_
 $tentGuestMonth = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM tent_bookings WHERE DATE(created_at) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "' AND archived=0")->fetch_assoc()['n'];
 $tentGuestYear  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM tent_bookings WHERE DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND archived=0")->fetch_assoc()['n'];
 
+// ── Check-in counts (นับจากวันเช็คอินจริง) ──
+// เรือ: boat_date | ห้อง: checkin_date | เต็นท์: checkin_date
+$boatCheckinToday  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM boat_bookings WHERE DATE(boat_date)='$today' AND booking_status='approved' AND archived=0")->fetch_assoc()['n'];
+$boatCheckinMonth  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM boat_bookings WHERE DATE(boat_date) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "' AND booking_status='approved' AND archived=0")->fetch_assoc()['n'];
+$boatCheckinYear   = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM boat_bookings WHERE DATE(boat_date) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND booking_status='approved' AND archived=0")->fetch_assoc()['n'];
+$boatCheckinPeriod = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM boat_bookings WHERE " . dateWhere('boat_date',$dateFrom,$dateTo) . " AND booking_status='approved' AND archived=0")->fetch_assoc()['n'];
+
+$roomCheckinToday  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM room_bookings WHERE DATE(checkin_date)='$today' AND booking_status='approved' AND archived=0")->fetch_assoc()['n'];
+$roomCheckinMonth  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM room_bookings WHERE DATE(checkin_date) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "' AND booking_status='approved' AND archived=0")->fetch_assoc()['n'];
+$roomCheckinYear   = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM room_bookings WHERE DATE(checkin_date) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND booking_status='approved' AND archived=0")->fetch_assoc()['n'];
+$roomCheckinPeriod = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM room_bookings WHERE " . dateWhere('checkin_date',$dateFrom,$dateTo) . " AND booking_status='approved' AND archived=0")->fetch_assoc()['n'];
+
+$tentCheckinToday  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM tent_bookings WHERE DATE(checkin_date)='$today' AND booking_status='approved' AND archived=0")->fetch_assoc()['n'];
+$tentCheckinMonth  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM tent_bookings WHERE DATE(checkin_date) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "' AND booking_status='approved' AND archived=0")->fetch_assoc()['n'];
+$tentCheckinYear   = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM tent_bookings WHERE DATE(checkin_date) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND booking_status='approved' AND archived=0")->fetch_assoc()['n'];
+$tentCheckinPeriod = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM tent_bookings WHERE " . dateWhere('checkin_date',$dateFrom,$dateTo) . " AND booking_status='approved' AND archived=0")->fetch_assoc()['n'];
+
+$totalCheckinToday  = $boatCheckinToday  + $roomCheckinToday  + $tentCheckinToday;
+$totalCheckinMonth  = $boatCheckinMonth  + $roomCheckinMonth  + $tentCheckinMonth;
+$totalCheckinYear   = $boatCheckinYear   + $roomCheckinYear   + $tentCheckinYear;
+$totalCheckinPeriod = $boatCheckinPeriod + $roomCheckinPeriod + $tentCheckinPeriod;
+
 // ── Chart data: bookings per day/month ──
 if ($reportType === 'daily') {
     $chartLabels = ["'" . date('d/m', strtotime($dateFrom)) . "'"];
@@ -662,6 +684,12 @@ $qnavLinks = [
     <div class="kpi-val"><?= number_format($ctxGuests) ?></div>
     <div class="kpi-sub">คน</div>
   </div>
+  <div class="kpi-card" style="border-left-color:#0d9488;">
+    <div class="kpi-icon">🚪</div>
+    <div class="kpi-lbl">เช็คอินจริง (<?= $labelRange ?>)</div>
+    <div class="kpi-val" style="color:#0d9488;"><?= number_format($totalCheckinPeriod) ?></div>
+    <div class="kpi-sub">คน (อนุมัติแล้วเท่านั้น)</div>
+  </div>
   <?php if ($serviceType === 'all'): ?>
   <div class="kpi-card purple">
     <div class="kpi-icon">🏆</div>
@@ -721,6 +749,59 @@ $qnavLinks = [
           <td class="num"><?= number_format($boatGuestMonth+$roomGuestMonth+$tentGuestMonth) ?> คน</td>
           <td class="num"><?= number_format($boatGuestYear+$roomGuestYear+$tentGuestYear) ?> คน</td>
           <td class="num"><?= number_format($boatGuests+$roomGuests+$tentGuests) ?> คน</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ สถิติเช็คอิน ═══ -->
+<div class="sec-hd">สถิติการเช็คอิน (จำนวนคนที่เข้าใช้บริการจริง)</div>
+<div class="stat-card" style="margin-bottom:12px;">
+  <div class="stat-card-hd">
+    <span style="font-size:1.1rem;">🚪</span>
+    <span class="stat-card-title">จำนวนผู้เช็คอิน แยกตามบริการ</span>
+    <span style="font-size:.72rem;color:var(--muted);margin-left:auto;">นับจากวันเช็คอินจริง (boat_date / checkin_date) เฉพาะที่อนุมัติแล้ว</span>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="stat-table">
+      <thead>
+        <tr>
+          <th>บริการ</th>
+          <th class="num"><span class="stat-period-badge today">วันนี้</span></th>
+          <th class="num"><span class="stat-period-badge month">เดือนนี้</span></th>
+          <th class="num"><span class="stat-period-badge year">ปีนี้</span></th>
+          <th class="num">ช่วงที่เลือก (<?= $labelRange ?>)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="pay-badge svc-boat">🚣 เรือพาย</span></td>
+          <td class="num"><?= number_format($boatCheckinToday) ?> คน</td>
+          <td class="num"><?= number_format($boatCheckinMonth) ?> คน</td>
+          <td class="num"><?= number_format($boatCheckinYear) ?> คน</td>
+          <td class="num"><?= number_format($boatCheckinPeriod) ?> คน</td>
+        </tr>
+        <tr>
+          <td><span class="pay-badge svc-room">🏨 ห้องพัก</span></td>
+          <td class="num"><?= number_format($roomCheckinToday) ?> คน</td>
+          <td class="num"><?= number_format($roomCheckinMonth) ?> คน</td>
+          <td class="num"><?= number_format($roomCheckinYear) ?> คน</td>
+          <td class="num"><?= number_format($roomCheckinPeriod) ?> คน</td>
+        </tr>
+        <tr>
+          <td><span class="pay-badge svc-tent">⛺ เต็นท์</span></td>
+          <td class="num"><?= number_format($tentCheckinToday) ?> คน</td>
+          <td class="num"><?= number_format($tentCheckinMonth) ?> คน</td>
+          <td class="num"><?= number_format($tentCheckinYear) ?> คน</td>
+          <td class="num"><?= number_format($tentCheckinPeriod) ?> คน</td>
+        </tr>
+        <tr style="background:#f0fdfa;font-weight:800;">
+          <td><strong>รวมทั้งหมด</strong></td>
+          <td class="num" style="color:#0d9488;"><?= number_format($totalCheckinToday) ?> คน</td>
+          <td class="num" style="color:#0d9488;"><?= number_format($totalCheckinMonth) ?> คน</td>
+          <td class="num" style="color:#0d9488;"><?= number_format($totalCheckinYear) ?> คน</td>
+          <td class="num" style="color:#0d9488;"><?= number_format($totalCheckinPeriod) ?> คน</td>
         </tr>
       </tbody>
     </table>

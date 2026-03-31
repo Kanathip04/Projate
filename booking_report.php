@@ -1166,7 +1166,7 @@ $qnavLinks = [
       </div>
       <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid #d1fae5;">
         <div style="font-size:1.5rem;font-weight:700;color:#db2777;"><?= number_format($widgetWalkin) ?></div>
-        <div style="font-size:.8rem;color:#6b7280;">🧍 walk-in</div>
+        <div style="font-size:.8rem;color:#6b7280;">🧍 check-in</div>
       </div>
     </div>
   </div>

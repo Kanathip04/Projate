@@ -140,7 +140,7 @@ table.at tr:last-child td{border-bottom:none;}
     <div style="overflow-x:auto;">
     <table class="at">
       <thead>
-        <tr><th>#</th><th>วันที่</th><th>จำนวนคิว</th><th>รายได้รวม</th><th>เวลาจัดเก็บ</th><th>รายละเอียด</th></tr>
+        <tr><th>#</th><th>วันที่</th><th>จำนวนคิว</th><th>รายได้รวม</th><th>เวลาจัดเก็บ</th></tr>
       </thead>
       <tbody>
       <?php $no=1; while ($ar = $allArchives->fetch_assoc()):
@@ -155,7 +155,6 @@ table.at tr:last-child td{border-bottom:none;}
           <td><span style="font-weight:700;color:var(--blue);"><?= (int)$ar['total_queues'] ?></span> คิว</td>
           <td style="font-weight:700;color:var(--green);">฿<?= number_format((float)$ar['total_revenue']) ?></td>
           <td style="font-size:.76rem;color:var(--muted);"><?= date('d/m/Y H:i', strtotime($ar['archived_at'])) ?></td>
-          <td><a href="?date=<?= urlencode($ar['archive_date']) ?>" style="color:var(--blue);font-weight:700;font-size:.8rem;text-decoration:none;">ดูรายละเอียด →</a></td>
         </tr>
       <?php endwhile; ?>
       </tbody>

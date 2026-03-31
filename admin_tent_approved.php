@@ -103,7 +103,19 @@ include 'admin_layout_top.php';
 .tk-empty-text{font-size:.83rem;color:var(--muted);line-height:1.7;}
 .item-pills{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;}
 .item-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:.65rem;font-weight:700;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.28);color:#15803d;}
+.tk-btn-slip{background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;}
+.tk-btn-slip:hover{background:#dbeafe;}
+.slip-lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;padding:20px;}
+.slip-lb.open{display:flex;}
+.slip-lb img{max-width:90vw;max-height:88vh;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.5);}
+.slip-lb-close{position:fixed;top:18px;right:22px;font-size:2rem;color:#fff;cursor:pointer;background:none;border:none;line-height:1;}
 </style>
+
+<!-- Slip Lightbox -->
+<div class="slip-lb" id="slipLb">
+  <button class="slip-lb-close" onclick="closeSLB()">✕</button>
+  <img id="slipLbImg" src="" alt="สลิป">
+</div>
 
 <div class="tk-wrap">
     <div class="tk-banner">
@@ -231,6 +243,9 @@ include 'admin_layout_top.php';
                                     <div class="tk-actions">
                                         <a href="equipment_ticket.php?id=<?= (int)$row['id'] ?>" class="tk-btn tk-btn-success" style="padding:6px 11px;font-size:.74rem;" target="_blank">🎫 สลิป</a>
                                         <a href="equipment_bill.php?id=<?= (int)$row['id'] ?>" class="tk-btn tk-btn-ghost" style="padding:6px 11px;font-size:.74rem;" target="_blank">🧾 บิล</a>
+                                        <?php if (!empty($row['payment_slip'])): ?>
+                                        <button onclick="openSLB('<?= h($row['payment_slip']) ?>')" class="tk-btn tk-btn-slip" style="padding:6px 11px;font-size:.74rem;">🖼 ดูสลิป</button>
+                                        <?php endif; ?>
                                         <form method="POST" class="tk-inline" onsubmit="return confirm('ยืนยันยกเลิกรายการนี้?')">
                                             <input type="hidden" name="action" value="cancel">
                                             <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
@@ -261,4 +276,9 @@ include 'admin_layout_top.php';
     </div>
 </div>
 
+<script>
+function openSLB(src){document.getElementById('slipLbImg').src=src;document.getElementById('slipLb').classList.add('open');}
+function closeSLB(){document.getElementById('slipLb').classList.remove('open');document.getElementById('slipLbImg').src='';}
+document.getElementById('slipLb').addEventListener('click',function(e){if(e.target===this)closeSLB();});
+</script>
 <?php $stmt->close(); $conn->close(); include 'admin_layout_bottom.php'; ?>

@@ -336,10 +336,22 @@ include 'admin_layout_top.php';
 }
 .tk-btn-ticket:hover{background:#dcfce7;transform:translateY(-1px);}
 
+.tk-btn-slip{background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;}
+.tk-btn-slip:hover{background:#dbeafe;}
+.slip-lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;padding:20px;}
+.slip-lb.open{display:flex;}
+.slip-lb img{max-width:90vw;max-height:88vh;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.5);}
+.slip-lb-close{position:fixed;top:18px;right:22px;font-size:2rem;color:#fff;cursor:pointer;background:none;border:none;line-height:1;}
 @media(max-width:900px){.tk-stats{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:680px){.tk-stats{grid-template-columns:1fr 1fr;}}
 @media(max-width:600px){.tk-stats{grid-template-columns:1fr 1fr;}.tk-table{display:block;overflow-x:auto;}.tk-banner{padding:22px 20px;}.tk-banner h1{font-size:1.25rem;}}
 </style>
+
+<!-- Slip Lightbox -->
+<div class="slip-lb" id="slipLb">
+  <button class="slip-lb-close" onclick="closeSLB()">✕</button>
+  <img id="slipLbImg" src="" alt="สลิป">
+</div>
 
 <div class="tk-wrap">
 
@@ -412,7 +424,7 @@ include 'admin_layout_top.php';
           <tr>
             <th>#</th><th>ผู้จอง</th><th>หมายเลขจอง</th>
             <th>เรือ / วันที่</th><th>จำนวน</th><th>ยอด</th>
-            <th>บัตรคิว</th><th>สถานะ</th><th>วันที่อนุมัติ</th>
+            <th>บัตรคิว</th><th>สถานะ</th><th>วันที่อนุมัติ</th><th>สลิป</th>
           </tr>
         </thead>
         <tbody>
@@ -460,6 +472,13 @@ include 'admin_layout_top.php';
             </td>
             <td><span class="status-pill s-approved">อนุมัติแล้ว</span></td>
             <td style="font-size:.76rem;color:var(--muted);"><?= h(substr($rowA['approved_at'] ?? $rowA['created_at'], 0, 16)) ?></td>
+            <td>
+              <?php if (!empty($rowA['payment_slip'])): ?>
+                <button onclick="openSLB('<?= h($rowA['payment_slip']) ?>')" class="tk-btn tk-btn-slip" style="padding:5px 11px;font-size:.74rem;">🖼 ดูสลิป</button>
+              <?php else: ?>
+                <span style="font-size:.73rem;color:var(--muted);">—</span>
+              <?php endif; ?>
+            </td>
           </tr>
         <?php endwhile; endif; ?>
         </tbody>
@@ -469,4 +488,9 @@ include 'admin_layout_top.php';
 
 </div>
 
+<script>
+function openSLB(src){document.getElementById('slipLbImg').src=src;document.getElementById('slipLb').classList.add('open');}
+function closeSLB(){document.getElementById('slipLb').classList.remove('open');document.getElementById('slipLbImg').src='';}
+document.getElementById('slipLb').addEventListener('click',function(e){if(e.target===this)closeSLB();});
+</script>
 <?php $stmtA->close(); include 'admin_layout_bottom.php'; ?>

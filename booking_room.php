@@ -1,4 +1,7 @@
 <?php
+error_reporting(0);
+ini_set('display_errors', 0);
+ob_start();
 session_start();
 require_once 'auth_guard.php';
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
@@ -163,6 +166,7 @@ $ci_ts = strtotime($checkin_q);
 $co_ts = strtotime($checkout_q);
 $nights_q = max(1, (int)(($co_ts - $ci_ts) / 86400));
 function thDate2($s){ $m=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']; $ts=strtotime($s); return date('j',$ts).' '.$m[(int)date('m',$ts)].' '.(date('Y',$ts)+543); }
+ob_end_clean();
 ?>
 <!DOCTYPE html>
 <html lang=”th”>

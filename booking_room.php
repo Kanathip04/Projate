@@ -29,7 +29,7 @@ function getColumns($conn, $t) {
 
 if (!tableExists($conn, 'rooms')) die("ไม่พบตาราง rooms");
 
-$rc              = getColumns($conn, 'rooms');
+$rc             = getColumns($conn, 'rooms');
 $hasRoomType    = in_array('room_type',   $rc, true);
 $hasPrice       = in_array('price',       $rc, true);
 $hasBedType     = in_array('bed_type',    $rc, true);
@@ -40,7 +40,6 @@ $hasStatus      = in_array('status',      $rc, true);
 $hasTotalRooms  = in_array('total_rooms', $rc, true);
 $hasAmenities   = in_array('amenities',   $rc, true);
 
-/* approved bookings map */
 $approvedMap = [];
 if (tableExists($conn, 'room_bookings')) {
     $bc = getColumns($conn, 'room_bookings');
@@ -54,7 +53,6 @@ if (tableExists($conn, 'room_bookings')) {
     }
 }
 
-/* build query */
 $fields = ['id', 'room_name'];
 if ($hasRoomType)    $fields[] = 'room_type';
 if ($hasPrice)       $fields[] = 'price';
@@ -74,7 +72,6 @@ if (!$stmt) die("Prepare failed: " . $conn->error);
 $stmt->execute();
 $result = $stmt->get_result();
 
-/* date params */
 $checkin_q  = trim($_GET['checkin']  ?? '');
 $checkout_q = trim($_GET['checkout'] ?? '');
 $guests_q   = max(1, (int)($_GET['guests'] ?? 1));
@@ -89,16 +86,15 @@ function thDate($s) {
     return date('j', $ts) . ' ' . $m[(int)date('m', $ts)] . ' ' . (date('Y', $ts) + 543);
 }
 
-/* stats */
-$totalCount = $result ? $result->num_rows : 0;
-$availCount = 0;
 $rooms = [];
-if ($result && $totalCount > 0) {
-    while ($r = $result->fetch_assoc()) {
-        $rooms[] = $r;
-        $tot = $hasTotalRooms ? max(1, (int)$r['total_rooms']) : 5;
-        if (max(0, $tot - ($approvedMap[(int)$r['id']] ?? 0)) > 0) $availCount++;
-    }
+if ($result) {
+    while ($r = $result->fetch_assoc()) $rooms[] = $r;
+}
+$totalCount = count($rooms);
+$availCount = 0;
+foreach ($rooms as $r) {
+    $tot = $hasTotalRooms ? max(1, (int)$r['total_rooms']) : 5;
+    if (max(0, $tot - ($approvedMap[(int)$r['id']] ?? 0)) > 0) $availCount++;
 }
 
 ob_end_clean();
@@ -110,301 +106,157 @@ ob_end_clean();
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>จองห้องพัก | สถาบันวิจัยวลัยรุกขเวช</title>
 <style>
-/* ── RESET ── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { font-family: Arial, Helvetica, sans-serif; background: #f5f1eb; color: #1a1a2e; }
-a { text-decoration: none; color: inherit; }
-img { display: block; max-width: 100%; }
-input, button, select, textarea { font-family: inherit; font-size: 14px; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{font-family:Arial,Helvetica,sans-serif;background:#f0ece4;color:#1a1a2e;}
+a{text-decoration:none;color:inherit;}
+img{display:block;max-width:100%;}
+input,button,select{font-family:inherit;}
 
-/* ── TOPBAR ── */
-.bk-topbar { background: #1a1a2e; padding: 22px 0 28px; }
-.bk-wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
-.bk-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-.bk-nav a {
-  padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 700;
-  color: rgba(255,255,255,.75); background: rgba(255,255,255,.08);
-  border: 1px solid rgba(255,255,255,.15);
-}
-.bk-nav a:hover { background: rgba(201,169,110,.2); color: #c9a96e; }
-.bk-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
-.bk-badge {
-  display: inline-block; padding: 4px 12px; border-radius: 99px;
-  background: rgba(201,169,110,.15); border: 1px solid rgba(201,169,110,.35);
-  color: #c9a96e; font-size: 12px; font-weight: 700; margin-bottom: 10px;
-}
-.bk-title { font-size: 28px; font-weight: 900; color: #fff; line-height: 1.2; margin-bottom: 6px; }
-.bk-title em { font-style: italic; color: #c9a96e; }
-.bk-sub { font-size: 14px; color: rgba(255,255,255,.55); line-height: 1.65; }
-.bk-night-pill {
-  background: rgba(201,169,110,.12); border: 1px solid rgba(201,169,110,.3);
-  border-radius: 12px; padding: 14px 20px; text-align: center; flex-shrink: 0;
-}
-.bk-night-num { font-size: 26px; font-weight: 900; color: #c9a96e; line-height: 1; }
-.bk-night-lbl { font-size: 11px; color: rgba(255,255,255,.5); font-weight: 600; margin-top: 2px; }
+/* ── HEADER ── */
+.hd{background:#1a1a2e;padding:0;}
+.hd-top{display:flex;align-items:center;justify-content:space-between;padding:14px 32px;border-bottom:1px solid rgba(255,255,255,.06);}
+.hd-logo{font-size:15px;font-weight:800;color:#fff;letter-spacing:.03em;}
+.hd-logo span{color:#c9a96e;}
+.hd-nav{display:flex;gap:6px;}
+.hd-nav a{padding:6px 14px;border-radius:99px;font-size:12px;font-weight:700;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.12);transition:.15s;}
+.hd-nav a:hover{background:rgba(201,169,110,.15);color:#c9a96e;border-color:rgba(201,169,110,.3);}
 
-/* ── SEARCH CARD ── */
-.bk-sc {
-  background: #fff; border-radius: 20px;
-  box-shadow: 0 4px 24px rgba(26,26,46,.08); overflow: hidden; margin-bottom: 24px;
-}
-.bk-sc-head { background: #1a1a2e; padding: 14px 22px; }
-.bk-sc-head-title {
-  font-size: 11px; font-weight: 800; letter-spacing: .12em;
-  text-transform: uppercase; color: rgba(255,255,255,.5); margin: 0;
-}
-.bk-sc-body { padding: 20px 22px; }
-.bk-form-row { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
-.bk-form-col { flex: 1; min-width: 160px; }
-.bk-form-col-sm { width: 130px; flex-shrink: 0; }
-.bk-label {
-  display: block; font-size: 11px; font-weight: 800; letter-spacing: .08em;
-  text-transform: uppercase; color: #7a7a8c; margin-bottom: 6px;
-}
-.bk-input {
-  width: 100%; padding: 10px 13px; font-size: 14px; color: #1a1a2e;
-  background: #fafaf8; border: 1.5px solid #e8e4de; border-radius: 10px; outline: none;
-}
-.bk-input:focus { border-color: #c9a96e; background: #fff; box-shadow: 0 0 0 3px rgba(201,169,110,.12); }
-.bk-search-btn {
-  width: 100%; padding: 11px 18px; border: none; border-radius: 10px;
-  background: #1a1a2e; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
-  white-space: nowrap;
-}
-.bk-search-btn:hover { background: #2a2a4a; }
+/* ── HERO ── */
+.hero{padding:36px 32px 32px;}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#c9a96e;margin-bottom:12px;}
+.hero-eyebrow::before{content:'';width:20px;height:1px;background:#c9a96e;}
+.hero-title{font-size:32px;font-weight:900;color:#fff;line-height:1.15;margin-bottom:8px;}
+.hero-title em{font-style:italic;color:#c9a96e;}
+.hero-sub{font-size:13px;color:rgba(255,255,255,.45);line-height:1.7;max-width:520px;margin-bottom:28px;}
 
-/* ── STATS ── */
-.bk-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 26px; }
-.bk-stat {
-  background: #fff; border-radius: 14px; padding: 16px 20px;
-  box-shadow: 0 2px 12px rgba(26,26,46,.06);
-  display: flex; align-items: center; gap: 14px; border-left: 3px solid #c9a96e;
-}
-.bk-stat-icon { font-size: 26px; flex-shrink: 0; }
-.bk-stat-val { font-size: 24px; font-weight: 900; color: #1a1a2e; line-height: 1; }
-.bk-stat-lbl {
-  font-size: 11px; color: #7a7a8c; font-weight: 600;
-  text-transform: uppercase; letter-spacing: .08em; margin-top: 2px;
-}
+/* ── SEARCH BAR ── */
+.searchbar{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:16px 20px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
+.sb-group{display:flex;flex-direction:column;gap:5px;flex:1;min-width:140px;}
+.sb-group label{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);}
+.sb-group input{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:9px 12px;font-size:13px;color:#fff;outline:none;width:100%;}
+.sb-group input:focus{border-color:#c9a96e;background:rgba(201,169,110,.08);}
+.sb-btn{padding:10px 22px;border:none;border-radius:10px;background:#c9a96e;color:#1a1a2e;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.sb-btn:hover{background:#d4b87a;}
 
-/* ── LIST HEADER ── */
-.bk-list-head {
-  background: #fff; border-radius: 20px 20px 0 0;
-  padding: 16px 22px; border-bottom: 1px solid #e8e4de;
-  display: flex; align-items: center; justify-content: space-between;
-  box-shadow: 0 2px 12px rgba(26,26,46,.06);
-}
-.bk-list-title {
-  font-size: 15px; font-weight: 800; color: #1a1a2e;
-  display: flex; align-items: center; gap: 8px;
-}
-.bk-list-title::before {
-  content: ''; width: 3px; height: 15px; background: #c9a96e;
-  border-radius: 2px; display: inline-block; flex-shrink: 0;
-}
-.bk-cnt-badge {
-  background: rgba(201,169,110,.12); color: #a07c3a;
-  font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
-}
-.bk-date-lbl { font-size: 13px; color: #7a7a8c; font-weight: 600; }
+/* ── MAIN ── */
+.main{max-width:1240px;margin:0 auto;padding:32px 24px 60px;}
 
-/* ── ROOM CARDS GRID ── */
-.bk-cards {
-  background: #fff; border-radius: 0 0 20px 20px; padding: 16px;
-  box-shadow: 0 4px 24px rgba(26,26,46,.08);
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;
-}
+/* ── SECTION HEADER ── */
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.sec-title{font-size:17px;font-weight:900;color:#1a1a2e;display:flex;align-items:center;gap:10px;}
+.sec-title::before{content:'';width:4px;height:18px;background:#c9a96e;border-radius:2px;flex-shrink:0;}
+.sec-meta{display:flex;align-items:center;gap:10px;}
+.sec-pill{padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700;}
+.pill-avail{background:rgba(22,163,74,.1);color:#16a34a;border:1px solid rgba(22,163,74,.2);}
+.pill-date{background:#fff;color:#7a7a8c;border:1px solid #e8e4de;}
 
-/* ── ROOM CARD ── */
-.bk-card {
-  border-radius: 14px; border: 1.5px solid #e8e4de; overflow: hidden;
-  background: #fff; display: flex; flex-direction: column;
-  transition: box-shadow .2s, transform .2s;
-}
-.bk-card:hover { box-shadow: 0 8px 24px rgba(26,26,46,.1); transform: translateY(-2px); }
-.bk-card.is-full { opacity: .72; }
+/* ── GRID ── */
+.room-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;}
 
-/* image */
-.bk-img-wrap { position: relative; flex-shrink: 0; }
-.bk-img { width: 100%; height: 160px; object-fit: cover; display: block; }
-.bk-img-ph {
-  width: 100%; height: 160px;
-  background: linear-gradient(135deg, #f1ede8, #e8e4de);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 40px; color: #ccc;
-}
-.bk-badge-avail {
-  position: absolute; top: 10px; left: 10px;
-  padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 800;
-  border: 1px solid rgba(255,255,255,.2); color: #fff;
-}
-.bk-badge-avail.ok  { background: rgba(22,163,74,.85); }
-.bk-badge-avail.full { background: rgba(220,38,38,.85); }
-.bk-badge-price {
-  position: absolute; bottom: 10px; right: 10px;
-  background: rgba(26,26,46,.85); color: #c9a96e;
-  padding: 5px 11px; border-radius: 99px; font-size: 13px; font-weight: 800;
-  border: 1px solid rgba(201,169,110,.35);
-}
+/* ── CARD ── */
+.rc{background:#fff;border-radius:18px;border:1.5px solid #e8e4de;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .2s,transform .2s;}
+.rc:hover{box-shadow:0 12px 32px rgba(26,26,46,.12);transform:translateY(-3px);}
+.rc.full{opacity:.65;}
 
-/* card body */
-.bk-card-body { padding: 14px 16px; flex: 1; }
-.bk-card-type { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #a07c3a; margin-bottom: 3px; }
-.bk-card-name { font-weight: 800; color: #1a1a2e; font-size: 15px; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bk-card-desc { font-size: 13px; color: #7a7a8c; line-height: 1.6; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.bk-card-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-.bk-chip {
-  display: inline-flex; align-items: center; gap: 3px;
-  padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 600;
-  background: #f1ede8; color: #7a7a8c;
-}
-.bk-chip-gold { background: rgba(201,169,110,.15); color: #a07c3a; }
-.bk-am-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
-.bk-am {
-  display: inline-flex; align-items: center; gap: 3px;
-  padding: 2px 8px; border-radius: 7px; font-size: 11px; font-weight: 600;
-  background: rgba(201,169,110,.1); color: #a07c3a; border: 1px solid rgba(201,169,110,.2);
-}
-.bk-stock-row { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: #7a7a8c; margin-bottom: 4px; }
-.bk-track { height: 4px; background: #e8e4de; border-radius: 99px; overflow: hidden; }
-.bk-fill { height: 100%; border-radius: 99px; background: #16a34a; }
-.bk-fill.warn { background: #f59e0b; }
-.bk-fill.danger { background: #dc2626; }
+/* image zone */
+.rc-img-wrap{position:relative;flex-shrink:0;}
+.rc-img{width:100%;height:190px;object-fit:cover;display:block;}
+.rc-img-ph{width:100%;height:190px;background:linear-gradient(135deg,#f1ede8,#e3ddd5);display:flex;align-items:center;justify-content:center;font-size:44px;color:#d0c8be;}
+.rc-avail{position:absolute;top:12px;left:12px;display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:99px;font-size:11px;font-weight:800;color:#fff;border:1px solid rgba(255,255,255,.25);}
+.rc-avail.ok{background:rgba(22,163,74,.88);}
+.rc-avail.full{background:rgba(220,38,38,.88);}
+.rc-dot{width:6px;height:6px;border-radius:50%;background:#fff;display:inline-block;animation:pulse 1.4s ease infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.rc-price-tag{position:absolute;bottom:12px;right:12px;background:rgba(26,26,46,.88);color:#c9a96e;padding:5px 12px;border-radius:99px;font-size:13px;font-weight:800;border:1px solid rgba(201,169,110,.3);}
 
-/* card footer */
-.bk-card-foot {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 11px 16px; border-top: 1px solid #e8e4de; background: #fdfcfa; flex-shrink: 0;
-}
-.bk-price-big { font-size: 18px; font-weight: 900; color: #a07c3a; }
-.bk-price-sub { font-size: 10px; color: #7a7a8c; font-weight: 600; }
-.bk-price-est { font-size: 11px; color: #16a34a; font-weight: 700; margin-top: 1px; }
-.bk-book-btn {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 9px 16px; border-radius: 9px; font-size: 13px; font-weight: 700;
-  background: #1a1a2e; color: #fff; border: none; cursor: pointer; white-space: nowrap;
-}
-.bk-book-btn:hover { background: #2a2a4a; color: #fff; }
-.bk-book-btn.disabled { background: #b8b0a8; cursor: not-allowed; pointer-events: none; }
+/* body */
+.rc-body{padding:16px 18px;flex:1;}
+.rc-type{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#a07c3a;margin-bottom:4px;}
+.rc-name{font-size:16px;font-weight:800;color:#1a1a2e;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rc-desc{font-size:12px;color:#7a7a8c;line-height:1.65;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.rc-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;}
+.rc-chip{display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:#f5f1eb;color:#7a7a8c;}
+.rc-chip.gold{background:rgba(201,169,110,.15);color:#a07c3a;}
+.rc-amenities{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px;}
+.rc-am{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:7px;font-size:11px;font-weight:600;background:rgba(201,169,110,.08);color:#a07c3a;border:1px solid rgba(201,169,110,.18);}
+
+/* progress */
+.rc-prog-row{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:#9a9aaa;margin-bottom:5px;}
+.rc-bar{height:4px;background:#ede9e2;border-radius:99px;overflow:hidden;}
+.rc-bar-fill{height:100%;border-radius:99px;background:#16a34a;}
+.rc-bar-fill.warn{background:#f59e0b;}
+.rc-bar-fill.danger{background:#dc2626;}
+
+/* footer */
+.rc-foot{padding:12px 18px;border-top:1.5px solid #f0ece4;background:#fdfcfa;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;}
+.rc-price{font-size:20px;font-weight:900;color:#a07c3a;}
+.rc-price-lbl{font-size:10px;color:#9a9aaa;font-weight:600;}
+.rc-price-est{font-size:11px;color:#16a34a;font-weight:700;margin-top:1px;}
+.rc-btn{display:inline-flex;align-items:center;gap:5px;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:800;background:#1a1a2e;color:#fff;border:none;cursor:pointer;white-space:nowrap;}
+.rc-btn:hover{background:#2d2d50;color:#fff;}
+.rc-btn.off{background:#c5bfb5;cursor:not-allowed;pointer-events:none;}
 
 /* empty */
-.bk-empty { grid-column: 1 / -1; padding: 56px; text-align: center; color: #7a7a8c; }
-.bk-empty-ico { font-size: 40px; opacity: .3; margin-bottom: 12px; }
-
-/* blinking dot */
-.bk-dot {
-  width: 6px; height: 6px; border-radius: 50%; background: #fff;
-  display: inline-block; animation: bkblink 1.4s ease infinite; vertical-align: middle; margin-right: 2px;
-}
-@keyframes bkblink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.rc-empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:#9a9aaa;}
+.rc-empty-ico{font-size:44px;opacity:.25;margin-bottom:14px;}
 
 /* responsive */
-@media (max-width: 900px) {
-  .bk-stats { grid-template-columns: 1fr 1fr; }
-  .bk-hero { flex-direction: column; align-items: flex-start; }
-}
-@media (max-width: 600px) {
-  .bk-stats { grid-template-columns: 1fr; }
-  .bk-form-row { flex-direction: column; }
-  .bk-form-col, .bk-form-col-sm { width: 100%; }
-}
+@media(max-width:860px){.hd-top{padding:12px 18px;}.hero{padding:28px 18px 24px;}.main{padding:24px 16px 48px;}.searchbar{flex-direction:column;}.sb-group{min-width:100%;}.sb-btn{width:100%;text-align:center;}}
+@media(max-width:600px){.hero-title{font-size:24px;}.hd-nav{display:none;}.room-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
 
-<!-- ══ TOPBAR ══ -->
-<div class="bk-topbar">
-  <div class="bk-wrap">
-    <nav class="bk-nav">
+<!-- ══ HEADER ══ -->
+<div class="hd">
+  <div class="hd-top">
+    <div class="hd-logo">วลัย<span>รุกขเวช</span> · ห้องพัก</div>
+    <nav class="hd-nav">
       <a href="index.php">← หน้าหลัก</a>
       <a href="booking_status.php">📋 สถานะการจอง</a>
-      <a href="booking_tent.php">⛺ จองเต็นท์</a>
-      <a href="booking_boat.php">🚣 จองพายเรือ</a>
+      <a href="booking_tent.php">⛺ เต็นท์</a>
+      <a href="booking_boat.php">🚣 พายเรือ</a>
     </nav>
-    <div class="bk-hero">
-      <div>
-        <div class="bk-badge">🏨 ที่พักภายในสถาบัน</div>
-        <div class="bk-title">จองห้องพัก <em>วลัยรุกขเวช</em></div>
-        <div class="bk-sub">ห้องพักมาตรฐาน บรรยากาศสงบร่มรื่น พร้อมสิ่งอำนวยความสะดวกครบครัน</div>
+  </div>
+
+  <!-- HERO + SEARCH -->
+  <div class="hero">
+    <div class="hero-eyebrow">ที่พักภายในสถาบัน</div>
+    <div class="hero-title">จองห้องพัก <em>วลัยรุกขเวช</em></div>
+    <div class="hero-sub">ห้องพักมาตรฐาน บรรยากาศสงบร่มรื่น พร้อมสิ่งอำนวยความสะดวกครบครัน</div>
+
+    <form method="GET" action="booking_room.php">
+      <div class="searchbar">
+        <div class="sb-group">
+          <label>เช็คอิน</label>
+          <input type="date" name="checkin" value="<?= htmlspecialchars($checkin_q) ?>" required>
+        </div>
+        <div class="sb-group">
+          <label>เช็คเอาท์</label>
+          <input type="date" name="checkout" value="<?= htmlspecialchars($checkout_q) ?>" required>
+        </div>
+        <div class="sb-group" style="max-width:110px;">
+          <label>ผู้เข้าพัก</label>
+          <input type="number" name="guests" min="1" max="20" value="<?= $guests_q ?>" required>
+        </div>
+        <button type="submit" class="sb-btn">🔍 ค้นหา</button>
       </div>
-      <div class="bk-night-pill">
-        <div class="bk-night-num">🌙 <?= $nights_q ?></div>
-        <div class="bk-night-lbl">คืน</div>
-      </div>
-    </div>
+    </form>
   </div>
 </div>
 
-<!-- ══ MAIN CONTENT ══ -->
-<div class="bk-wrap" style="padding-top:28px; padding-bottom:40px;">
+<!-- ══ MAIN ══ -->
+<div class="main">
 
-  <!-- Search Card -->
-  <div class="bk-sc">
-    <div class="bk-sc-head">
-      <p class="bk-sc-head-title">🔍 เลือกวันที่และจำนวนผู้เข้าพัก</p>
-    </div>
-    <div class="bk-sc-body">
-      <form method="GET" action="booking_room.php">
-        <div class="bk-form-row">
-          <div class="bk-form-col">
-            <label class="bk-label">วันเช็คอิน</label>
-            <input type="date" name="checkin" class="bk-input"
-              value="<?= htmlspecialchars($checkin_q) ?>" required>
-          </div>
-          <div class="bk-form-col">
-            <label class="bk-label">วันเช็คเอาท์</label>
-            <input type="date" name="checkout" class="bk-input"
-              value="<?= htmlspecialchars($checkout_q) ?>" required>
-          </div>
-          <div class="bk-form-col-sm">
-            <label class="bk-label">ผู้เข้าพัก</label>
-            <input type="number" name="guests" class="bk-input"
-              min="1" max="20" value="<?= $guests_q ?>" required>
-          </div>
-          <div class="bk-form-col-sm">
-            <button type="submit" class="bk-search-btn">🔍 ค้นหา</button>
-          </div>
-        </div>
-      </form>
+  <div class="sec-hd">
+    <div class="sec-title">ห้องพักที่ว่าง</div>
+    <div class="sec-meta">
+      <span class="sec-pill pill-avail">✓ ว่าง <?= $availCount ?> ประเภท</span>
+      <span class="sec-pill pill-date"><?= thDate($checkin_q) ?> — <?= thDate($checkout_q) ?> · <?= $nights_q ?> คืน</span>
     </div>
   </div>
 
-  <!-- Stats -->
-  <div class="bk-stats">
-    <div class="bk-stat" style="border-left-color:#1d6fad;">
-      <div class="bk-stat-icon">🏨</div>
-      <div>
-        <div class="bk-stat-val"><?= $totalCount ?></div>
-        <div class="bk-stat-lbl">ประเภทห้องทั้งหมด</div>
-      </div>
-    </div>
-    <div class="bk-stat" style="border-left-color:#16a34a;">
-      <div class="bk-stat-icon">✅</div>
-      <div>
-        <div class="bk-stat-val"><?= $availCount ?></div>
-        <div class="bk-stat-lbl">ประเภทที่ว่าง</div>
-      </div>
-    </div>
-    <div class="bk-stat" style="border-left-color:#c9a96e;">
-      <div class="bk-stat-icon">🌙</div>
-      <div>
-        <div class="bk-stat-val"><?= $nights_q ?></div>
-        <div class="bk-stat-lbl">จำนวนคืน</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- List Header -->
-  <div class="bk-list-head">
-    <div class="bk-list-title">
-      ห้องพักที่ว่าง &middot; <?= $guests_q ?> ผู้เข้าพัก
-      <span class="bk-cnt-badge"><?= $availCount ?> ว่าง</span>
-    </div>
-    <span class="bk-date-lbl"><?= thDate($checkin_q) ?> — <?= thDate($checkout_q) ?></span>
-  </div>
-
-  <!-- Room Cards -->
-  <div class="bk-cards">
+  <div class="room-grid">
   <?php if (!empty($rooms)):
     $amIcons = ['แอร์'=>'❄️','TV'=>'📺','Wi-Fi'=>'📶','ตู้เย็น'=>'🧊','ห้องน้ำในตัว'=>'🚿','เครื่องทำน้ำอุ่น'=>'🔥','ระเบียง'=>'🌅','เตียงคู่'=>'🛏','เตียงเดี่ยว'=>'🛌'];
     foreach ($rooms as $room):
@@ -420,107 +272,97 @@ input, button, select, textarea { font-family: inherit; font-size: 14px; }
       $fillCls        = $fillPct >= 100 ? 'danger' : ($fillPct >= 60 ? 'warn' : '');
       $totalEst       = $roomPrice * $nights_q;
   ?>
-  <div class="bk-card<?= $isFull ? ' is-full' : '' ?>">
+  <div class="rc<?= $isFull ? ' full' : '' ?>">
 
-    <!-- image -->
-    <div class="bk-img-wrap">
+    <div class="rc-img-wrap">
       <?php if ($roomImg): ?>
-        <img src="<?= htmlspecialchars($roomImg) ?>"
-             alt="<?= htmlspecialchars($room['room_name']) ?>"
-             class="bk-img"
-             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-        <div class="bk-img-ph" style="display:none;">🏨</div>
+        <img src="<?= htmlspecialchars($roomImg) ?>" alt="<?= htmlspecialchars($room['room_name']) ?>"
+          class="rc-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="rc-img-ph" style="display:none;">🏨</div>
       <?php else: ?>
-        <div class="bk-img-ph">🏨</div>
+        <div class="rc-img-ph">🏨</div>
       <?php endif; ?>
-
-      <div class="bk-badge-avail <?= $isFull ? 'full' : 'ok' ?>">
-        <?php if (!$isFull): ?><span class="bk-dot"></span><?php endif; ?>
+      <div class="rc-avail <?= $isFull ? 'full' : 'ok' ?>">
+        <?php if (!$isFull): ?><span class="rc-dot"></span><?php endif; ?>
         <?= $isFull ? 'ห้องเต็ม' : 'ว่าง ' . $availableRooms . '/' . $totalRooms ?>
       </div>
-      <div class="bk-badge-price">฿<?= number_format($roomPrice) ?>/คืน</div>
+      <div class="rc-price-tag">฿<?= number_format($roomPrice) ?>/คืน</div>
     </div>
 
-    <!-- body -->
-    <div class="bk-card-body">
+    <div class="rc-body">
       <?php if (!empty($room['room_type'])): ?>
-      <div class="bk-card-type"><?= htmlspecialchars($room['room_type']) ?></div>
+      <div class="rc-type"><?= htmlspecialchars($room['room_type']) ?></div>
       <?php endif; ?>
-      <div class="bk-card-name"><?= htmlspecialchars($room['room_name']) ?></div>
+      <div class="rc-name"><?= htmlspecialchars($room['room_name']) ?></div>
       <?php if ($roomDesc): ?>
-      <div class="bk-card-desc"><?= htmlspecialchars($roomDesc) ?></div>
+      <div class="rc-desc"><?= htmlspecialchars($roomDesc) ?></div>
       <?php endif; ?>
 
-      <div class="bk-card-meta">
-        <span class="bk-chip bk-chip-gold">฿<?= number_format($roomPrice) ?>/คืน</span>
-        <span class="bk-chip">🏠 <?= $totalRooms ?> ห้อง</span>
+      <div class="rc-chips">
+        <span class="rc-chip gold">฿<?= number_format($roomPrice) ?>/คืน</span>
+        <span class="rc-chip">🏠 <?= $totalRooms ?> ห้อง</span>
         <?php if (!empty($room['max_guests']) && (int)$room['max_guests'] > 0): ?>
-        <span class="bk-chip">👥 <?= (int)$room['max_guests'] ?> คน</span>
+        <span class="rc-chip">👥 <?= (int)$room['max_guests'] ?> คน</span>
         <?php endif; ?>
         <?php if (!empty($room['bed_type'])): ?>
-        <span class="bk-chip">🛏 <?= htmlspecialchars($room['bed_type']) ?></span>
+        <span class="rc-chip">🛏 <?= htmlspecialchars($room['bed_type']) ?></span>
         <?php endif; ?>
       </div>
 
       <?php if ($hasAmenities && !empty($room['amenities'])):
         $amItems = array_filter(array_map('trim', explode('|', $room['amenities']))); ?>
-      <div class="bk-am-chips">
+      <div class="rc-amenities">
         <?php foreach ($amItems as $am): ?>
-        <span class="bk-am"><?= $amIcons[$am] ?? '' ?> <?= htmlspecialchars($am) ?></span>
+        <span class="rc-am"><?= $amIcons[$am] ?? '' ?> <?= htmlspecialchars($am) ?></span>
         <?php endforeach; ?>
       </div>
       <?php endif; ?>
 
-      <div class="bk-stock-row">
+      <div class="rc-prog-row">
         <span>จองแล้ว <?= $approvedCount ?>/<?= $totalRooms ?> ห้อง</span>
-        <span><?= $isFull ? 'เต็ม' : 'เหลือ ' . $availableRooms ?></span>
+        <span><?= $isFull ? 'เต็มแล้ว' : 'เหลือ ' . $availableRooms ?></span>
       </div>
-      <div class="bk-track">
-        <div class="bk-fill <?= $fillCls ?>" style="width:<?= min(100, $fillPct) ?>%"></div>
+      <div class="rc-bar">
+        <div class="rc-bar-fill <?= $fillCls ?>" style="width:<?= min(100,$fillPct) ?>%"></div>
       </div>
     </div>
 
-    <!-- footer -->
-    <div class="bk-card-foot">
+    <div class="rc-foot">
       <div>
-        <div class="bk-price-big">฿<?= number_format($roomPrice) ?></div>
-        <div class="bk-price-sub">ต่อห้อง / คืน</div>
+        <div class="rc-price">฿<?= number_format($roomPrice) ?></div>
+        <div class="rc-price-lbl">ต่อห้อง / คืน</div>
         <?php if ($nights_q > 1 && !$isFull): ?>
-        <div class="bk-price-est">~฿<?= number_format($totalEst) ?> (<?= $nights_q ?> คืน)</div>
+        <div class="rc-price-est">รวม <?= $nights_q ?> คืน ~฿<?= number_format($totalEst) ?></div>
         <?php endif; ?>
       </div>
       <?php if ($isFull): ?>
-      <span class="bk-book-btn disabled">ห้องเต็ม</span>
+      <span class="rc-btn off">ห้องเต็ม</span>
       <?php else: ?>
-      <a class="bk-book-btn"
-         href="booking_form.php?room_id=<?= $roomId ?>&checkin=<?= urlencode($checkin_q) ?>&checkout=<?= urlencode($checkout_q) ?>&guests=<?= $guests_q ?>">จองเลย →</a>
+      <a class="rc-btn" href="booking_form.php?room_id=<?= $roomId ?>&checkin=<?= urlencode($checkin_q) ?>&checkout=<?= urlencode($checkout_q) ?>&guests=<?= $guests_q ?>">จองเลย →</a>
       <?php endif; ?>
     </div>
 
   </div>
-  <?php endforeach; ?>
-
-  <?php else: ?>
-  <div class="bk-empty">
-    <div class="bk-empty-ico">🏨</div>
-    <div style="font-size:16px;font-weight:800;margin-bottom:6px;">ไม่พบห้องพักในช่วงเวลานี้</div>
+  <?php endforeach; else: ?>
+  <div class="rc-empty">
+    <div class="rc-empty-ico">🏨</div>
+    <div style="font-size:15px;font-weight:800;margin-bottom:6px;color:#4a4a5a;">ไม่พบห้องพักในช่วงเวลานี้</div>
     <div style="font-size:13px;">กรุณาเลือกวันที่อื่น หรือติดต่อเจ้าหน้าที่</div>
   </div>
   <?php endif; ?>
-  </div><!-- /bk-cards -->
+  </div>
 
-</div><!-- /bk-wrap -->
+</div>
 
 <script>
-(function () {
-  var ci = document.querySelector('input[name=checkin]');
-  var co = document.querySelector('input[name=checkout]');
-  if (ci && co) {
-    ci.addEventListener('change', function () {
-      if (co.value <= ci.value) {
-        var d = new Date(ci.value);
-        d.setDate(d.getDate() + 1);
-        co.value = d.toISOString().slice(0, 10);
+(function(){
+  var ci=document.querySelector('input[name=checkin]');
+  var co=document.querySelector('input[name=checkout]');
+  if(ci&&co){
+    ci.addEventListener('change',function(){
+      if(co.value<=ci.value){
+        var d=new Date(ci.value);d.setDate(d.getDate()+1);
+        co.value=d.toISOString().slice(0,10);
       }
     });
   }

@@ -13,6 +13,12 @@ $conn->query("ALTER TABLE tourists ADD COLUMN IF NOT EXISTS archived TINYINT(1) 
 $filterDate = isset($_GET['date']) ? trim($_GET['date']) : '';
 $search     = isset($_GET['search']) ? trim($_GET['search']) : '';
 
+// ── delete ALL archived ──
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_all'])) {
+    $conn->query("DELETE FROM tourists WHERE archived=1");
+    header("Location: admin_checkin_archive.php"); exit;
+}
+
 // ── restore single record ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_id'])) {
     $rid = (int)$_POST['restore_id'];
@@ -134,6 +140,14 @@ include "admin_layout_top.php";
       <div class="ar-title">📦 จัดเก็บ Check-in</div>
       <div class="ar-sub">ข้อมูลผู้เข้าชมที่ปิดวันแล้ว — สามารถค้นหา กู้คืน หรือลบถาวรได้</div>
     </div>
+    <?php if ($totalArchived > 0): ?>
+    <form method="POST" onsubmit="return confirm('ลบข้อมูลทั้งหมด <?= $totalArchived ?> รายการ? ไม่สามารถกู้คืนได้!');">
+      <input type="hidden" name="delete_all" value="1">
+      <button type="submit" class="btn btn-danger" style="height:42px;font-size:.85rem;">
+        🗑 ลบทั้งหมด (<?= $totalArchived ?> รายการ)
+      </button>
+    </form>
+    <?php endif; ?>
   </div>
 
   <!-- stat cards -->

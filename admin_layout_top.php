@@ -378,8 +378,8 @@ foreach ($_sectionMap as $_sec => $_items) {
     <a href="booking_report.php" class="menu-item <?= $activeMenu==='admin_report'?'active':'' ?>">
       <span class="icon">📊</span><span class="text">กราฟรายงาน</span>
     </a>
-    <a href="admin_walkin_archive.php" class="menu-item <?= $activeMenu==='walkin_archive'?'active':'' ?>">
-      <span class="icon">📦</span><span class="text">จัดเก็บ Walk-in</span>
+    <a href="admin_checkin_archive.php" class="menu-item <?= $activeMenu==='walkin_archive'?'active':'' ?>">
+      <span class="icon">📦</span><span class="text">จัดเก็บ Check-in</span>
     </a>
   </div>
 </div>

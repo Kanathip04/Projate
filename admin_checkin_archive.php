@@ -3,7 +3,7 @@ $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
 
-$pageTitle  = "จัดเก็บ Walk-in";
+$pageTitle  = "จัดเก็บ Check-in";
 $activeMenu = "walkin_archive";
 
 // ── ensure archived column exists ──
@@ -131,7 +131,7 @@ include "admin_layout_top.php";
 <div class="ar-page">
   <div class="ar-topbar">
     <div>
-      <div class="ar-title">📦 จัดเก็บ Walk-in</div>
+      <div class="ar-title">📦 จัดเก็บ Check-in</div>
       <div class="ar-sub">ข้อมูลผู้เข้าชมที่ปิดวันแล้ว — สามารถค้นหา กู้คืน หรือลบถาวรได้</div>
     </div>
   </div>
@@ -142,11 +142,6 @@ include "admin_layout_top.php";
       <h4>ทั้งหมด</h4>
       <div class="num"><?= number_format($totalArchived) ?></div>
       <div class="unit">รายการ</div>
-    </div>
-    <div class="ar-card c-days">
-      <h4>จำนวนวัน</h4>
-      <div class="num"><?= number_format($totalDays) ?></div>
-      <div class="unit">วัน</div>
     </div>
     <div class="ar-card c-student">
       <h4>นักศึกษา</h4>

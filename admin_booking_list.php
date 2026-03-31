@@ -160,6 +160,7 @@ include 'admin_layout_top.php';
     </div>
     <div class="bk-banner-links">
       <a href="admin_booking_approved.php" class="bk-banner-link">✅ รายการอนุมัติแล้ว</a>
+      <a href="admin_slip_verify.php"      class="bk-banner-link">🧾 ตรวจสอบสลิป</a>
       <a href="admin_booking_archive.php"  class="bk-banner-link">🗂 รายการย้อนหลัง</a>
     </div>
   </div>

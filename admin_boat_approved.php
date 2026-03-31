@@ -5,6 +5,7 @@ session_start();
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 if ($conn->connect_error) die("DB Error: " . $conn->connect_error);
+$conn->query("ALTER TABLE boat_bookings ADD COLUMN IF NOT EXISTS archived TINYINT(1) NOT NULL DEFAULT 0");
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
 $currentPage = basename($_SERVER['PHP_SELF']);
@@ -53,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $archIns = $conn->prepare("INSERT INTO boat_queue_daily_archive (archive_date,total_queues,total_revenue,bookings_json) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE total_queues=VALUES(total_queues),total_revenue=VALUES(total_revenue),bookings_json=VALUES(bookings_json),archived_at=NOW()");
         $archIns->bind_param("siis", $archDate, $cnt, $totalRev, $json);
         $archIns->execute(); $archIns->close();
+        $conn->query("UPDATE boat_bookings SET archived=1 WHERE DATE(approved_at)='$archDate' AND booking_status='approved' AND payment_status='cash_paid'");
         header("Location: admin_boat_archive_view.php"); exit;
     }
     header("Location: {$currentPage}?msg=" . urlencode($message) . "&type=" . urlencode($message_type)); exit;
@@ -90,7 +92,7 @@ if (!empty($params)) $stmt->bind_param($types, ...$params);
 $stmt->execute(); $result = $stmt->get_result();
 
 // รายการอนุมัติแล้ว
-$whereApproved = "WHERE payment_provider='cash' AND payment_status='cash_paid'";
+$whereApproved = "WHERE payment_provider='cash' AND payment_status='cash_paid' AND (archived IS NULL OR archived=0)";
 $paramsA = []; $typesA = "";
 if ($search !== '') {
     $whereApproved .= " AND (full_name LIKE ? OR phone LIKE ? OR booking_ref LIKE ?)";

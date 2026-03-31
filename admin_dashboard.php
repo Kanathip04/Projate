@@ -288,7 +288,7 @@ include "admin_layout_top.php";
                 $ts2 = strtotime($row['created_at']);
                 if ($ts2) $t = date('H:i', $ts2);
               }
-              $genderIcon = ($row['gender'] === 'ชาย') ? '👨' : (($row['gender'] === 'หญิง') ? '👩' : '');
+              $genderIcon = ($row['gender'] === 'ชาย') ? '' : (($row['gender'] === 'หญิง') ? '' : '');
               ?>
               <tr>
                 <td style="color:#7b8091;font-weight:700;"><?= $n++ ?></td>

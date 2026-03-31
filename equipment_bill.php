@@ -7,9 +7,43 @@ $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 if ($conn->connect_error) die("DB Error");
 
-/* === ตรวจ/เพิ่มคอลัมน์ที่จำเป็น === */
-$conn->query("ALTER TABLE equipment_bookings ADD COLUMN IF NOT EXISTS payment_status ENUM('unpaid','waiting_verify','paid','failed') DEFAULT 'unpaid'");
-$conn->query("ALTER TABLE equipment_bookings ADD COLUMN IF NOT EXISTS payment_slip VARCHAR(500) DEFAULT NULL");
+/* === สร้าง payment_slips ถ้ายังไม่มี และเพิ่ม booking_type ถ้าขาด === */
+$conn->query("CREATE TABLE IF NOT EXISTS `payment_slips` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `booking_id` INT UNSIGNED,
+    `booking_ref` VARCHAR(50),
+    `slip_image_path` VARCHAR(500),
+    `slip_hash` VARCHAR(64),
+    `verification_status` VARCHAR(50) DEFAULT 'checking',
+    `uploaded_ip` VARCHAR(50),
+    `uploaded_ua` VARCHAR(500),
+    `uploaded_at` DATETIME,
+    `extracted_amount` DECIMAL(10,2) DEFAULT NULL,
+    `extracted_ref_no` VARCHAR(100) DEFAULT NULL,
+    `payer_name` VARCHAR(200) DEFAULT NULL,
+    `payee_name` VARCHAR(200) DEFAULT NULL,
+    `confidence_score` FLOAT DEFAULT NULL,
+    `raw_ai_response` TEXT,
+    `verification_reason` VARCHAR(500) DEFAULT NULL,
+    `source_bank` VARCHAR(100) DEFAULT NULL,
+    `destination_bank` VARCHAR(100) DEFAULT NULL,
+    `extracted_transfer_datetime` DATETIME DEFAULT NULL,
+    `booking_type` VARCHAR(30) DEFAULT 'boat'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$chkBt = $conn->query("SHOW COLUMNS FROM payment_slips LIKE 'booking_type'");
+if ($chkBt && $chkBt->num_rows === 0) {
+    $conn->query("ALTER TABLE payment_slips ADD COLUMN booking_type VARCHAR(30) DEFAULT 'boat'");
+}
+
+/* === ตรวจ/เพิ่มคอลัมน์ที่จำเป็น (safe for PHP 8.1+) === */
+$chk1 = $conn->query("SHOW COLUMNS FROM equipment_bookings LIKE 'payment_status'");
+if ($chk1 && $chk1->num_rows === 0) {
+    $conn->query("ALTER TABLE equipment_bookings ADD COLUMN payment_status ENUM('unpaid','waiting_verify','paid','failed') DEFAULT 'unpaid'");
+}
+$chk2 = $conn->query("SHOW COLUMNS FROM equipment_bookings LIKE 'payment_slip'");
+if ($chk2 && $chk2->num_rows === 0) {
+    $conn->query("ALTER TABLE equipment_bookings ADD COLUMN payment_slip VARCHAR(500) DEFAULT NULL");
+}
 
 $id = (int)($_GET['id'] ?? 0);
 if (!$id) { header("Location: booking_tent.php"); exit; }
@@ -63,30 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['slip'])) {
                     $ni  = max(1, (int)$d1t->diff($d2t)->days);
                 }
                 $totalPay *= $ni;
-
-                // บันทึก payment_slips
-                $conn->query("CREATE TABLE IF NOT EXISTS `payment_slips` (
-                    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                    `booking_id` INT UNSIGNED,
-                    `booking_ref` VARCHAR(50),
-                    `slip_image_path` VARCHAR(500),
-                    `slip_hash` VARCHAR(64),
-                    `verification_status` VARCHAR(50) DEFAULT 'checking',
-                    `uploaded_ip` VARCHAR(50),
-                    `uploaded_ua` VARCHAR(500),
-                    `uploaded_at` DATETIME,
-                    `extracted_amount` DECIMAL(10,2) DEFAULT NULL,
-                    `extracted_ref_no` VARCHAR(100) DEFAULT NULL,
-                    `payer_name` VARCHAR(200) DEFAULT NULL,
-                    `payee_name` VARCHAR(200) DEFAULT NULL,
-                    `confidence_score` FLOAT DEFAULT NULL,
-                    `raw_ai_response` TEXT,
-                    `verification_reason` VARCHAR(500) DEFAULT NULL,
-                    `source_bank` VARCHAR(100) DEFAULT NULL,
-                    `destination_bank` VARCHAR(100) DEFAULT NULL,
-                    `extracted_transfer_datetime` DATETIME DEFAULT NULL,
-                    `booking_type` VARCHAR(30) DEFAULT 'boat'
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
                 $insStmt = $conn->prepare(
                     "INSERT INTO payment_slips (booking_id,booking_ref,slip_image_path,slip_hash,verification_status,uploaded_ip,uploaded_ua,uploaded_at,booking_type)

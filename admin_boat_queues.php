@@ -500,32 +500,6 @@ table.bq-table tr:hover td{background:#f8fbff;}
     </div>
   </div>
 
-  <!-- ═══ ARCHIVE ═══ -->
-  <div class="archive-card">
-    <div class="archive-header">
-      <div class="archive-title">🗄️ ข้อมูลจัดเก็บรายวัน</div>
-      <form method="POST" style="display:flex;gap:8px;align-items:center;">
-        <input type="hidden" name="action" value="manual_archive">
-        <input type="date" name="archive_date" value="<?= $yesterday ?>" style="border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:'Sarabun',sans-serif;font-size:.82rem;outline:none;">
-        <button class="btn btn-navy btn-sm" type="submit">📥 จัดเก็บวันที่เลือก</button>
-      </form>
-    </div>
-    <?php if ($archives->num_rows === 0): ?>
-      <div class="empty-state">ยังไม่มีข้อมูลจัดเก็บ (จะ archive อัตโนมัติทุกเที่ยงคืน)</div>
-    <?php else: ?>
-      <?php while ($arch = $archives->fetch_assoc()): ?>
-      <div class="archive-row">
-        <div class="arch-date">📅 <?= date('d/m/Y', strtotime($arch['archive_date'])) ?></div>
-        <span class="arch-count"><?= (int)$arch['total_queues'] ?> คิว</span>
-        <?php if ((float)$arch['total_revenue'] > 0): ?>
-        <span class="arch-rev">฿<?= number_format((float)$arch['total_revenue']) ?></span>
-        <?php endif; ?>
-        <span class="arch-time">จัดเก็บ <?= date('d/m H:i', strtotime($arch['archived_at'])) ?></span>
-        <a href="admin_boat_archive_view.php?date=<?= urlencode($arch['archive_date']) ?>" class="arch-btn">ดูรายละเอียด →</a>
-      </div>
-      <?php endwhile; ?>
-    <?php endif; ?>
-  </div>
 
 </div>
 </div>

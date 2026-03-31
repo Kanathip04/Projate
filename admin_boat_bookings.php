@@ -179,18 +179,22 @@ if (isset($_GET['msg'])) {
 $tab    = $_GET['tab'] ?? 'pending';
 $search = trim($_GET['search'] ?? '');
 
+// ── ซ่อนรายการที่ยังไม่ชำระ (แสดงเฉพาะที่ออกบัตรคิวแล้ว หรืออยู่ระหว่างตรวจสลิป) ──
+// payment_status IN ('unpaid','pending','failed','expired') = ยังไม่ถึงหลังบ้าน
+$VISIBLE = "archived=0 AND payment_status NOT IN ('unpaid','pending','failed','expired')";
+
 $rs = $conn->query("
-    SELECT 
+    SELECT
         COUNT(*) t,
         SUM(booking_status='pending') p,
         SUM(booking_status='approved') a,
         SUM(booking_status='rejected') r,
-        SUM(payment_status='unpaid') pu,
         SUM(payment_status='waiting_verify') pw,
-        SUM(payment_status='paid') pp,
-        SUM(payment_status='failed') pf
+        SUM(payment_status IN ('paid','cash_paid')) pp,
+        SUM(payment_status='manual_review') pm,
+        SUM(payment_status='cash_pending') pc
     FROM boat_bookings
-    WHERE archived=0
+    WHERE $VISIBLE
 ");
 $st_row = $rs->fetch_assoc();
 
@@ -198,12 +202,12 @@ $stat_total            = (int)($st_row['t'] ?? 0);
 $stat_pending          = (int)($st_row['p'] ?? 0);
 $stat_approved         = (int)($st_row['a'] ?? 0);
 $stat_rejected         = (int)($st_row['r'] ?? 0);
-$stat_payment_unpaid   = (int)($st_row['pu'] ?? 0);
 $stat_payment_waiting  = (int)($st_row['pw'] ?? 0);
 $stat_payment_paid     = (int)($st_row['pp'] ?? 0);
-$stat_payment_failed   = (int)($st_row['pf'] ?? 0);
+$stat_payment_manual   = (int)($st_row['pm'] ?? 0);
+$stat_payment_cash     = (int)($st_row['pc'] ?? 0);
 
-$where = "WHERE archived=0";
+$where = "WHERE $VISIBLE";
 
 if ($tab === 'approved') {
     $where .= " AND booking_status='approved'";
@@ -213,8 +217,11 @@ if ($tab === 'approved') {
     $where .= " AND payment_status IN ('paid','cash_paid')";
 } elseif ($tab === 'cash_pending') {
     $where .= " AND payment_status='cash_pending'";
+} elseif ($tab === 'manual') {
+    $where .= " AND payment_status='manual_review'";
 } else {
-    $where .= " AND booking_status IN ('pending','rejected','cancelled')";
+    // default 'pending' tab = รอตรวจสลิป + รอ admin (ที่มีสลิปแล้ว)
+    $where .= " AND payment_status IN ('waiting_verify','manual_review','cash_pending') AND booking_status != 'approved'";
 }
 
 $params = [];
@@ -340,18 +347,19 @@ include 'admin_layout_top.php';
 <!-- Stat bar: 6 ตัวเลข -->
 <div class="stat-bar">
   <div class="stat-item"><div class="sn"><?= $stat_total ?></div><div class="sl">ทั้งหมด</div></div>
-  <div class="stat-item s-warn"><div class="sn"><?= $stat_pending ?></div><div class="sl">รออนุมัติ</div></div>
-  <div class="stat-item s-ok"><div class="sn"><?= $stat_approved ?></div><div class="sl">อนุมัติแล้ว</div></div>
   <div class="stat-item s-warn"><div class="sn"><?= $stat_payment_waiting ?></div><div class="sl">รอตรวจสลิป</div></div>
   <div class="stat-item s-ok"><div class="sn"><?= $stat_payment_paid ?></div><div class="sl">ชำระแล้ว</div></div>
-  <div class="stat-item s-err"><div class="sn"><?= $stat_rejected + $stat_payment_failed ?></div><div class="sl">ปฏิเสธ/ไม่ผ่าน</div></div>
+  <div class="stat-item s-ok"><div class="sn"><?= $stat_approved ?></div><div class="sl">อนุมัติแล้ว</div></div>
+  <div class="stat-item s-warn"><div class="sn"><?= $stat_payment_manual ?></div><div class="sl">รอตรวจสอบ</div></div>
+  <div class="stat-item s-err"><div class="sn"><?= $stat_rejected ?></div><div class="sl">ปฏิเสธ</div></div>
 </div>
 
 <!-- Tab strip -->
 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
   <div class="tab-strip">
-    <a href="?tab=pending" class="ts-btn<?= $tab==='pending'?' active':'' ?>">ทั้งหมด / รออนุมัติ<span class="ts-badge"><?= $stat_pending ?></span></a>
+    <a href="?tab=pending" class="ts-btn<?= $tab==='pending'?' active':'' ?>">รอดำเนินการ<span class="ts-badge"><?= $stat_payment_waiting + $stat_payment_manual + $stat_payment_cash ?></span></a>
     <a href="?tab=waiting_payment" class="ts-btn<?= $tab==='waiting_payment'?' active':'' ?>">รอตรวจสลิป<span class="ts-badge"><?= $stat_payment_waiting ?></span></a>
+    <a href="?tab=manual" class="ts-btn<?= $tab==='manual'?' active':'' ?>">รอตรวจสอบ<span class="ts-badge"><?= $stat_payment_manual ?></span></a>
     <a href="?tab=paid" class="ts-btn<?= $tab==='paid'?' active':'' ?>">ชำระแล้ว</a>
     <a href="?tab=cash_pending" class="ts-btn<?= $tab==='cash_pending'?' active':'' ?>">💵 รอจ่ายสด</a>
     <a href="?tab=approved" class="ts-btn<?= $tab==='approved'?' active':'' ?>">อนุมัติแล้ว</a>

@@ -223,6 +223,7 @@ include 'admin_layout_top.php';
                 <thead>
                     <tr>
                         <th style="width:46px;">#</th>
+                        <th>เลขที่บิล</th>
                         <th>ผู้จอง</th>
                         <th>ติดต่อ</th>
                         <th>เต็นท์ / ราคา</th>
@@ -234,7 +235,7 @@ include 'admin_layout_top.php';
                 </thead>
                 <tbody>
                     <?php if ($result && $result->num_rows > 0): ?>
-                        <?php while ($row = $result->fetch_assoc()): ?>
+                        <?php $rowNum = 1; while ($row = $result->fetch_assoc()): ?>
                             <?php
                                 // Map payment_status to badge class and label
                                 $ps = $row['payment_status'] ?? 'unpaid';
@@ -272,8 +273,16 @@ include 'admin_layout_top.php';
                                 // Determine if this row is still pending (can approve/reject)
                                 $isPending = in_array($ps, ['unpaid', 'waiting_verify', 'manual_review']);
                             ?>
+                            <?php
+                                // คำนวณเลขที่บิล EQUIP-YYYYMMDD-XXX
+                                $_bkDate2 = date('Ymd', strtotime($row['created_at']));
+                                $_seqR2   = $conn->query("SELECT COUNT(*) AS seq FROM equipment_bookings WHERE DATE(created_at) = DATE('" . $conn->real_escape_string($row['created_at']) . "') AND id <= " . (int)$row['id']);
+                                $_seq2    = (int)($_seqR2 ? $_seqR2->fetch_assoc()['seq'] : 1);
+                                $_billRef = 'EQUIP-' . $_bkDate2 . '-' . str_pad($_seq2, 3, '0', STR_PAD_LEFT);
+                            ?>
                             <tr>
-                                <td style="color:var(--muted);font-size:.76rem;"><?= (int)$row['id'] ?></td>
+                                <td style="color:var(--muted);font-size:.76rem;font-weight:700;"><?= $rowNum++ ?></td>
+                                <td style="font-size:.78rem;font-weight:700;color:#15803d;white-space:nowrap;"><?= h($_billRef) ?></td>
                                 <td>
                                     <div class="tk-name"><?= h($row['full_name']) ?></div>
                                 </td>
@@ -351,7 +360,7 @@ include 'admin_layout_top.php';
                             </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
-                        <tr><td colspan="8">
+                        <tr><td colspan="9">
                             <div class="tk-empty">
                                 <div class="tk-empty-icon">⛺</div>
                                 <div class="tk-empty-text">

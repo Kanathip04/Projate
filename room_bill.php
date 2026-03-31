@@ -249,7 +249,7 @@ $qrPayload = promptpayPayload(PROMPTPAY_ID, $total);
 $payStatus = $bk['payment_status'] ?? 'unpaid';
 
 /* Auto redirect ไปหน้าใบเสร็จถ้าชำระแล้ว */
-if ($payStatus === 'paid' && !isset($_GET['uploaded'])) {
+if ($payStatus === 'paid') {
     header("Location: room_ticket.php?id=$id");
     exit;
 }

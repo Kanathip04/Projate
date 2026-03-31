@@ -74,6 +74,17 @@ $stmt = $conn->prepare("SELECT * FROM boat_bookings {$where} ORDER BY id DESC");
 if (!empty($params)) $stmt->bind_param($types, ...$params);
 $stmt->execute(); $result = $stmt->get_result();
 
+// รายการอนุมัติแล้ว
+$whereApproved = "WHERE payment_provider='cash' AND payment_status='cash_paid'";
+$paramsA = []; $typesA = "";
+if ($search !== '') {
+    $whereApproved .= " AND (full_name LIKE ? OR phone LIKE ? OR booking_ref LIKE ?)";
+    $paramsA = [$like,$like,$like]; $typesA = "sss";
+}
+$stmtA = $conn->prepare("SELECT * FROM boat_bookings {$whereApproved} ORDER BY approved_at DESC");
+if (!empty($paramsA)) $stmtA->bind_param($typesA, ...$paramsA);
+$stmtA->execute(); $resultA = $stmtA->get_result();
+
 $pageTitle = "อนุมัติการจองเรือ"; $activeMenu = "boat_approve";
 include 'admin_layout_top.php';
 ?>
@@ -104,7 +115,10 @@ include 'admin_layout_top.php';
 .tk-card-header{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
 .tk-card-title{font-size:.9rem;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px;}
 .tk-card-title::before{content:'';display:inline-block;width:3px;height:14px;background:var(--warning);border-radius:2px;}
+.tk-card-title.approved-title::before{background:var(--success);}
 .tk-count{background:#fffbeb;color:var(--warning);font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;}
+.tk-count-success{background:#f0fdf4;color:var(--success);font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;}
+.s-approved{background:#f0fdf4;color:#166534;border:1px solid #86efac;}
 .tk-search{padding:14px 22px;border-bottom:1px solid var(--border);display:flex;gap:10px;background:#fdfcfa;}
 .tk-search-wrap{position:relative;flex:1;}
 .tk-search-wrap::before{content:'🔍';position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:.72rem;pointer-events:none;}
@@ -265,6 +279,62 @@ include 'admin_layout_top.php';
             </table>
         </div>
     </div>
+
+    <!-- ── รายการอนุมัติแล้ว ── -->
+    <div class="tk-card" style="margin-top:24px;">
+        <div class="tk-card-header">
+            <div class="tk-card-title approved-title">
+                ✅ รายการอนุมัติแล้ว
+                <span class="tk-count-success"><?= $resultA->num_rows ?> รายการ</span>
+            </div>
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="tk-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>ผู้จอง</th>
+                        <th>หมายเลขจอง</th>
+                        <th>เรือ / วันที่</th>
+                        <th>จำนวน</th>
+                        <th>ยอด</th>
+                        <th>สถานะ</th>
+                        <th>วันที่อนุมัติ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php if ($resultA->num_rows === 0): ?>
+                    <tr><td colspan="8" class="tk-empty">ยังไม่มีรายการอนุมัติ</td></tr>
+                <?php else: $rowNumA = 1; while ($rowA = $resultA->fetch_assoc()): ?>
+                    <tr>
+                        <td style="color:var(--muted);font-size:.78rem;font-weight:700;"><?= $rowNumA++ ?></td>
+                        <td>
+                            <div class="bk-name"><?= h($rowA['full_name']) ?></div>
+                            <div class="bk-sub"><?= h($rowA['phone']) ?></div>
+                            <?php if ($rowA['email']): ?>
+                            <div class="bk-sub"><?= h($rowA['email']) ?></div>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <span class="ref-pill"><?= h($rowA['booking_ref'] ?? '-') ?></span>
+                            <?php if ($rowA['queue_name']): ?>
+                            <div class="bk-sub" style="margin-top:4px;"><?= h($rowA['queue_name']) ?></div>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <div style="font-weight:600;"><?= h($rowA['boat_type'] ?? '-') ?></div>
+                            <div class="bk-sub">📅 <?= h($rowA['boat_date'] ?? '-') ?></div>
+                        </td>
+                        <td><?= (int)$rowA['guests'] ?> คน</td>
+                        <td style="font-weight:700;color:var(--success);">฿<?= number_format((float)$rowA['total_amount'], 0) ?></td>
+                        <td><span class="status-pill s-approved">✓ อนุมัติแล้ว</span></td>
+                        <td style="font-size:.76rem;color:var(--muted);"><?= h(substr($rowA['approved_at'] ?? $rowA['created_at'], 0, 16)) ?></td>
+                    </tr>
+                <?php endwhile; endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
-<?php include 'admin_layout_bottom.php'; ?>
+<?php $stmtA->close(); include 'admin_layout_bottom.php'; ?>

@@ -389,7 +389,7 @@ if ($verified && $amountMatched) {
             'ok'          => true,
             'action'      => 'approved',
             'booking_ref' => $booking_ref,
-            'ticket_url'  => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/queue_ticket.php?ref=' . urlencode($booking_ref),
+            'ticket_url'  => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/equipment_ticket.php?id=' . $equipId,
         ]);
     } else {
         // Boat booking: คำนวณคิวและอัปเดต boat_bookings

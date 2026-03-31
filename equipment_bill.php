@@ -494,10 +494,12 @@ a{text-decoration:none;}
     <div class="paid-box">
       <div class="paid-ico">✅</div>
       <div class="paid-title">ชำระเงินเรียบร้อยแล้ว!</div>
-      <div class="paid-sub">เจ้าหน้าที่ยืนยันการชำระของท่านแล้ว กรุณาแจ้งเจ้าหน้าที่เมื่อถึงวันเช่า</div>
+      <div class="paid-sub">เจ้าหน้าที่ยืนยันการชำระของท่านแล้ว</div>
+      <a href="equipment_ticket.php?id=<?= $id ?>" style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:12px 28px;background:linear-gradient(135deg,#052e16,#166534);color:#fff;border-radius:13px;font-family:'Kanit',sans-serif;font-size:.95rem;font-weight:800;text-decoration:none;">
+        🎫 ดูสลิปการจอง
+      </a>
     </div>
   </div>
-  <?= $confirmHtml ?>
 
   <?php elseif ($payStatus === 'failed'): ?>
   <div class="card">

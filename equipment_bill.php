@@ -196,6 +196,165 @@ if ($payStatus === 'paid' && !isset($_GET['uploaded'])) {
     exit;
 }
 
+/* ── ถ้าชำระเงินสด → แสดงใบจองให้นำไปยื่นพนักงาน ── */
+if (($bk['payment_method'] ?? '') === 'เงินสด'):
+    $bookingRef2 = 'EQUIP-' . str_pad($id, 5, '0', STR_PAD_LEFT);
+    $totalCash   = $total * $nights;
+    $tentUnits   = json_decode($bk['tent_units'] ?? '[]', true) ?: [];
+?>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ใบจองเต็นท์ #<?= $id ?> — ชำระเงินสด</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--ink:#1a1a2e;--gold:#c9a96e;--gold-dark:#a8864d;--bg:#f5f1eb;--card:#fff;--muted:#7a7a8c;--border:#e8e4de;--green:#15803d;--green-bg:#ecfdf3;--green-bd:#bbf7d0;}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+.page{max-width:520px;width:100%;}
+
+/* top bar */
+.top-bar{background:linear-gradient(135deg,#0d1f0d 0%,#1a2e1a 40%,#1a1a2e 100%);border-radius:22px 22px 0 0;padding:32px 28px 26px;text-align:center;position:relative;overflow:hidden;}
+.top-bar::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(21,128,61,.3) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(201,169,110,.15) 0%,transparent 50%);pointer-events:none;}
+.cash-icon{width:72px;height:72px;border-radius:50%;background:rgba(21,128,61,.25);border:2px solid rgba(21,128,61,.5);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:32px;position:relative;z-index:1;animation:pop .4s cubic-bezier(.175,.885,.32,1.275) both;}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.top-bar h1{font-size:24px;font-weight:800;color:#fff;margin-bottom:6px;position:relative;z-index:1;}
+.top-bar p{font-size:13px;color:rgba(255,255,255,.72);position:relative;z-index:1;}
+.ref-badge{display:inline-block;margin-top:12px;padding:6px 18px;border-radius:999px;background:rgba(201,169,110,.18);border:1px solid rgba(201,169,110,.4);color:var(--gold);font-size:13px;font-weight:700;position:relative;z-index:1;}
+
+/* body */
+.card-body{background:var(--card);border:1px solid var(--border);border-top:none;border-radius:0 0 22px 22px;padding:24px 24px 28px;box-shadow:0 12px 30px rgba(26,26,46,.08);}
+
+/* amount highlight */
+.amount-box{background:var(--green-bg);border:2px solid var(--green-bd);border-radius:16px;padding:20px;text-align:center;margin-bottom:20px;}
+.amount-label{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;}
+.amount-value{font-size:36px;font-weight:800;color:var(--green);}
+.amount-sub{font-size:13px;color:var(--muted);margin-top:4px;}
+
+/* info rows */
+.info-grid{display:flex;flex-direction:column;gap:10px;margin-bottom:20px;}
+.info-row{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:12px;}
+.info-icon{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;background:rgba(26,26,46,.06);}
+.info-label{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:2px;}
+.info-value{font-size:14px;font-weight:700;color:var(--ink);}
+.unit-pills{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
+.unit-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.3);color:var(--green);font-size:11px;font-weight:700;}
+
+/* instruction box */
+.instr-box{background:#fffbeb;border:1px solid #fde68a;border-radius:14px;padding:16px;margin-bottom:20px;}
+.instr-title{font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px;}
+.instr-steps{list-style:none;padding:0;}
+.instr-steps li{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#78350f;padding:5px 0;line-height:1.5;}
+.step-num{width:22px;height:22px;border-radius:50%;background:#fbbf24;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+
+/* buttons */
+.btn-group{display:flex;gap:10px;flex-wrap:wrap;}
+.btn{flex:1;min-width:120px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:13px 16px;border-radius:13px;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:700;text-decoration:none;border:none;cursor:pointer;transition:all .2s;}
+.btn-primary{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#fff;}
+.btn-primary:hover{background:var(--gold);color:var(--ink);}
+.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--border);}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold-dark);}
+@media print{.btn-group{display:none;}.top-bar{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+@media(max-width:480px){.card-body{padding:18px 16px 22px;}.btn-group{flex-direction:column;}}
+</style>
+</head>
+<body>
+<div class="page">
+    <div class="top-bar">
+        <div class="cash-icon">💵</div>
+        <h1>ใบจองเต็นท์ — ชำระเงินสด</h1>
+        <p>กรุณานำใบจองนี้ไปยื่นกับเจ้าหน้าที่ที่สำนักงาน</p>
+        <div class="ref-badge">หมายเลขจอง <?= htmlspecialchars($bookingRef2) ?></div>
+    </div>
+
+    <div class="card-body">
+        <div class="amount-box">
+            <div class="amount-label">ยอดชำระเงินสด</div>
+            <div class="amount-value">฿<?= number_format($totalCash, 2) ?></div>
+            <div class="amount-sub"><?= $nights ?> คืน × ฿<?= number_format($total, 2) ?>/คืน</div>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-row">
+                <div class="info-icon">⛺</div>
+                <div>
+                    <div class="info-label">ประเภทเต็นท์</div>
+                    <div class="info-value"><?= htmlspecialchars($bk['tent_type'] ?? '') ?></div>
+                </div>
+            </div>
+
+            <?php if (!empty($tentUnits)): ?>
+            <div class="info-row">
+                <div class="info-icon">🔑</div>
+                <div>
+                    <div class="info-label">หน่วยที่จอง (<?= count($tentUnits) ?> หน่วย)</div>
+                    <div class="unit-pills">
+                        <?php foreach ($tentUnits as $u): ?>
+                            <span class="unit-pill">✓ หน่วยที่ <?= (int)$u ?></span>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <div class="info-row">
+                <div class="info-icon">👤</div>
+                <div>
+                    <div class="info-label">ชื่อผู้จอง</div>
+                    <div class="info-value"><?= htmlspecialchars($bk['full_name'] ?? '') ?></div>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-icon">📞</div>
+                <div>
+                    <div class="info-label">เบอร์โทร</div>
+                    <div class="info-value"><?= htmlspecialchars($bk['phone'] ?? '') ?></div>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-icon">📅</div>
+                <div>
+                    <div class="info-label">วันเช็คอิน → เช็คเอาท์</div>
+                    <div class="info-value"><?= htmlspecialchars($bk['checkin_date'] ?? '') ?> → <?= htmlspecialchars($bk['checkout_date'] ?? '') ?></div>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-icon">💵</div>
+                <div>
+                    <div class="info-label">วิธีชำระ</div>
+                    <div class="info-value" style="color:var(--green);">เงินสด (ชำระกับเจ้าหน้าที่)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="instr-box">
+            <div class="instr-title">📋 ขั้นตอนถัดไป</div>
+            <ul class="instr-steps">
+                <li><span class="step-num">1</span>พิมพ์หรือบันทึกใบจองนี้ไว้</li>
+                <li><span class="step-num">2</span>นำใบจองไปยื่นที่สำนักงาน/เจ้าหน้าที่</li>
+                <li><span class="step-num">3</span>ชำระเงินสดจำนวน <strong>฿<?= number_format($totalCash, 2) ?> บาท</strong></li>
+                <li><span class="step-num">4</span>รับใบเสร็จจากเจ้าหน้าที่เพื่อยืนยันการจอง</li>
+            </ul>
+        </div>
+
+        <div class="btn-group">
+            <button onclick="window.print()" class="btn btn-primary">🖨 พิมพ์ / บันทึก PDF</button>
+            <a href="/Projate/booking_tent.php" class="btn btn-ghost">⛺ กลับหน้าจอง</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+<?php
+    $conn->close();
+    exit;
+endif;
+
 // ── Timer 5 นาที ──
 define('PAY_TIMEOUT_SEC', 300);
 $createdAt   = strtotime($bk['created_at']);

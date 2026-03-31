@@ -130,7 +130,22 @@ include 'admin_layout_top.php';
 .arc-empty-ico{font-size:2.5rem;opacity:.25;margin-bottom:10px;}
 .badge-archived{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;
   border-radius:20px;font-size:.69rem;font-weight:700;background:#eff6ff;color:#1d4ed8;}
+.pay-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:.69rem;font-weight:700;margin-top:4px;}
+.pay-cash{background:#fff7ed;color:#c2410c;border:1px solid #fdba74;}
+.pay-slip{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;}
+.arc-btn-slip{background:#f0fdf4;color:#15803d;border:1.5px solid #86efac;}
+.arc-btn-slip:hover{background:#dcfce7;}
+.slip-lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;padding:20px;}
+.slip-lb.open{display:flex;}
+.slip-lb img{max-width:90vw;max-height:88vh;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.5);}
+.slip-lb-close{position:fixed;top:18px;right:22px;font-size:2rem;color:#fff;cursor:pointer;background:none;border:none;line-height:1;}
 </style>
+
+<!-- Slip Lightbox -->
+<div class="slip-lb" id="slipLb">
+  <button class="slip-lb-close" onclick="closeSLB()">✕</button>
+  <img id="slipLbImg" src="" alt="สลิป">
+</div>
 
 <?php if ($message !== ''): ?>
 <div class="arc-alert <?= $message_type==='error'?'arc-alert-err':'arc-alert-ok' ?>">
@@ -178,6 +193,7 @@ include 'admin_layout_top.php';
           <th>ติดต่อ</th>
           <th>อุปกรณ์ / ราคา</th>
           <th>วันเข้า–ออก</th>
+          <th>ประเภทชำระ</th>
           <th>สถานะ</th>
           <th>วันที่จอง</th>
           <th style="width:160px;">จัดการ</th>
@@ -212,6 +228,9 @@ include 'admin_layout_top.php';
                 $d2 = new DateTime($row['checkout_date']);
                 $nights = max(1, (int)$d1->diff($d2)->days);
             }
+            // วิธีชำระเงิน
+            $pm = trim($row['payment_method'] ?? '');
+            $isTransfer = ($pm !== '' && $pm !== 'เงินสด');
           ?>
           <tr>
             <td style="color:var(--muted);font-size:.76rem;"><?= $no++ ?></td>
@@ -241,10 +260,22 @@ include 'admin_layout_top.php';
               <div style="font-size:.79rem;">📅 <?= h($row['checkin_date'] ?? '—') ?></div>
               <div style="font-size:.79rem;color:var(--muted);">→ <?= h($row['checkout_date'] ?? '—') ?> (<?= $nights ?> คืน)</div>
             </td>
+            <td>
+              <?php if ($pm !== ''): ?>
+                <span class="pay-pill <?= $isTransfer?'pay-slip':'pay-cash' ?>">
+                  <?= $isTransfer?'🏦':'💵' ?> <?= h($pm) ?>
+                </span>
+              <?php else: ?>
+                <span style="color:var(--muted);font-size:.73rem;">—</span>
+              <?php endif; ?>
+            </td>
             <td><span class="badge-archived">📦 จัดเก็บแล้ว</span></td>
             <td style="font-size:.75rem;color:var(--muted);"><?= h(substr($row['created_at'],0,16)) ?></td>
             <td>
               <div class="arc-actions">
+                <?php if ($isTransfer && !empty($row['payment_slip'])): ?>
+                  <button onclick="openSLB('<?= h($row['payment_slip']) ?>')" class="arc-btn arc-btn-slip" style="padding:5px 11px;font-size:.74rem;">🖼 ดูสลิป</button>
+                <?php endif; ?>
                 <form method="POST" class="mif" onsubmit="return confirm('คืนรายการนี้กลับไปหน้าชำระแล้ว?')">
                   <input type="hidden" name="action" value="restore">
                   <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
@@ -260,7 +291,7 @@ include 'admin_layout_top.php';
           </tr>
           <?php endwhile; ?>
         <?php else: ?>
-        <tr><td colspan="9">
+        <tr><td colspan="10">
           <div class="arc-empty">
             <div class="arc-empty-ico">📦</div>
             <div><?= $search ? 'ไม่พบรายการที่ตรงกับ "'.h($search).'"' : 'ยังไม่มีรายการที่จัดเก็บ' ?></div>
@@ -272,4 +303,9 @@ include 'admin_layout_top.php';
   </div>
 </div>
 
+<script>
+function openSLB(src){document.getElementById('slipLbImg').src=src;document.getElementById('slipLb').classList.add('open');}
+function closeSLB(){document.getElementById('slipLb').classList.remove('open');document.getElementById('slipLbImg').src='';}
+document.getElementById('slipLb').addEventListener('click',function(e){if(e.target===this)closeSLB();});
+</script>
 <?php $stmt->close(); $conn->close(); include 'admin_layout_bottom.php'; ?>

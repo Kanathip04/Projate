@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $archIns = $conn->prepare("INSERT INTO boat_queue_daily_archive (archive_date,total_queues,total_revenue,bookings_json) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE total_queues=VALUES(total_queues),total_revenue=VALUES(total_revenue),bookings_json=VALUES(bookings_json),archived_at=NOW()");
         $archIns->bind_param("siis", $archDate, $cnt, $totalRev, $json);
         $archIns->execute(); $archIns->close();
-        header("Location: admin_boat_archive_view.php?date=" . urlencode($archDate)); exit;
+        header("Location: admin_boat_archive_view.php"); exit;
     }
     header("Location: {$currentPage}?msg=" . urlencode($message) . "&type=" . urlencode($message_type)); exit;
 }

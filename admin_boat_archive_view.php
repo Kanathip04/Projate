@@ -8,26 +8,9 @@ function h($s){return htmlspecialchars((string)$s,ENT_QUOTES,'UTF-8');}
 
 $thMonths=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
-// ถ้ามี date param → แสดงรายละเอียดวันนั้น
-// ถ้าไม่มี → แสดงรายการ archive ทั้งหมด
-$date     = trim($_GET['date'] ?? '');
-$viewMode = ($date !== '');
-$arch     = null; $bookings = []; $thDate = '';
+$allArchives = $conn->query("SELECT archive_date, total_queues, total_revenue, archived_at FROM boat_queue_daily_archive ORDER BY archive_date DESC");
 
-if ($viewMode) {
-    $stmt = $conn->prepare("SELECT * FROM boat_queue_daily_archive WHERE archive_date=? LIMIT 1");
-    $stmt->bind_param("s",$date); $stmt->execute();
-    $arch = $stmt->get_result()->fetch_assoc(); $stmt->close();
-    $d=(int)date('d',strtotime($date));$m=(int)date('m',strtotime($date));$y=(int)date('Y',strtotime($date))+543;
-    $thDate="$d {$thMonths[$m]} $y";
-    $bookings = $arch ? json_decode($arch['bookings_json'], true) : [];
-    $pageTitle="Archive: $thDate";
-} else {
-    $allArchives = $conn->query("SELECT archive_date, total_queues, total_revenue, archived_at FROM boat_queue_daily_archive ORDER BY archive_date DESC");
-    $pageTitle="จัดเก็บข้อมูลคิว";
-}
-
-$activeMenu="boat_archive";
+$pageTitle="จัดเก็บข้อมูลคิว"; $activeMenu="boat_archive";
 include 'admin_layout_top.php';
 ?>
 <style>
@@ -59,71 +42,6 @@ table.at tr:last-child td{border-bottom:none;}
 </style>
 <div class="main">
 <div class="arch-wrap">
-
-<?php if ($viewMode): ?>
-  <!-- ════ โหมดรายละเอียดวันที่เลือก ════ -->
-  <div class="arch-banner">
-    <div>
-      <h1>🗄️ Archive: <?= $thDate ?></h1>
-      <p>ข้อมูลคิวพายเรือที่จัดเก็บ</p>
-    </div>
-    <a href="admin_boat_approved.php" class="btn btn-ghost">← กลับ</a>
-  </div>
-
-  <?php if ($arch): ?>
-  <div class="stats-row">
-    <div class="stat-box">
-      <div class="stat-val"><?= (int)$arch['total_queues'] ?></div>
-      <div class="stat-label">คิวทั้งหมด</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-val" style="color:var(--green);">฿<?= number_format((float)$arch['total_revenue']) ?></div>
-      <div class="stat-label">รายได้รวม</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-val" style="font-size:1rem;color:var(--muted);margin-top:6px;"><?= date('d/m/Y H:i', strtotime($arch['archived_at'])) ?></div>
-      <div class="stat-label">เวลาจัดเก็บ</div>
-    </div>
-  </div>
-  <div class="list-card">
-    <div class="list-header"><div class="list-title">รายการคิว</div></div>
-    <?php if (empty($bookings)): ?>
-      <div class="empty-state">ไม่มีรายการในวันนี้</div>
-    <?php else: ?>
-    <div style="overflow-x:auto;">
-    <table class="at">
-      <thead>
-        <tr><th>คิว</th><th>ชื่อ</th><th>เรือ</th><th>วันที่จอง</th><th>ชำระ</th><th>ยอด</th></tr>
-      </thead>
-      <tbody>
-      <?php foreach ($bookings as $b):
-        $units = json_decode($b['boat_units'] ?? '[]', true) ?: [];
-        $boatLabel = !empty($units) ? implode(', ', array_map(fn($u)=>"เรือ {$u} คน",$units)) : ($b['boat_type'] ?? '-');
-      ?>
-        <tr>
-          <td><span class="q-no">Q<?= str_pad($b['daily_queue_no'],4,'0',STR_PAD_LEFT) ?></span></td>
-          <td><?= h($b['full_name'] ?? '') ?></td>
-          <td><?= h($boatLabel) ?></td>
-          <td><?= !empty($b['boat_date']) ? date('d/m/Y', strtotime($b['boat_date'])) : '-' ?></td>
-          <td><?= !empty($b['approved_at']) ? date('H:i', strtotime($b['approved_at'])) : '-' ?> น.</td>
-          <td>
-            <?php if (!empty($b['total_amount'])): ?>
-              <span style="font-weight:700;color:var(--green);">฿<?= number_format((float)$b['total_amount']) ?></span>
-            <?php else: ?>-<?php endif; ?>
-          </td>
-        </tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
-    </div>
-    <?php endif; ?>
-  </div>
-  <?php else: ?>
-    <div class="empty-state" style="background:#fff;border-radius:14px;padding:60px;">ไม่พบข้อมูล archive สำหรับวันที่ <?= $thDate ?></div>
-  <?php endif; ?>
-
-<?php else: ?>
-  <!-- ════ โหมดรายการ archive ทั้งหมด ════ -->
   <div class="arch-banner">
     <div>
       <h1>📦 จัดเก็บข้อมูลคิว</h1>
@@ -162,8 +80,6 @@ table.at tr:last-child td{border-bottom:none;}
     </div>
     <?php endif; ?>
   </div>
-<?php endif; ?>
-
 </div>
 </div>
 <?php include 'admin_layout_bottom.php'; ?>

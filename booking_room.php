@@ -183,13 +183,16 @@ button{font-family:inherit;cursor:pointer;}
 
 /* ════ GRID ════ */
 .room-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(340px,1fr));
+  display:flex;
+  flex-wrap:wrap;
   gap:22px;
+  justify-content:center;
 }
-
 /* ════ ROOM CARD ════ */
 .rcard{
+  flex:0 0 calc(50% - 11px);
+  max-width:480px;
+  min-width:300px;
   background:#fff;
   border-radius:22px;
   overflow:hidden;
@@ -335,7 +338,7 @@ button{font-family:inherit;cursor:pointer;}
   <!-- HERO TEXT -->
   <div class="hero-body">
     <div class="hero-eyebrow">ที่พักภายในสถาบัน</div>
-    <div class="hero-h1">จองห้องพัก<br><em>วลัยรุกขเวช</em></div>
+    <div class="hero-h1">จองห้องพัก <em>วลัยรุกขเวช</em></div>
     <div class="hero-desc">เลือกห้องพักที่ต้องการ กรอกข้อมูลผู้เข้าพัก<br>แล้วส่งคำขอจองได้เลย</div>
   </div>
 

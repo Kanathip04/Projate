@@ -327,10 +327,6 @@ input, button, select, textarea { font-family: inherit; font-size: 14px; }
         <div class="bk-title">จองห้องพัก <em>วลัยรุกขเวช</em></div>
         <div class="bk-sub">ห้องพักมาตรฐาน บรรยากาศสงบร่มรื่น พร้อมสิ่งอำนวยความสะดวกครบครัน</div>
       </div>
-      <div class="bk-night-pill">
-        <div class="bk-night-num">🌙 <?= $nights_q ?></div>
-        <div class="bk-night-lbl">คืน</div>
-      </div>
     </div>
   </div>
 </div>

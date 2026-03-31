@@ -352,7 +352,7 @@ body::before {
 // กำหนด section ที่ active menu อยู่ใน section ไหน
 $_sectionMap = [
   'overview'  => ['dashboard','report','admin_report','charts'],
-  'booking'   => ['booking','booking_approved','booking_archive','rooms','tent_booking','tent_approved','tent_manage','tent_stock','boat_booking','boat_queue'],
+  'booking'   => ['booking','booking_approved','booking_archive','rooms','tent_booking','tent_approved','tent_manage','tent_stock','boat_booking','boat_queue','boat_approve','boat_archive'],
   'content'   => ['news_add','news_manage','popup','banner','about','survey'],
   'settings'  => ['users','password','profile'],
 ];
@@ -420,6 +420,12 @@ foreach ($_sectionMap as $_sec => $_items) {
     <span class="menu-sub-label">🚣 พายเรือ</span>
     <a href="admin_boat_bookings.php" class="menu-item <?= $activeMenu==='boat_booking'?'active':'' ?>">
       <span class="icon">🚣</span><span class="text">การจองพายเรือ</span>
+    </a>
+    <a href="admin_boat_approved.php" class="menu-item <?= $activeMenu==='boat_approve'?'active':'' ?>">
+      <span class="icon">✅</span><span class="text">อนุมัติการจอง</span>
+    </a>
+    <a href="admin_boat_archive_view.php" class="menu-item <?= $activeMenu==='boat_archive'?'active':'' ?>">
+      <span class="icon">📦</span><span class="text">จัดเก็บเรือ</span>
     </a>
     <a href="admin_boat_queues.php" class="menu-item <?= $activeMenu==='boat_queue'?'active':'' ?>">
       <span class="icon">🛶</span><span class="text">จัดการคิวพายเรือ</span>

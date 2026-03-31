@@ -196,8 +196,8 @@ function promptpayPayload(string $target, float $amount): string {
 $qrPayload = promptpayPayload(PROMPTPAY_ID, $total * $nights);
 $payStatus = $bk['payment_status'] ?? 'unpaid';
 
-// Auto-redirect ไปหน้าสลิปทันทีถ้าชำระแล้ว (ยกเว้นเมื่อเพิ่ง upload สลิป)
-if ($payStatus === 'paid' && !isset($_GET['uploaded'])) {
+// Auto-redirect ไปหน้าสลิปทันทีถ้าชำระแล้ว
+if ($payStatus === 'paid') {
     header("Location: equipment_ticket.php?id=$id");
     exit;
 }
@@ -705,9 +705,7 @@ a{text-decoration:none;}
       <div class="paid-ico">✅</div>
       <div class="paid-title">ชำระเงินเรียบร้อยแล้ว!</div>
       <div class="paid-sub">เจ้าหน้าที่ยืนยันการชำระของท่านแล้ว</div>
-      <a href="equipment_ticket.php?id=<?= $id ?>" style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:12px 28px;background:linear-gradient(135deg,#052e16,#166534);color:#fff;border-radius:13px;font-family:'Kanit',sans-serif;font-size:.95rem;font-weight:800;text-decoration:none;">
-        🎫 ดูสลิปการจอง
-      </a>
+      <script>window.location.replace('equipment_ticket.php?id=<?= $id ?>');</script>
     </div>
   </div>
 

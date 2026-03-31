@@ -255,11 +255,13 @@ include 'admin_layout_top.php';
                                     <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
                                     <button class="tk-btn tk-btn-danger" style="width:100%;">✗ ปฏิเสธ</button>
                                 </form>
-                                <form method="POST" onsubmit="return confirm('ลบรายการนี้?')">
+                                <?php if ($row['payment_status'] === 'cash_pending'): ?>
+                                <form method="POST" onsubmit="return confirm('ยืนยันลบรายการ รอชำระสด นี้?')">
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                                    <button class="tk-btn tk-btn-ghost" style="width:100%;font-size:.74rem;">🗑 ลบ</button>
+                                    <button class="tk-btn tk-btn-danger" style="width:100%;font-size:.74rem;">🗑 ลบ</button>
                                 </form>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>

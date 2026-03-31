@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $st->execute();
             $st->close();
 
-            header("Location: {$currentPage}?tab=approved&msg=" . urlencode("อนุมัติการชำระเงินเรียบร้อยแล้ว (คิว Q" . str_pad($qno,4,'0',STR_PAD_LEFT) . ")") . "&type=success");
+            header("Location: {$currentPage}?tab=pending&msg=" . urlencode("อนุมัติการชำระเงินเรียบร้อยแล้ว (คิว Q" . str_pad($qno,4,'0',STR_PAD_LEFT) . ")") . "&type=success");
             exit;
         }
 
@@ -119,7 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $st->execute();
             $st->close();
 
-            header("Location: {$currentPage}?tab=approved&msg=" . urlencode("รับเงินสดแล้ว ออกบัตรคิว Q" . str_pad($qno,4,'0',STR_PAD_LEFT)) . "&type=success");
+            header("Location: {$currentPage}?tab=pending&msg=" . urlencode("รับเงินสดแล้ว ออกบัตรคิว Q" . str_pad($qno,4,'0',STR_PAD_LEFT)) . "&type=success");
             exit;
         }
 
@@ -349,7 +349,6 @@ include 'admin_layout_top.php';
     <a href="?tab=manual" class="ts-btn<?= $tab==='manual'?' active':'' ?>">รอตรวจสอบ<span class="ts-badge"><?= $stat_payment_manual ?></span></a>
     <a href="?tab=paid" class="ts-btn<?= $tab==='paid'?' active':'' ?>">ชำระแล้ว</a>
     <a href="?tab=cash_pending" class="ts-btn<?= $tab==='cash_pending'?' active':'' ?>">💵 รอจ่ายสด</a>
-    <a href="?tab=approved" class="ts-btn<?= $tab==='approved'?' active':'' ?>">อนุมัติแล้ว</a>
   </div>
   <form method="GET" class="search-bar">
     <input type="hidden" name="tab" value="<?= h($tab) ?>">
@@ -517,20 +516,6 @@ include 'admin_layout_top.php';
             </form>
           <?php endif; ?>
 
-          <?php if ($bs === 'pending' && $ps !== 'paid'): ?>
-            <form method="POST" style="display:contents;">
-              <input type="hidden" name="tab" value="<?= h($tab) ?>">
-              <input type="hidden" name="action" value="approve_booking">
-              <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-              <button class="btn btn-ghost btn-sm" type="submit" onclick="return confirm('อนุมัติการจอง?')">อนุมัติจอง</button>
-            </form>
-            <form method="POST" style="display:contents;">
-              <input type="hidden" name="tab" value="<?= h($tab) ?>">
-              <input type="hidden" name="action" value="reject_booking">
-              <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-              <button class="btn btn-danger btn-sm" type="submit" onclick="return confirm('ปฏิเสธการจอง?')">ปฏิเสธ</button>
-            </form>
-          <?php endif; ?>
 
           <?php if (in_array($ps, ['duplicate','suspicious','failed','manual_review'])): ?>
             <form method="POST" style="display:contents;">

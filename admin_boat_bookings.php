@@ -19,14 +19,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $id = (int)($_POST['id'] ?? 0);
 
-    // ── [ชั่วคราว] ลบข้อมูลทั้งหมด ──
-    if ($action === 'delete_all_temp') {
-        $conn->query("DELETE FROM payment_slips");
-        $conn->query("DELETE FROM boat_bookings");
-        $conn->query("ALTER TABLE boat_bookings AUTO_INCREMENT = 1");
-        header("Location: {$currentPage}?msg=" . urlencode("ลบข้อมูลทั้งหมดเรียบร้อยแล้ว") . "&type=success");
-        exit;
-    }
 
     if ($id > 0) {
         if ($action === 'approve_payment') {
@@ -333,11 +325,6 @@ include 'admin_layout_top.php';
     <div class="pg-title">🚣 การจองคิวพายเรือ</div>
     <div class="pg-sub">จัดการรายการจอง การชำระเงิน และสลิป</div>
   </div>
-  <a href="admin_boat_queues.php" class="btn btn-accent" style="height:38px;font-size:.82rem;">+ จัดการคิว</a>
-  <form method="POST" style="display:inline;" onsubmit="return confirm('⚠️ ลบข้อมูลการจองทั้งหมด?\nการกระทำนี้ไม่สามารถย้อนกลับได้!')">
-    <input type="hidden" name="action" value="delete_all_temp">
-    <button type="submit" class="btn" style="height:38px;font-size:.82rem;background:#dc3545;color:#fff;border:none;">🗑 ลบทั้งหมด (ชั่วคราว)</button>
-  </form>
 </div>
 
 <?php if ($message): ?>

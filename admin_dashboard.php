@@ -97,11 +97,6 @@ include "admin_layout_top.php";
 /* ── Table section ── */
 .table-section { animation: fadeUp 0.5s 0.2s both; }
 
-.table-toolbar {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
-}
-
 .live-dot {
   display: inline-block; width: 7px; height: 7px;
   background: #22c55e; border-radius: 50%; margin-right: 6px;
@@ -113,14 +108,54 @@ include "admin_layout_top.php";
   50%      { box-shadow: 0 0 0 6px rgba(34,197,94,0.08); }
 }
 
-.lm-table thead th:nth-child(1),
-.lm-table tbody td:nth-child(1) { width: 50px; text-align: center; color: var(--muted); }
-.lm-table thead th:nth-child(4),
-.lm-table tbody td:nth-child(4) { width: 100px; text-align: center; }
-.lm-table thead th:nth-child(5),
-.lm-table tbody td:nth-child(5) { width: 100px; text-align: center; }
-
+/* ── Table box (daily_report style) ── */
+.table-box {
+  background: linear-gradient(180deg,#ffffff 0%,#fffdfa 100%);
+  border: 1px solid #eee7dc;
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(24,30,58,0.08);
+  overflow: hidden;
+}
+.table-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid #efe8dc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: linear-gradient(180deg,#fffdf9 0%,#fbf8f2 100%);
+}
+.table-title h2 { font-size:18px; font-weight:800; margin:0 0 4px; color:#1d2238; }
+.table-title p  { margin:0; font-size:13px; color:#8b8fa3; }
+.summary-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 999px;
+  background: #f5efe4; color: #6f5a33;
+  font-size: 13px; font-weight: 700;
+}
+.table-actions {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+.lm-table { width:100%; border-collapse:separate; border-spacing:0; }
+.lm-table th, .lm-table td {
+  padding: 14px 14px; border-bottom: 1px solid #f0ebe3;
+  text-align: left; font-size: 13px; vertical-align: middle;
+}
+.lm-table th {
+  background: #f8f5ef; color: #5f6579; font-weight: 800;
+  white-space: nowrap; position: sticky; top: 0; z-index: 1;
+}
+.lm-table tbody tr:hover { background: #fcfaf6; }
+.lm-table td { color: #1f2437; }
+.name-cell { font-weight:700; color:#1d2238; }
+.time-cell { font-weight:700; color:#4f566d; }
 .empty-row { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 32px !important; }
+
+/* badges สำหรับ user_type */
+.badge.student { background:#fff1e6; color:#e56a00; border:1px solid #ffd4b3; }
+.badge.staff   { background:#edf8ee; color:#3e8e49; border:1px solid #cdebd1; }
+.badge.tourist { background:#eaf2ff; color:#1f6fd1; border:1px solid #cfe1ff; }
 
 @media (max-width: 1100px) {
   .mid-grid { grid-template-columns: 1fr; }
@@ -202,13 +237,13 @@ include "admin_layout_top.php";
 
 <!-- ── Table ── -->
 <div class="table-section">
-  <div class="lm-card">
-    <div class="lm-card-header">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="live-dot"></span>
-        <span class="lm-card-title">รายการเข้าชมวันนี้</span>
+  <div class="table-box">
+    <div class="table-header">
+      <div class="table-title">
+        <h2><span class="live-dot"></span>รายการเข้าชมวันนี้ (<?= date('d/m/Y') ?>)</h2>
+        <p>แสดงข้อมูลผู้เช็คอินทั้งหมดของวันนี้แบบ real-time</p>
       </div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <div class="table-actions">
         <form method="GET" style="display:flex;gap:8px;align-items:center;">
           <div class="search-wrap">
             <input type="text" name="search" placeholder="ค้นหา..."
@@ -219,6 +254,7 @@ include "admin_layout_top.php";
             <a href="admin_dashboard.php" class="btn btn-ghost btn-sm">ล้าง</a>
           <?php endif; ?>
         </form>
+        <div class="summary-chip">ทั้งหมด <?= (int)$total_today ?> รายการ</div>
         <a href="archive_today.php" class="btn btn-accent btn-sm"
            onclick="return confirm('ต้องการปิดวันหรือไม่?')">ปิดวัน</a>
       </div>
@@ -228,38 +264,39 @@ include "admin_layout_top.php";
       <table class="lm-table">
         <thead>
           <tr>
-            <th>#</th>
+            <th style="width:56px;">#</th>
             <th>ชื่อเล่น</th>
             <th>เพศ</th>
             <th>อายุ</th>
             <th>ประเภท</th>
             <th>เวลาเข้า</th>
-            <th>จัดการ</th>
+            <th style="width:80px;">จัดการ</th>
           </tr>
         </thead>
         <tbody id="liveTable">
           <?php if ($result && $result->num_rows > 0): ?>
             <?php $n = 1; while ($row = $result->fetch_assoc()): ?>
               <?php
-              $badgeClass = ($row['user_type'] == 'นักศึกษา') ? 'badge-blue'
-                          : (($row['user_type'] == 'บุคลากร') ? 'badge-orange' : 'badge-green');
+              $bType = $row['user_type'];
+              $badgeClass = ($bType === 'นักศึกษา') ? 'student'
+                          : (($bType === 'บุคลากร') ? 'staff' : 'tourist');
               $t = '-';
-              if (!empty($row['created_at'])) {
-                $ts = strtotime($row['created_at']);
+              if (!empty($row['visit_time'])) {
+                $ts = strtotime($row['visit_time']);
                 if ($ts) $t = date('H:i', $ts);
-              } elseif (!empty($row['visit_time'])) {
-                $ts2 = strtotime($row['visit_time']);
+              } elseif (!empty($row['created_at'])) {
+                $ts2 = strtotime($row['created_at']);
                 if ($ts2) $t = date('H:i', $ts2);
               }
               $genderIcon = ($row['gender'] === 'ชาย') ? '👨' : (($row['gender'] === 'หญิง') ? '👩' : '');
               ?>
               <tr>
-                <td><?= $n++ ?></td>
-                <td><strong><?= htmlspecialchars($row['nickname']) ?></strong></td>
+                <td style="color:#7b8091;font-weight:700;"><?= $n++ ?></td>
+                <td class="name-cell"><?= htmlspecialchars($row['nickname']) ?></td>
                 <td><?= $genderIcon ?> <?= htmlspecialchars($row['gender'] ?? '-') ?></td>
-                <td><?= (int)($row['age'] ?? 0) ?> ปี</td>
-                <td><span class="badge <?= $badgeClass ?>"><?= htmlspecialchars($row['user_type']) ?></span></td>
-                <td><?= $t ?></td>
+                <td><?= ($row['age'] !== null && $row['age'] !== '') ? (int)$row['age'] . ' ปี' : '-' ?></td>
+                <td><span class="badge <?= $badgeClass ?>"><?= htmlspecialchars($bType) ?></span></td>
+                <td class="time-cell"><?= $t ?></td>
                 <td>
                   <a class="btn btn-danger btn-sm"
                      href="delete_tourist.php?id=<?= (int)$row['id'] ?>"

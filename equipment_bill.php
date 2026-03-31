@@ -284,6 +284,14 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh;disp
 
         <div class="info-grid">
             <div class="info-row">
+                <div class="info-icon">🧾</div>
+                <div>
+                    <div class="info-label">เลขที่บิล</div>
+                    <div class="info-value" style="font-size:16px;color:#15803d;letter-spacing:.04em;"><?= htmlspecialchars($bookingRef2) ?></div>
+                </div>
+            </div>
+
+            <div class="info-row">
                 <div class="info-icon">⛺</div>
                 <div>
                     <div class="info-label">ประเภทเต็นท์</div>

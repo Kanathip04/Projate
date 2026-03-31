@@ -78,6 +78,9 @@ if ($lastReset < $today) {
         }
     }
 
+    // ปิดการจองคิวที่วันที่ผ่านมาแล้ว (ทุกคิวที่ queue_date < วันนี้)
+    $conn->query("UPDATE boat_queues SET status='hide' WHERE queue_date < '$today' AND status='show'");
+
     // อัปเดต last reset date
     $conn->query("UPDATE app_settings SET setting_value='$today' WHERE setting_key='last_queue_reset_date'");
 }

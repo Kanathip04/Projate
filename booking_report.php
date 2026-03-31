@@ -88,6 +88,9 @@ $touristStaff   = (int)($touristBreakdown['บุคลากร']['cnt'] ?? 0);
 $touristVisitor = (int)($touristBreakdown['นักท่องเที่ยว']['cnt'] ?? 0);
 $touristTotal   = $touristStudent + $touristStaff + $touristVisitor;
 
+// today's walk-in tourists
+$touristTodayCount = (int)$conn->query("SELECT COUNT(*) c FROM tourists WHERE visit_date='$today'")->fetch_assoc()['c'];
+
 // รายชื่อผู้เช็คอิน (tourists) สำหรับช่วงที่เลือก
 $touristListRes = $conn->query("SELECT nickname, gender, age, user_type, visit_date, visit_time
     FROM tourists WHERE " . dateWhere('visit_date', $dateFrom, $dateTo) . " ORDER BY visit_date ASC, visit_time ASC LIMIT 200");
@@ -1128,9 +1131,31 @@ $qnavLinks = [
 <div class="sec-hd">กราฟ</div>
 <!-- Charts row 1 -->
 <div class="chart-grid">
-  <div class="chart-box">
-    <div class="chart-title">📊 จำนวนการจองตามช่วงเวลา</div>
-    <div class="chart-wrap"><canvas id="chartBooking"></canvas></div>
+  <div class="chart-box" style="display:flex;flex-direction:column;justify-content:center;background:#f0fdf4;border:2px solid #bbf7d0;">
+    <div class="chart-title" style="color:#15803d;">🚪 ข้อมูลเช็คอินวันนี้ (<?= date('d/m/Y') ?>)</div>
+    <?php $grandTodayCheckin = $totalCheckinToday + $touristTodayCount; ?>
+    <div style="text-align:center;padding:18px 0 10px;">
+      <div style="font-size:3rem;font-weight:800;color:#16a34a;line-height:1;"><?= number_format($grandTodayCheckin) ?></div>
+      <div style="font-size:.95rem;color:#6b7280;margin-top:4px;">คนทั้งหมด</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 16px;">
+      <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid #d1fae5;">
+        <div style="font-size:1.5rem;font-weight:700;color:#0d9488;"><?= number_format($boatCheckinToday) ?></div>
+        <div style="font-size:.8rem;color:#6b7280;">⛵ เรือพาย</div>
+      </div>
+      <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid #d1fae5;">
+        <div style="font-size:1.5rem;font-weight:700;color:#7c3aed;"><?= number_format($roomCheckinToday) ?></div>
+        <div style="font-size:.8rem;color:#6b7280;">🏠 ห้องพัก</div>
+      </div>
+      <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid #d1fae5;">
+        <div style="font-size:1.5rem;font-weight:700;color:#d97706;"><?= number_format($tentCheckinToday) ?></div>
+        <div style="font-size:.8rem;color:#6b7280;">⛺ เต็นท์</div>
+      </div>
+      <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid #d1fae5;">
+        <div style="font-size:1.5rem;font-weight:700;color:#db2777;"><?= number_format($touristTodayCount) ?></div>
+        <div style="font-size:.8rem;color:#6b7280;">🧍 walk-in</div>
+      </div>
+    </div>
   </div>
   <div class="chart-box">
     <div class="chart-title">💵 รายได้ตามช่วงเวลา (เรือพาย)</div>

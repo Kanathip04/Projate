@@ -8,6 +8,15 @@ function h($s){return htmlspecialchars((string)$s,ENT_QUOTES,'UTF-8');}
 
 $thMonths=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_archive') {
+    $delDate = trim($_POST['archive_date'] ?? '');
+    if ($delDate) {
+        $st = $conn->prepare("DELETE FROM boat_queue_daily_archive WHERE archive_date=?");
+        $st->bind_param("s", $delDate); $st->execute(); $st->close();
+    }
+    header("Location: admin_boat_archive_view.php"); exit;
+}
+
 $allArchives = $conn->query("SELECT archive_date, total_queues, total_revenue, archived_at FROM boat_queue_daily_archive ORDER BY archive_date DESC");
 
 $pageTitle="จัดเก็บข้อมูลคิว"; $activeMenu="boat_archive";
@@ -58,7 +67,7 @@ table.at tr:last-child td{border-bottom:none;}
     <div style="overflow-x:auto;">
     <table class="at">
       <thead>
-        <tr><th>#</th><th>วันที่</th><th>จำนวนคิว</th><th>รายได้รวม</th><th>เวลาจัดเก็บ</th></tr>
+        <tr><th>#</th><th>วันที่</th><th>จำนวนคิว</th><th>รายได้รวม</th><th>เวลาจัดเก็บ</th><th style="width:80px;">จัดการ</th></tr>
       </thead>
       <tbody>
       <?php $no=1; while ($ar = $allArchives->fetch_assoc()):
@@ -73,6 +82,13 @@ table.at tr:last-child td{border-bottom:none;}
           <td><span style="font-weight:700;color:var(--blue);"><?= (int)$ar['total_queues'] ?></span> คิว</td>
           <td style="font-weight:700;color:var(--green);">฿<?= number_format((float)$ar['total_revenue']) ?></td>
           <td style="font-size:.76rem;color:var(--muted);"><?= date('d/m/Y H:i', strtotime($ar['archived_at'])) ?></td>
+          <td>
+            <form method="POST" onsubmit="return confirm('ยืนยันลบข้อมูล <?= $arThDate ?> ?')">
+              <input type="hidden" name="action" value="delete_archive">
+              <input type="hidden" name="archive_date" value="<?= h($ar['archive_date']) ?>">
+              <button style="background:#fef2f2;color:#dc2626;border:1.5px solid #fca5a5;border-radius:7px;padding:4px 10px;font-size:.75rem;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;">🗑 ลบ</button>
+            </form>
+          </td>
         </tr>
       <?php endwhile; ?>
       </tbody>

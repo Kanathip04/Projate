@@ -23,6 +23,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $conn->query("UPDATE equipment_bookings SET archived=1 WHERE payment_status='paid' AND (archived IS NULL OR archived=0)");
         header("Location: manage_tent_stock.php?msg=" . urlencode("จัดเก็บข้อมูลเรียบร้อยแล้ว") . "&type=success"); exit;
     }
+    if ($action === 'approve_slip' && $id > 0) {
+        $st = $conn->prepare("UPDATE equipment_bookings SET payment_status='paid' WHERE id=?");
+        $st->bind_param("i", $id); $st->execute(); $st->close();
+        $conn->query("UPDATE payment_slips SET verification_status='paid', reviewed_by=".(int)($_SESSION['user_id']??0).", reviewed_at=NOW() WHERE booking_id=$id AND booking_type='equipment' ORDER BY id DESC LIMIT 1");
+        $message = "อนุมัติสลิปเรียบร้อยแล้ว";
+    }
+    if ($action === 'reject_slip' && $id > 0) {
+        $st = $conn->prepare("UPDATE equipment_bookings SET payment_status='failed', payment_slip=NULL WHERE id=?");
+        $st->bind_param("i", $id); $st->execute(); $st->close();
+        $conn->query("UPDATE payment_slips SET verification_status='rejected', reviewed_by=".(int)($_SESSION['user_id']??0).", reviewed_at=NOW() WHERE booking_id=$id AND booking_type='equipment' ORDER BY id DESC LIMIT 1");
+        $message = "ปฏิเสธสลิปเรียบร้อยแล้ว";
+    }
     if ($action === 'cancel' && $id > 0) {
         $st = $conn->prepare("UPDATE equipment_bookings SET payment_status='failed', booking_status='pending' WHERE id=?");
         $st->bind_param("i", $id); $st->execute(); $st->close();
@@ -48,6 +60,14 @@ if ($search !== '') {
 $stmt = $conn->prepare("SELECT * FROM equipment_bookings {$where} ORDER BY id DESC");
 if (!empty($params)) $stmt->bind_param($types, ...$params);
 $stmt->execute(); $result = $stmt->get_result();
+
+// รายการรอตรวจสลิป
+$whereW = "WHERE payment_status='waiting_verify' AND (archived IS NULL OR archived=0)";
+if ($search !== '') $whereW .= " AND (full_name LIKE ? OR phone LIKE ? OR email LIKE ?)";
+$stmtW = $conn->prepare("SELECT * FROM equipment_bookings {$whereW} ORDER BY id DESC");
+if ($search !== '') $stmtW->bind_param($types, ...$params);
+$stmtW->execute(); $resultW = $stmtW->get_result();
+$totalW = $resultW->num_rows;
 
 $pageTitle = "รายการอนุมัติอุปกรณ์"; $activeMenu = "tent_approved";
 include 'admin_layout_top.php';
@@ -105,6 +125,16 @@ include 'admin_layout_top.php';
 .item-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:.65rem;font-weight:700;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.28);color:#15803d;}
 .tk-btn-slip{background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;}
 .tk-btn-slip:hover{background:#dbeafe;}
+.tk-btn-approve-slip{background:var(--success);color:#fff;}
+.tk-btn-approve-slip:hover{background:#15803d;box-shadow:0 4px 10px rgba(22,163,74,.3);}
+.tk-btn-reject-slip{background:#fef2f2;color:var(--danger);border:1.5px solid #fca5a5;}
+.tk-btn-reject-slip:hover{background:#fee2e2;}
+.badge-waiting{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:.69rem;font-weight:700;background:#fffbeb;color:#92400e;border:1px solid #fde68a;}
+.waiting-card{background:#fffbeb;border:1.5px solid #fde68a;border-radius:18px;overflow:hidden;margin-bottom:24px;}
+.waiting-card .tk-card-header{background:linear-gradient(135deg,#78350f,#92400e);border-bottom:none;}
+.waiting-card .tk-card-title{color:#fff;}
+.waiting-card .tk-card-title::before{background:#fbbf24;}
+.waiting-count{background:rgba(255,255,255,.2);color:#fff;font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;}
 .slip-lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;padding:20px;}
 .slip-lb.open{display:flex;}
 .slip-lb img{max-width:90vw;max-height:88vh;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.5);}
@@ -138,6 +168,107 @@ include 'admin_layout_top.php';
         <div class="tk-alert <?= $message_type==='error' ? 'tk-alert-error' : 'tk-alert-success' ?>">
             <?= $message_type==='error' ? '⚠' : '✓' ?> <?= h($message) ?>
         </div>
+    <?php endif; ?>
+
+    <?php if ($totalW > 0): ?>
+    <div class="waiting-card">
+        <div class="tk-card-header">
+            <div>
+                <div class="tk-card-title">⏳ รอตรวจสอบสลิป</div>
+            </div>
+            <span class="waiting-count"><?= $totalW ?> รายการ</span>
+        </div>
+        <div class="tk-table-wrap">
+            <table class="tk-table">
+                <thead>
+                    <tr>
+                        <th style="width:46px;">#</th>
+                        <th>เลขที่บิล</th>
+                        <th>ผู้จอง</th>
+                        <th>ติดต่อ</th>
+                        <th>อุปกรณ์ / ราคา</th>
+                        <th>วันเข้า–ออก</th>
+                        <th>วันที่จอง</th>
+                        <th>จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php $noW = 1; while ($rowW = $resultW->fetch_assoc()): ?>
+                        <?php
+                        $_bkDateW = date('Ymd', strtotime($rowW['created_at']));
+                        $_seqRW   = $conn->query("SELECT COUNT(*) AS seq FROM equipment_bookings WHERE DATE(created_at) = DATE('" . $conn->real_escape_string($rowW['created_at']) . "') AND id <= " . (int)$rowW['id']);
+                        $_seqW    = (int)($_seqRW ? $_seqRW->fetch_assoc()['seq'] : 1);
+                        $_billRefW = 'EQUIP-' . $_bkDateW . '-' . str_pad($_seqW, 3, '0', STR_PAD_LEFT);
+
+                        $itemsW = [];
+                        if (!empty($rowW['items_json'])) {
+                            $decodedW = json_decode($rowW['items_json'], true);
+                            if (is_array($decodedW)) {
+                                foreach ($decodedW as $item) {
+                                    $name = $item['name'] ?? ($item['tent_name'] ?? '');
+                                    $qty  = (int)($item['qty'] ?? ($item['quantity'] ?? 1));
+                                    $unit = $item['unit'] ?? 'ชิ้น';
+                                    if ($name) $itemsW[] = h($name) . ' &times;' . $qty . ' ' . h($unit);
+                                }
+                            }
+                        }
+                        $nightsW = 1;
+                        if (!empty($rowW['checkin_date']) && !empty($rowW['checkout_date'])) {
+                            $d1W = new DateTime($rowW['checkin_date']);
+                            $d2W = new DateTime($rowW['checkout_date']);
+                            $nightsW = max(1, (int)$d1W->diff($d2W)->days);
+                        }
+                        ?>
+                        <tr style="background:#fffbeb;">
+                            <td style="color:var(--muted);font-size:.76rem;font-weight:700;"><?= $noW++ ?></td>
+                            <td style="font-size:.78rem;font-weight:700;color:#92400e;white-space:nowrap;"><?= h($_billRefW) ?></td>
+                            <td><div class="tk-name"><?= h($rowW['full_name']) ?></div></td>
+                            <td>
+                                <div><?= h($rowW['phone']) ?></div>
+                                <div class="tk-meta"><?= h($rowW['email'] ?? '') ?></div>
+                            </td>
+                            <td>
+                                <?php if (!empty($itemsW)): ?>
+                                    <div class="item-pills">
+                                        <?php foreach ($itemsW as $itemStr): ?>
+                                            <span class="item-pill">🎒 <?= $itemStr ?></span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <span style="color:var(--muted);font-size:.75rem;">-</span>
+                                <?php endif; ?>
+                                <?php if (!empty($rowW['total_price'])): ?>
+                                    <div class="tk-meta">฿ <?= number_format((float)$rowW['total_price'], 2) ?></div>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <div style="font-size:.79rem;">📅 <?= h($rowW['checkin_date']) ?></div>
+                                <div style="font-size:.79rem;color:var(--muted);">→ <?= h($rowW['checkout_date']) ?> (<?= $nightsW ?> คืน)</div>
+                            </td>
+                            <td style="font-size:.76rem;color:var(--muted);"><?= h(substr($rowW['created_at'],0,16)) ?></td>
+                            <td>
+                                <div class="tk-actions">
+                                    <?php if (!empty($rowW['payment_slip'])): ?>
+                                    <button onclick="openSLB('<?= h($rowW['payment_slip']) ?>')" class="tk-btn tk-btn-slip" style="padding:6px 11px;font-size:.74rem;">🖼 ดูสลิป</button>
+                                    <?php endif; ?>
+                                    <form method="POST" class="tk-inline" onsubmit="return confirm('ยืนยันอนุมัติสลิปนี้?')">
+                                        <input type="hidden" name="action" value="approve_slip">
+                                        <input type="hidden" name="id" value="<?= (int)$rowW['id'] ?>">
+                                        <button class="tk-btn tk-btn-approve-slip" style="padding:6px 11px;font-size:.74rem;">✓ อนุมัติสลิป</button>
+                                    </form>
+                                    <form method="POST" class="tk-inline" onsubmit="return confirm('ยืนยันปฏิเสธสลิปนี้?')">
+                                        <input type="hidden" name="action" value="reject_slip">
+                                        <input type="hidden" name="id" value="<?= (int)$rowW['id'] ?>">
+                                        <button class="tk-btn tk-btn-reject-slip" style="padding:6px 11px;font-size:.74rem;">✗ ปฏิเสธ</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
     <?php endif; ?>
 
     <div class="tk-card">

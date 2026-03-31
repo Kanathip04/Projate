@@ -16,8 +16,13 @@ if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
 $pageTitle  = "Dashboard";
 $activeMenu = "dashboard";
 
+// ── Auto-archive: ปิดวันอัตโนมัติหลังเที่ยงคืน ──
+// archive ข้อมูลวันก่อนหน้าที่ยังไม่ถูกปิดวัน
+$conn->query("UPDATE tourists SET archived=1 WHERE visit_date < CURDATE() AND archived=0");
+
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-$where  = "WHERE visit_date = CURDATE()";
+// แสดงเฉพาะวันนี้ และยังไม่ถูก archive (ยังไม่ปิดวัน)
+$where  = "WHERE visit_date = CURDATE() AND archived=0";
 
 if ($search !== '') {
     $safe   = $conn->real_escape_string($search);
@@ -28,7 +33,7 @@ $sql    = "SELECT id, nickname, gender, age, user_type, visit_date, visit_time, 
 $result = $conn->query($sql);
 if (!$result) die("SQL Error: " . $conn->error);
 
-$count_sql    = "SELECT user_type, COUNT(*) as total FROM tourists WHERE visit_date = CURDATE() GROUP BY user_type";
+$count_sql    = "SELECT user_type, COUNT(*) as total FROM tourists WHERE visit_date = CURDATE() AND archived=0 GROUP BY user_type";
 $count_result = $conn->query($count_sql);
 
 $type_counts  = [];

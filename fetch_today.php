@@ -9,7 +9,7 @@ if ($conn->connect_error) {
 
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
-$where = "WHERE visit_date = CURDATE()";
+$where = "WHERE visit_date = CURDATE() AND archived=0";
 
 if ($search !== '') {
     $safe = $conn->real_escape_string($search);

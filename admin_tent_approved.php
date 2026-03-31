@@ -8,21 +8,6 @@ if ($conn->connect_error) die("DB Error: " . $conn->connect_error);
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
-$conn->query("CREATE TABLE IF NOT EXISTS `tent_bookings` (
-    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    `tent_id` INT UNSIGNED DEFAULT NULL,
-    `full_name` VARCHAR(200) NOT NULL,
-    `phone` VARCHAR(30) NOT NULL,
-    `email` VARCHAR(200) DEFAULT '',
-    `tent_type` VARCHAR(200) DEFAULT '',
-    `guests` INT DEFAULT 1,
-    `checkin_date` DATE DEFAULT NULL,
-    `checkout_date` DATE DEFAULT NULL,
-    `note` TEXT,
-    `booking_status` ENUM('pending','approved','rejected','cancelled') DEFAULT 'pending',
-    `archived` TINYINT(1) DEFAULT 0,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
 $currentPage = basename($_SERVER['PHP_SELF']);
 $message = ''; $message_type = 'success';
@@ -31,17 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $id = (int)($_POST['id'] ?? 0);
     if ($action === 'cancel' && $id > 0) {
-        $st = $conn->prepare("UPDATE tent_bookings SET booking_status='cancelled' WHERE id=?");
+        $st = $conn->prepare("UPDATE equipment_bookings SET payment_status='failed', booking_status='pending' WHERE id=?");
         $st->bind_param("i", $id); $st->execute(); $st->close();
         $message = "ยกเลิกรายการเรียบร้อยแล้ว";
     }
-    if ($action === 'archive' && $id > 0) {
-        $st = $conn->prepare("UPDATE tent_bookings SET archived=1 WHERE id=?");
-        $st->bind_param("i", $id); $st->execute(); $st->close();
-        $message = "จัดเก็บรายการเรียบร้อยแล้ว";
-    }
     if ($action === 'delete' && $id > 0) {
-        $st = $conn->prepare("DELETE FROM tent_bookings WHERE id=?");
+        $st = $conn->prepare("DELETE FROM equipment_bookings WHERE id=?");
         $st->bind_param("i", $id); $st->execute(); $st->close();
         $message = "ลบรายการเรียบร้อยแล้ว";
     }
@@ -51,17 +31,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (isset($_GET['msg'])) { $message = $_GET['msg']; $message_type = $_GET['type'] ?? 'success'; }
 $search = trim($_GET['search'] ?? '');
 
-$where = "WHERE archived=0 AND booking_status='approved'";
+$where = "WHERE payment_status='paid'";
 $params = []; $types = "";
 if ($search !== '') {
-    $where .= " AND (full_name LIKE ? OR phone LIKE ? OR email LIKE ? OR tent_type LIKE ?)";
-    $like = "%{$search}%"; $params = [$like,$like,$like,$like]; $types = "ssss";
+    $where .= " AND (full_name LIKE ? OR phone LIKE ? OR email LIKE ?)";
+    $like = "%{$search}%"; $params = [$like,$like,$like]; $types = "sss";
 }
-$stmt = $conn->prepare("SELECT * FROM tent_bookings {$where} ORDER BY id DESC");
+$stmt = $conn->prepare("SELECT * FROM equipment_bookings {$where} ORDER BY id DESC");
 if (!empty($params)) $stmt->bind_param($types, ...$params);
 $stmt->execute(); $result = $stmt->get_result();
 
-$pageTitle = "รายการอนุมัติเต็นท์"; $activeMenu = "tent_approved";
+$pageTitle = "รายการอนุมัติอุปกรณ์"; $activeMenu = "tent_approved";
 include 'admin_layout_top.php';
 ?>
 <style>
@@ -92,12 +72,14 @@ include 'admin_layout_top.php';
 .tk-btn-primary{background:var(--ink);color:#fff;}
 .tk-btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--border);}
 .tk-btn-ghost:hover{border-color:var(--gold);color:var(--gold);}
+.tk-btn-success{background:#f0fdf4;color:var(--success);border:1.5px solid #86efac;}
+.tk-btn-success:hover{background:#dcfce7;}
 .tk-btn-warning{background:#fffbeb;color:var(--warning);border:1.5px solid #fde68a;}
 .tk-btn-warning:hover{background:#fef3c7;}
 .tk-btn-danger{background:#fef2f2;color:var(--danger);border:1.5px solid #fca5a5;}
 .tk-btn-danger:hover{background:#fee2e2;}
 .tk-table-wrap{overflow-x:auto;}
-.tk-table{width:100%;border-collapse:collapse;min-width:820px;}
+.tk-table{width:100%;border-collapse:collapse;min-width:860px;}
 .tk-table thead th{padding:11px 14px;font-size:.67rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border);text-align:left;font-weight:700;background:#fdfcfa;}
 .tk-table tbody td{padding:13px 14px;font-size:.83rem;color:var(--ink);border-bottom:1px solid var(--border);vertical-align:middle;}
 .tk-table tbody tr:last-child td{border-bottom:none;}
@@ -111,15 +93,15 @@ include 'admin_layout_top.php';
 .tk-empty{padding:48px 24px;text-align:center;}
 .tk-empty-icon{font-size:2.2rem;margin-bottom:10px;opacity:.35;}
 .tk-empty-text{font-size:.83rem;color:var(--muted);line-height:1.7;}
-.unit-pills{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;}
-.unit-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:.65rem;font-weight:700;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.28);color:#15803d;}
+.item-pills{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;}
+.item-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:.65rem;font-weight:700;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.28);color:#15803d;}
 </style>
 
 <div class="tk-wrap">
     <div class="tk-banner">
         <div>
-            <h1>✅ รายการอนุมัติเต็นท์</h1>
-            <p>รายการจองเต็นท์ที่ผ่านการอนุมัติแล้ว</p>
+            <h1>✅ รายการชำระแล้ว (อุปกรณ์)</h1>
+            <p>รายการเช่าอุปกรณ์ที่ชำระเงินเรียบร้อยแล้ว</p>
         </div>
         <div class="tk-banner-links">
             <a href="admin_tent_list.php" class="tk-banner-link">📋 รายการรออนุมัติ</a>
@@ -136,7 +118,7 @@ include 'admin_layout_top.php';
     <div class="tk-card">
         <div class="tk-card-header">
             <div>
-                <div class="tk-card-title">รายการอนุมัติแล้ว</div>
+                <div class="tk-card-title">รายการชำระแล้ว</div>
             </div>
             <span class="tk-count"><?= $result->num_rows ?> รายการ</span>
         </div>
@@ -145,7 +127,7 @@ include 'admin_layout_top.php';
             <div class="tk-search">
                 <div class="tk-search-wrap">
                     <input type="text" name="search" class="tk-search-input"
-                           placeholder="ค้นหาชื่อ, เบอร์โทร, ประเภทเต็นท์..."
+                           placeholder="ค้นหาชื่อ, เบอร์โทร, อีเมล..."
                            value="<?= h($search) ?>">
                 </div>
                 <button type="submit" class="tk-btn tk-btn-primary">ค้นหา</button>
@@ -160,56 +142,64 @@ include 'admin_layout_top.php';
                 <thead>
                     <tr>
                         <th style="width:46px;">#</th>
-                        <th>ผู้จอง</th>
+                        <th>ผู้เช่า</th>
                         <th>ติดต่อ</th>
-                        <th>เต็นท์</th>
+                        <th>อุปกรณ์</th>
                         <th>วันเข้า–ออก</th>
+                        <th>ยอดรวม</th>
                         <th>สถานะ</th>
                         <th>วันที่จอง</th>
-                        <th style="width:200px;">จัดการ</th>
+                        <th style="width:220px;">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if ($result && $result->num_rows > 0): ?>
                         <?php while ($row = $result->fetch_assoc()): ?>
+                            <?php
+                            $items = json_decode($row['items_json'] ?? '[]', true) ?: [];
+                            $nights = 1;
+                            if (!empty($row['checkin_date']) && !empty($row['checkout_date'])) {
+                                $d1 = new DateTime($row['checkin_date']);
+                                $d2 = new DateTime($row['checkout_date']);
+                                $nights = max(1, (int)$d1->diff($d2)->days);
+                            }
+                            $total = (float)$row['total_price'] * $nights;
+                            ?>
                             <tr>
                                 <td style="color:var(--muted);font-size:.76rem;"><?= (int)$row['id'] ?></td>
                                 <td>
                                     <div class="tk-name"><?= h($row['full_name']) ?></div>
-                                    <div class="tk-meta"><?= (int)$row['guests'] ?> คน</div>
                                 </td>
                                 <td>
                                     <div><?= h($row['phone']) ?></div>
-                                    <div class="tk-meta"><?= h($row['email']) ?></div>
+                                    <div class="tk-meta"><?= h($row['email'] ?? '') ?></div>
                                 </td>
                                 <td>
-                                  <?= h($row['tent_type']) ?>
-                                  <?php $units = !empty($row['tent_units']) ? json_decode($row['tent_units'], true) : []; ?>
-                                  <?php if (!empty($units)): ?>
-                                    <div class="unit-pills">
-                                      <?php foreach ($units as $u): ?>
-                                        <span class="unit-pill">🔑 หน่วยที่ <?= (int)$u ?></span>
+                                  <?php if (!empty($items)): ?>
+                                    <div class="item-pills">
+                                      <?php foreach ($items as $it): ?>
+                                        <span class="item-pill">🎒 <?= h($it['name']) ?> ×<?= (int)$it['qty'] ?></span>
                                       <?php endforeach; ?>
                                     </div>
+                                  <?php else: ?>
+                                    <span style="color:var(--muted);font-size:.75rem;">-</span>
                                   <?php endif; ?>
                                 </td>
                                 <td>
                                     <div style="font-size:.79rem;">📅 <?= h($row['checkin_date']) ?></div>
-                                    <div style="font-size:.79rem;color:var(--muted);">→ <?= h($row['checkout_date']) ?></div>
+                                    <div style="font-size:.79rem;color:var(--muted);">→ <?= h($row['checkout_date']) ?> (<?= $nights ?> คืน)</div>
                                 </td>
-                                <td><span class="badge-approved">อนุมัติแล้ว</span></td>
+                                <td style="font-weight:700;color:#92400e;">฿<?= number_format($total, 2) ?></td>
+                                <td><span class="badge-approved">ชำระแล้ว</span></td>
                                 <td style="font-size:.76rem;color:var(--muted);"><?= h(substr($row['created_at'],0,16)) ?></td>
                                 <td>
                                     <div class="tk-actions">
+                                        <a href="equipment_ticket.php?id=<?= (int)$row['id'] ?>" class="tk-btn tk-btn-success" style="padding:6px 11px;font-size:.74rem;" target="_blank">🎫 สลิป</a>
+                                        <a href="equipment_bill.php?id=<?= (int)$row['id'] ?>" class="tk-btn tk-btn-ghost" style="padding:6px 11px;font-size:.74rem;" target="_blank">🧾 บิล</a>
                                         <form method="POST" class="tk-inline" onsubmit="return confirm('ยืนยันยกเลิกรายการนี้?')">
                                             <input type="hidden" name="action" value="cancel">
                                             <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
                                             <button class="tk-btn tk-btn-warning" style="padding:6px 11px;font-size:.74rem;">✗ ยกเลิก</button>
-                                        </form>
-                                        <form method="POST" class="tk-inline" onsubmit="return confirm('จัดเก็บรายการนี้?')">
-                                            <input type="hidden" name="action" value="archive">
-                                            <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                                            <button class="tk-btn tk-btn-warning" style="padding:6px 11px;font-size:.74rem;">📦 จัดเก็บ</button>
                                         </form>
                                         <form method="POST" class="tk-inline" onsubmit="return confirm('ยืนยันการลบ?')">
                                             <input type="hidden" name="action" value="delete">
@@ -221,11 +211,11 @@ include 'admin_layout_top.php';
                             </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
-                        <tr><td colspan="8">
+                        <tr><td colspan="9">
                             <div class="tk-empty">
                                 <div class="tk-empty-icon">✅</div>
                                 <div class="tk-empty-text">
-                                    <?= $search ? 'ไม่พบรายการที่ตรงกับ "'.h($search).'"' : 'ยังไม่มีรายการอนุมัติ' ?>
+                                    <?= $search ? 'ไม่พบรายการที่ตรงกับ "'.h($search).'"' : 'ยังไม่มีรายการชำระแล้ว' ?>
                                 </div>
                             </div>
                         </td></tr>

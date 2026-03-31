@@ -46,44 +46,12 @@ $conn->query("CREATE TABLE IF NOT EXISTS `app_settings` (
 $conn->query("INSERT IGNORE INTO app_settings (setting_key, setting_value) VALUES ('last_queue_reset_date', '2000-01-01')");
 
 /* ════════════════════════════════
-   AUTO ARCHIVE เที่ยงคืน
-   ถ้าวันที่ last_reset != เมื่อวาน → archive ข้อมูลเมื่อวาน
+   AUTO CLOSE เที่ยงคืน
+   ปิดการจองคิวที่วันที่ผ่านมาแล้วอัตโนมัติ (ไม่ลบข้อมูล)
+   เจ้าหน้าที่ต้องมาเปิดเองด้วยปุ่ม เปิดการจอง
 ════════════════════════════════ */
-$yesterday = date('Y-m-d', strtotime('-1 day'));
-$today     = date('Y-m-d');
-
-$lastReset = $conn->query("SELECT setting_value FROM app_settings WHERE setting_key='last_queue_reset_date' LIMIT 1")->fetch_assoc()['setting_value'] ?? '2000-01-01';
-
-if ($lastReset < $today) {
-    // archive เมื่อวาน (ถ้ายังไม่ได้ archive)
-    $archCheck = $conn->prepare("SELECT id FROM boat_queue_daily_archive WHERE archive_date=? LIMIT 1");
-    $archCheck->bind_param("s", $yesterday); $archCheck->execute();
-    $alreadyArch = $archCheck->get_result()->fetch_assoc();
-    $archCheck->close();
-
-    if (!$alreadyArch) {
-        $bkRes = $conn->query("SELECT * FROM boat_bookings WHERE DATE(approved_at)='$yesterday' AND booking_status='approved' AND payment_status='paid' ORDER BY daily_queue_no ASC");
-        $bkRows = [];
-        $totalRev = 0;
-        while ($bk = $bkRes->fetch_assoc()) {
-            $bkRows[] = $bk;
-            $totalRev += (float)($bk['total_amount'] ?? 0);
-        }
-        if (!empty($bkRows)) {
-            $json = json_encode($bkRows, JSON_UNESCAPED_UNICODE);
-            $cnt  = count($bkRows);
-            $archIns = $conn->prepare("INSERT IGNORE INTO boat_queue_daily_archive (archive_date, total_queues, total_revenue, bookings_json) VALUES (?,?,?,?)");
-            $archIns->bind_param("siis", $yesterday, $cnt, $totalRev, $json);
-            $archIns->execute(); $archIns->close();
-        }
-    }
-
-    // ปิดการจองคิวที่วันที่ผ่านมาแล้ว (ทุกคิวที่ queue_date < วันนี้)
-    $conn->query("UPDATE boat_queues SET status='hide' WHERE queue_date < '$today' AND status='show'");
-
-    // อัปเดต last reset date
-    $conn->query("UPDATE app_settings SET setting_value='$today' WHERE setting_key='last_queue_reset_date'");
-}
+$today = date('Y-m-d');
+$conn->query("UPDATE boat_queues SET status='hide' WHERE queue_date < '$today' AND status='show'");
 
 $currentPage = basename($_SERVER['PHP_SELF']);
 $message = ''; $message_type = 'success';
@@ -152,19 +120,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    /* ── archive ด้วยตนเอง ── */
-    if ($action === 'manual_archive') {
-        $archDate = trim($_POST['archive_date'] ?? $yesterday);
-        $bkRes2 = $conn->query("SELECT * FROM boat_bookings WHERE DATE(approved_at)='$archDate' AND booking_status='approved' AND payment_status='paid' ORDER BY daily_queue_no ASC");
-        $bkRows2 = []; $totalRev2 = 0;
-        while ($bk = $bkRes2->fetch_assoc()) { $bkRows2[] = $bk; $totalRev2 += (float)($bk['total_amount'] ?? 0); }
-        $json2 = json_encode($bkRows2, JSON_UNESCAPED_UNICODE);
-        $cnt2  = count($bkRows2);
-        $archIns2 = $conn->prepare("INSERT INTO boat_queue_daily_archive (archive_date,total_queues,total_revenue,bookings_json) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE total_queues=VALUES(total_queues),total_revenue=VALUES(total_revenue),bookings_json=VALUES(bookings_json),archived_at=NOW()");
-        $archIns2->bind_param("siis", $archDate, $cnt2, $totalRev2, $json2);
-        $archIns2->execute(); $archIns2->close();
-        $message = "จัดเก็บข้อมูลวันที่ $archDate สำเร็จ ($cnt2 คิว)";
-    }
 
     header("Location: {$currentPage}?msg=" . urlencode($message) . "&type=" . urlencode($message_type)); exit;
 }
@@ -191,8 +146,6 @@ $stmt = $conn->prepare("SELECT q.*, (SELECT COUNT(*) FROM boat_bookings b WHERE 
 if (!empty($params)) $stmt->bind_param($types, ...$params);
 $stmt->execute(); $result = $stmt->get_result();
 
-/* ── ดึง archives ล่าสุด ── */
-$archives = $conn->query("SELECT archive_date, total_queues, total_revenue, archived_at FROM boat_queue_daily_archive ORDER BY archive_date DESC LIMIT 10");
 
 $pageTitle = "จัดการคิวพายเรือ"; $activeMenu = "boat_queue";
 include 'admin_layout_top.php';

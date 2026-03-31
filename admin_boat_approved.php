@@ -40,6 +40,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $st->bind_param("i", $id); $st->execute(); $st->close();
         $message = "ลบรายการเรียบร้อยแล้ว";
     }
+    if ($action === 'archive_approved') {
+        $archDate = trim($_POST['archive_date'] ?? date('Y-m-d'));
+        $bkRes = $conn->query("SELECT * FROM boat_bookings WHERE DATE(approved_at)='$archDate' AND booking_status='approved' AND payment_status='cash_paid' ORDER BY daily_queue_no ASC");
+        $bkRows = []; $totalRev = 0;
+        while ($bk = $bkRes->fetch_assoc()) {
+            $bkRows[] = $bk;
+            $totalRev += (float)($bk['total_amount'] ?? 0);
+        }
+        $json = json_encode($bkRows, JSON_UNESCAPED_UNICODE);
+        $cnt  = count($bkRows);
+        $archIns = $conn->prepare("INSERT INTO boat_queue_daily_archive (archive_date,total_queues,total_revenue,bookings_json) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE total_queues=VALUES(total_queues),total_revenue=VALUES(total_revenue),bookings_json=VALUES(bookings_json),archived_at=NOW()");
+        $archIns->bind_param("siis", $archDate, $cnt, $totalRev, $json);
+        $archIns->execute(); $archIns->close();
+        header("Location: admin_boat_archive_view.php?date=" . urlencode($archDate)); exit;
+    }
     header("Location: {$currentPage}?msg=" . urlencode($message) . "&type=" . urlencode($message_type)); exit;
 }
 
@@ -288,6 +303,13 @@ include 'admin_layout_top.php';
                 ✅ รายการอนุมัติแล้ว
                 <span class="tk-count-success"><?= $resultA->num_rows ?> รายการ</span>
             </div>
+            <form method="POST" onsubmit="return confirm('ยืนยันจัดเก็บข้อมูลที่อนุมัติแล้ววันนี้?')">
+                <input type="hidden" name="action" value="archive_approved">
+                <input type="hidden" name="archive_date" value="<?= date('Y-m-d') ?>">
+                <button class="tk-btn tk-btn-ghost" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;font-size:.78rem;border-color:#86efac;color:var(--success);">
+                    📦 จัดเก็บข้อมูลวันนี้
+                </button>
+            </form>
         </div>
         <div style="overflow-x:auto;">
             <table class="tk-table">

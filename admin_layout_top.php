@@ -425,7 +425,7 @@ foreach ($_sectionMap as $_sec => $_items) {
       <span class="icon">✅</span><span class="text">อนุมัติการจอง</span>
     </a>
     <a href="admin_boat_archive_view.php" class="menu-item <?= $activeMenu==='boat_archive'?'active':'' ?>">
-      <span class="icon">📦</span><span class="text">จัดเก็บเรือ</span>
+      <span class="icon">📦</span><span class="text">จัดเก็บข้อมูลคิว</span>
     </a>
     <a href="admin_boat_queues.php" class="menu-item <?= $activeMenu==='boat_queue'?'active':'' ?>">
       <span class="icon">🛶</span><span class="text">จัดการคิวพายเรือ</span>

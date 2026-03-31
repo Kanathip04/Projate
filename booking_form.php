@@ -91,383 +91,449 @@ if ($checkout === '' || $checkout <= $checkin) {
 }
 
 $availCount = $total_rooms - count($takenUnits);
+
+$roomImg = '';
+foreach (['image_path','image'] as $col) {
+    if (!empty($room[$col])) { $roomImg = $room[$col]; break; }
+}
+$pricePerNight = (float)$room['price'];
+$capacity      = (int)($room['capacity'] ?? 2);
 ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>กรอกข้อมูลการจองห้องพัก</title>
+<title>จองห้องพัก — <?= htmlspecialchars($room['room_name']) ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --ink:        #1a1a2e;
-    --gold:       #c9a96e;
-    --gold-light: #f5ead8;
-    --bg:         #f5f1eb;
-    --card:       #ffffff;
-    --muted:      #7a7a8c;
-    --border:     #e8e4de;
-    --success:    #15803d;
-    --success-bg: #ecfdf3;
-    --danger:     #dc2626;
-    --warning:    #d97706;
-    --warning-bg: #fffbeb;
-  }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --ink:#0d1b2a;--gold:#c9a96e;--gold-dim:#f5ead8;--gold-dark:#a8864d;
+  --bg:#f0f4f8;--card:#fff;--border:#e2e8f0;--muted:#64748b;
+  --success:#15803d;--danger:#dc2626;--warning:#d97706;
+  --navy:#0d1b2a;--navy2:#1e3a5c;
+}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+a{text-decoration:none;}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+/* ── page shell ── */
+.pg-wrap{max-width:1100px;margin:0 auto;padding:28px 16px 60px;}
+.back-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;background:var(--card);border:1.5px solid var(--border);border-radius:10px;color:var(--muted);font-size:.82rem;font-weight:700;margin-bottom:22px;transition:.2s;}
+.back-btn:hover{border-color:var(--gold);color:var(--gold-dark);}
 
-  body {
-    font-family: 'Sarabun', sans-serif;
-    background: var(--bg);
-    color: var(--ink);
-    min-height: 100vh;
-    padding: 40px 16px;
-  }
+/* ── layout ── */
+.layout{display:grid;grid-template-columns:340px 1fr;gap:24px;align-items:start;}
 
-  .wrapper { width: min(960px, 100%); margin: 0 auto; }
+/* ── LEFT PANEL ── */
+.side-panel{position:sticky;top:24px;display:flex;flex-direction:column;gap:16px;}
 
-  .back-link {
-    display: inline-flex; align-items: center; gap: 6px;
-    margin-bottom: 20px; color: var(--ink); text-decoration: none;
-    font-weight: 600; font-size: 14px; opacity: .75; transition: opacity .2s;
-  }
-  .back-link:hover { opacity: 1; }
+/* room card */
+.room-card{background:var(--card);border-radius:20px;overflow:hidden;box-shadow:0 4px 20px rgba(13,27,42,.10);border:1px solid var(--border);}
+.room-img{width:100%;height:180px;object-fit:cover;display:block;}
+.room-img-ph{width:100%;height:180px;background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);display:flex;align-items:center;justify-content:center;font-size:3rem;}
+.room-info{padding:18px 20px;}
+.room-type-badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:.68rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:var(--gold-dim);color:var(--gold-dark);margin-bottom:8px;}
+.room-name{font-family:'Kanit',sans-serif;font-size:1.05rem;font-weight:800;color:var(--ink);margin-bottom:10px;line-height:1.3;}
+.room-meta{display:flex;flex-direction:column;gap:6px;}
+.room-meta-row{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--muted);}
+.room-meta-row span:first-child{font-size:.9rem;}
+.room-meta-row strong{color:var(--ink);}
+.avail-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:99px;font-size:.73rem;font-weight:700;margin-top:10px;}
+.avail-pill.ok{background:#f0fdf4;color:var(--success);border:1px solid #bbf7d0;}
+.avail-pill.full{background:#fef2f2;color:var(--danger);border:1px solid #fecaca;}
 
-  .card {
-    background: var(--card); border-radius: 20px;
-    box-shadow: 0 8px 32px rgba(26,26,46,.10); overflow: hidden;
-  }
+/* price summary */
+.price-box{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);border-radius:20px;padding:20px;color:#fff;box-shadow:0 4px 20px rgba(13,27,42,.18);}
+.price-box-title{font-size:.7rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:14px;}
+.price-rows{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+.price-row{display:flex;justify-content:space-between;align-items:center;font-size:.82rem;}
+.price-row .lbl{color:rgba(255,255,255,.7);}
+.price-row .val{font-weight:700;color:#fff;}
+.price-divider{border:none;border-top:1px solid rgba(255,255,255,.15);margin:8px 0;}
+.price-total{display:flex;justify-content:space-between;align-items:center;}
+.price-total .lbl{font-size:.85rem;font-weight:700;color:rgba(255,255,255,.85);}
+.price-total .val{font-family:'Kanit',sans-serif;font-size:1.5rem;font-weight:900;color:var(--gold);}
+.price-note{font-size:.68rem;color:rgba(255,255,255,.45);margin-top:6px;text-align:right;}
 
-  .header {
-    background: linear-gradient(135deg, #1a1a2e 0%, #2d2d4e 100%);
-    color: #fff; padding: 32px 36px; border-bottom: 3px solid var(--gold);
-  }
-  .header h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
-  .header p  { font-size: 14px; font-weight: 300; opacity: .8; }
+/* ── RIGHT PANEL ── */
+.form-panel{background:var(--card);border-radius:20px;box-shadow:0 4px 20px rgba(13,27,42,.08);border:1px solid var(--border);overflow:hidden;}
 
-  .content { padding: 32px 36px; }
+/* section header */
+.sec-hd{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.sec-num{width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-family:'Kanit',sans-serif;font-size:.78rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sec-title{font-family:'Kanit',sans-serif;font-size:.95rem;font-weight:800;color:var(--ink);}
+.sec-sub{font-size:.75rem;color:var(--muted);margin-top:1px;}
+.sec-body{padding:20px 28px 24px;}
 
-  /* Room info box */
-  .room-box {
-    background: var(--gold-light); border: 1px solid var(--gold);
-    border-radius: 14px; padding: 20px 24px; margin-bottom: 28px;
-    display: flex; justify-content: space-between; align-items: flex-start;
-    flex-wrap: wrap; gap: 12px;
-  }
-  .room-box-info h3 { font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
-  .room-box-info p  { font-size: 14px; color: var(--ink); margin-bottom: 4px; opacity: .85; }
-  .room-avail-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 700;
-    white-space: nowrap;
-  }
-  .room-avail-badge.has-avail { background: var(--success-bg); color: var(--success); border: 1px solid #86efac; }
-  .room-avail-badge.no-avail  { background: #fef2f2; color: var(--danger); border: 1px solid #fca5a5; }
+/* unit grid */
+.unit-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+.leg{display:flex;align-items:center;gap:5px;font-size:.73rem;color:var(--muted);}
+.leg-dot{width:11px;height:11px;border-radius:3px;border:1.5px solid;}
+.leg-dot.a{background:#f8fafc;border-color:var(--border);}
+.leg-dot.s{background:var(--navy);border-color:var(--navy);}
+.leg-dot.p{background:#fffbeb;border-color:#fde68a;}
+.leg-dot.b{background:#f1f5f9;border-color:#cbd5e1;}
 
-  /* ── Unit selector ── */
-  .unit-section { margin-bottom: 28px; }
-  .unit-section-label {
-    font-size: 13px; font-weight: 700; color: var(--muted);
-    margin-bottom: 14px; letter-spacing: .4px; text-transform: uppercase;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .unit-section-label .req { color: var(--danger); }
-  .unit-section-label .count-badge {
-    background: rgba(26,26,46,.07); color: var(--ink);
-    padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
-  }
-  .unit-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 12px;
-    margin-bottom: 12px;
-  }
-  .unit-card {
-    display: flex; flex-direction: column; align-items: center; gap: 5px;
-    padding: 16px 10px; border: 2px solid var(--border); border-radius: 14px;
-    cursor: pointer; transition: border-color .2s, background .2s, transform .15s;
-    background: #faf9f7; user-select: none; position: relative;
-  }
-  .unit-card input[type="checkbox"] { display: none; }
-  .unit-card:not(.unit-taken):hover {
-    border-color: var(--gold); background: var(--gold-light); transform: translateY(-2px);
-  }
-  .unit-card.unit-selected {
-    border-color: var(--ink); background: var(--ink);
-  }
-  .unit-card.unit-selected .unit-num   { color: #fff; }
-  .unit-card.unit-selected .unit-stat  { color: rgba(255,255,255,.65); }
-  .unit-card.unit-selected::after {
-    content: '✓'; position: absolute; top: 6px; right: 8px;
-    color: var(--gold); font-size: 13px; font-weight: 900;
-  }
-  .unit-card.unit-taken {
-    background: #f3f4f6; border-color: #e5e7eb; cursor: not-allowed; opacity: .6;
-  }
-  .unit-card.unit-taken.unit-pending { background: var(--warning-bg); border-color: #fde68a; opacity: .75; }
-  .unit-icon { font-size: 22px; line-height: 1; }
-  .unit-num  { font-size: 14px; font-weight: 700; color: var(--ink); text-align: center; }
-  .unit-stat { font-size: 11px; color: var(--muted); text-align: center; }
+.unit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-bottom:12px;}
+.uc{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:14px 8px;border:2px solid var(--border);border-radius:14px;
+  cursor:pointer;transition:all .2s;background:#f8fafc;user-select:none;position:relative;
+}
+.uc input{display:none;}
+.uc:not(.ut):hover{border-color:var(--gold);background:var(--gold-dim);transform:translateY(-2px);box-shadow:0 4px 12px rgba(201,169,110,.18);}
+.uc.us{border-color:var(--navy);background:var(--navy);box-shadow:0 4px 14px rgba(13,27,42,.25);}
+.uc.us .un{color:#fff;}
+.uc.us .ust{color:rgba(255,255,255,.6);}
+.uc.us::after{content:'✓';position:absolute;top:5px;right:7px;color:var(--gold);font-size:.78rem;font-weight:900;}
+.uc.ut{background:#f1f5f9;border-color:#e2e8f0;cursor:not-allowed;opacity:.55;}
+.uc.ut.up{background:#fffbeb;border-color:#fde68a;opacity:.7;}
+.ui{font-size:1.5rem;line-height:1;}
+.un{font-size:.8rem;font-weight:800;color:var(--ink);text-align:center;}
+.ust{font-size:.67rem;color:var(--muted);text-align:center;}
 
-  .unit-summary {
-    display: none; padding: 11px 16px; border-radius: 10px; font-size: 14px;
-    font-weight: 600; background: rgba(26,26,46,.06); color: var(--ink);
-    border: 1px solid rgba(26,26,46,.1); margin-top: 4px;
-  }
-  .unit-summary.show { display: block; }
+.unit-summary{display:none;padding:10px 14px;border-radius:10px;font-size:.82rem;font-weight:700;background:#f0fdf4;color:var(--success);border:1.5px solid #bbf7d0;margin-top:4px;}
+.unit-summary.show{display:block;}
 
-  /* Legend */
-  .unit-legend {
-    display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
-    font-size: 12px; color: var(--muted);
-  }
-  .leg { display: flex; align-items: center; gap: 5px; }
-  .leg-dot {
-    width: 12px; height: 12px; border-radius: 3px; border: 1.5px solid;
-  }
-  .leg-dot.avail   { background: #faf9f7;        border-color: var(--border); }
-  .leg-dot.sel     { background: var(--ink);     border-color: var(--ink); }
-  .leg-dot.pending { background: var(--warning-bg); border-color: #fde68a; }
-  .leg-dot.booked  { background: #f3f4f6;        border-color: #e5e7eb; }
+/* form fields */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.fg{display:flex;flex-direction:column;gap:6px;}
+.fg.full{grid-column:1/-1;}
+.fg label{font-size:.72rem;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:4px;}
+.fg label .req{color:var(--danger);}
+.fi{position:relative;}
+.fi-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:.9rem;pointer-events:none;opacity:.5;}
+.fi input,.fi select,.fi textarea{
+  width:100%;padding:10px 13px 10px 36px;
+  font-family:'Sarabun',sans-serif;font-size:.9rem;color:var(--ink);
+  background:#f8fafc;border:1.5px solid var(--border);border-radius:11px;
+  outline:none;transition:.2s;
+}
+.fi input:focus,.fi select:focus,.fi textarea:focus{border-color:var(--gold);background:#fff;box-shadow:0 0 0 3px rgba(201,169,110,.15);}
+.fi textarea{padding-top:10px;min-height:80px;resize:vertical;}
+.fi select{appearance:none;}
+.fi-no-icon input,.fi-no-icon select,.fi-no-icon textarea{padding-left:13px;}
 
-  /* Form grid */
-  .section-divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
-  .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-  .form-group { display: flex; flex-direction: column; }
-  .form-group.full { grid-column: 1 / -1; }
+/* date row */
+.date-row{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:start;}
+.date-sep{padding-top:34px;text-align:center;color:var(--muted);font-size:.8rem;}
 
-  label {
-    font-size: 13px; font-weight: 600; color: var(--muted);
-    margin-bottom: 7px; letter-spacing: .4px; text-transform: uppercase;
-  }
-  input, textarea, select {
-    font-family: 'Sarabun', sans-serif; font-size: 15px; color: var(--ink);
-    background: #faf9f7; border: 1.5px solid var(--border);
-    border-radius: 10px; padding: 11px 14px; outline: none;
-    transition: border-color .2s, box-shadow .2s;
-  }
-  input:focus, textarea:focus, select:focus {
-    border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,169,110,.18); background: #fff;
-  }
-  input::placeholder, textarea::placeholder { color: var(--border); }
-  textarea { min-height: 100px; resize: vertical; }
-  select { appearance: none; cursor: pointer; }
+/* nights badge */
+.nights-badge{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 14px;background:var(--gold-dim);border:1.5px solid var(--gold);border-radius:11px;font-size:.82rem;font-weight:700;color:var(--gold-dark);margin-top:4px;grid-column:1/-1;}
 
-  .btn-submit {
-    margin-top: 28px; width: 100%; padding: 15px; border: none;
-    border-radius: 12px; background: var(--ink); color: #fff;
-    font-family: 'Sarabun', sans-serif; font-size: 16px; font-weight: 700;
-    letter-spacing: .4px; cursor: pointer; transition: background .2s, transform .15s;
-  }
-  .btn-submit:hover { background: #2d2d4e; transform: translateY(-1px); }
-  .btn-submit:active { transform: translateY(0); }
+/* submit */
+.submit-wrap{padding:20px 28px 28px;border-top:1px solid var(--border);}
+.submit-btn{
+  width:100%;padding:15px;border:none;border-radius:14px;
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);
+  color:#fff;font-family:'Kanit',sans-serif;font-size:1rem;font-weight:800;
+  cursor:pointer;transition:all .2s;letter-spacing:.03em;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 4px 16px rgba(13,27,42,.2);
+}
+.submit-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(13,27,42,.28);}
+.submit-btn:active{transform:translateY(0);}
+.submit-sub{text-align:center;font-size:.72rem;color:var(--muted);margin-top:10px;}
 
-  @media (max-width: 640px) {
-    .header  { padding: 24px 20px; }
-    .content { padding: 24px 20px; }
-    .form-grid { grid-template-columns: 1fr; }
-    .unit-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
-  }
+@media(max-width:860px){
+  .layout{grid-template-columns:1fr;}
+  .side-panel{position:static;}
+}
+@media(max-width:560px){
+  .sec-body{padding:16px 18px 20px;}
+  .submit-wrap{padding:16px 18px 24px;}
+  .form-grid{grid-template-columns:1fr;}
+  .date-row{grid-template-columns:1fr;}.date-sep{display:none;}
+  .unit-grid{grid-template-columns:repeat(auto-fill,minmax(80px,1fr));}
+}
 </style>
 </head>
 <body>
-<div class="wrapper">
-  <a href="/Projate/booking_room.php?checkin=<?= urlencode($_GET['checkin'] ?? '') ?>&checkout=<?= urlencode($_GET['checkout'] ?? '') ?>&guests=<?= urlencode($_GET['guests'] ?? '') ?>"
-     class="back-link">&#8592; กลับไปหน้าห้องพัก</a>
+<div class="pg-wrap">
 
-  <div class="card">
-    <div class="header">
-      <h1>กรอกข้อมูลการจอง</h1>
-      <p>กรุณากรอกข้อมูลให้ครบถ้วนเพื่อยืนยันการจองห้องพัก</p>
+  <a href="/Projate/booking_room.php?checkin=<?= urlencode($checkin) ?>&checkout=<?= urlencode($checkout) ?>&guests=<?= urlencode($guests) ?>" class="back-btn">&#8592; กลับหน้าห้องพัก</a>
+
+  <div class="layout">
+
+    <!-- ════ LEFT: Room Info + Price ════ -->
+    <div class="side-panel">
+
+      <div class="room-card">
+        <?php if ($roomImg): ?>
+          <img src="<?= htmlspecialchars($roomImg) ?>" alt="<?= htmlspecialchars($room['room_name']) ?>" class="room-img">
+        <?php else: ?>
+          <div class="room-img-ph">🏨</div>
+        <?php endif; ?>
+        <div class="room-info">
+          <div class="room-type-badge"><?= htmlspecialchars($room['room_type'] ?? 'STANDARD') ?></div>
+          <div class="room-name"><?= htmlspecialchars($room['room_name']) ?></div>
+          <div class="room-meta">
+            <div class="room-meta-row"><span>💰</span><span>ราคา <strong>฿<?= number_format($pricePerNight) ?></strong> / คืน / ห้อง</span></div>
+            <div class="room-meta-row"><span>👥</span><span>รองรับ <strong><?= $capacity ?> คน</strong> / ห้อง</span></div>
+            <div class="room-meta-row"><span>🏠</span><span>ทั้งหมด <strong><?= $total_rooms ?> ห้อง</strong></span></div>
+            <?php if (!empty($room['room_size'])): ?>
+            <div class="room-meta-row"><span>📐</span><span>ขนาด <strong><?= htmlspecialchars($room['room_size']) ?></strong></span></div>
+            <?php endif; ?>
+            <?php if (!empty($room['bed_type'])): ?>
+            <div class="room-meta-row"><span>🛏</span><span><?= htmlspecialchars($room['bed_type']) ?></span></div>
+            <?php endif; ?>
+          </div>
+          <div class="avail-pill <?= $availCount > 0 ? 'ok' : 'full' ?>">
+            <?= $availCount > 0 ? "✓ ว่าง {$availCount}/{$total_rooms} ห้อง" : "✗ เต็มทุกห้องแล้ว" ?>
+          </div>
+        </div>
+      </div>
+
+      <div class="price-box">
+        <div class="price-box-title">สรุปยอดชำระ</div>
+        <div class="price-rows">
+          <div class="price-row"><span class="lbl">ราคาต่อห้อง/คืน</span><span class="val">฿<?= number_format($pricePerNight) ?></span></div>
+          <div class="price-row"><span class="lbl">จำนวนห้อง</span><span class="val" id="sumRooms">—</span></div>
+          <div class="price-row"><span class="lbl">จำนวนคืน</span><span class="val" id="sumNights">—</span></div>
+        </div>
+        <hr class="price-divider">
+        <div class="price-total">
+          <span class="lbl">ยอดรวมทั้งหมด</span>
+          <span class="val" id="sumTotal">—</span>
+        </div>
+        <div class="price-note" id="sumBreakdown">&nbsp;</div>
+      </div>
+
     </div>
 
-    <div class="content">
-
-      <!-- Room info -->
-      <div class="room-box">
-        <div class="room-box-info">
-          <h3><?= htmlspecialchars($room['room_name']) ?></h3>
-          <p><strong>ประเภทห้อง:</strong> <?= htmlspecialchars($room['room_type']) ?></p>
-          <p><strong>ราคา:</strong> ฿<?= number_format((float)$room['price']) ?> / คืน</p>
-          <p><strong>รองรับ:</strong> <?= (int)$room['capacity'] ?> คน / ห้อง</p>
-          <p><strong>จำนวนห้องทั้งหมด:</strong> <?= $total_rooms ?> ห้อง</p>
-        </div>
-        <div class="room-avail-badge <?= $availCount > 0 ? 'has-avail' : 'no-avail' ?>">
-          <?= $availCount > 0
-            ? "ว่าง {$availCount} / {$total_rooms} ห้อง"
-            : "เต็มทุกห้องแล้ว" ?>
-        </div>
-      </div>
-
-      <!-- Unit selector -->
-      <div class="unit-section">
-        <div class="unit-section-label">
-          เลือกห้องที่ต้องการจอง <span class="req">*</span>
-          <span class="count-badge">ว่าง <?= $availCount ?> ห้อง</span>
-        </div>
-
-        <div class="unit-legend">
-          <div class="leg"><div class="leg-dot avail"></div> ว่าง</div>
-          <div class="leg"><div class="leg-dot sel"></div> เลือกแล้ว</div>
-          <div class="leg"><div class="leg-dot pending"></div> รออนุมัติ</div>
-          <div class="leg"><div class="leg-dot booked"></div> จองแล้ว</div>
-        </div>
-
-        <div class="unit-grid">
-          <?php for ($u = 1; $u <= $total_rooms; $u++):
-            $unitSt  = $takenUnits[$u] ?? 'available';
-            $isAvail = ($unitSt === 'available');
-            $cardCls = 'unit-card';
-            $icon    = '🏠';
-            $statTxt = 'ว่าง';
-            if (!$isAvail) {
-              $cardCls .= ' unit-taken';
-              if ($unitSt === 'pending') {
-                $cardCls .= ' unit-pending';
-                $icon    = '⏳';
-                $statTxt = 'รออนุมัติ';
-              } else {
-                $icon    = '🔒';
-                $statTxt = 'จองแล้ว';
-              }
-            }
-          ?>
-            <label class="<?= $cardCls ?>" id="unit-label-<?= $u ?>">
-              <input type="checkbox" name="room_units[]" value="<?= $u ?>"
-                     <?= $isAvail ? '' : 'disabled' ?>>
-              <span class="unit-icon"><?= $icon ?></span>
-              <span class="unit-num">ห้องที่ <?= $u ?></span>
-              <span class="unit-stat"><?= $statTxt ?></span>
-            </label>
-          <?php endfor; ?>
-        </div>
-
-        <div class="unit-summary" id="unitSummary"></div>
-      </div>
-
-      <hr class="section-divider">
-
+    <!-- ════ RIGHT: Form ════ -->
+    <div class="form-panel">
       <form action="save_booking.php" method="POST" id="bookingForm">
-        <!-- ส่ง room_units ที่เลือก (hidden fields จะถูก populate โดย JS) -->
         <div id="unitHiddenContainer"></div>
-
         <input type="hidden" name="room_id"    value="<?= (int)$room['id'] ?>">
         <input type="hidden" name="room_name"  value="<?= htmlspecialchars($room['room_name']) ?>">
         <input type="hidden" name="room_price" value="<?= htmlspecialchars($room['price']) ?>">
 
-        <div class="form-grid">
-          <div class="form-group">
-            <label>ชื่อผู้จอง</label>
-            <input type="text" name="customer_name" placeholder="กรอกชื่อ-นามสกุล"
-                   value="<?= htmlspecialchars($user_name) ?>" required>
+        <!-- ── Section 1: เลือกห้อง ── -->
+        <div class="sec-hd">
+          <div class="sec-num">1</div>
+          <div>
+            <div class="sec-title">เลือกห้องที่ต้องการจอง</div>
+            <div class="sec-sub">เลือกได้มากกว่า 1 ห้อง · ว่างอยู่ <?= $availCount ?> จาก <?= $total_rooms ?> ห้อง</div>
           </div>
-
-          <div class="form-group">
-            <label>เบอร์โทร</label>
-            <input type="text" name="phone" placeholder="0XX-XXX-XXXX"
-                   value="<?= htmlspecialchars($user_phone) ?>" required>
+        </div>
+        <div class="sec-body">
+          <div class="unit-legend">
+            <div class="leg"><div class="leg-dot a"></div>ว่าง</div>
+            <div class="leg"><div class="leg-dot s"></div>เลือกแล้ว</div>
+            <div class="leg"><div class="leg-dot p"></div>รออนุมัติ</div>
+            <div class="leg"><div class="leg-dot b"></div>จองแล้ว</div>
           </div>
-
-          <div class="form-group">
-            <label>อีเมล</label>
-            <input type="email" name="email" placeholder="example@email.com"
-                   value="<?= htmlspecialchars($user_email) ?>">
+          <div class="unit-grid">
+            <?php for ($u = 1; $u <= $total_rooms; $u++):
+              $uSt   = $takenUnits[$u] ?? 'available';
+              $isAv  = ($uSt === 'available');
+              $cls   = 'uc' . (!$isAv ? ' ut' . ($uSt==='pending'?' up':'') : '');
+              $icon  = $isAv ? '🏠' : ($uSt==='pending' ? '⏳' : '🔒');
+              $label = $isAv ? 'ว่าง' : ($uSt==='pending' ? 'รออนุมัติ' : 'จองแล้ว');
+            ?>
+            <label class="<?= $cls ?>" id="ul<?= $u ?>">
+              <input type="checkbox" name="room_units[]" value="<?= $u ?>" <?= $isAv?'':'disabled' ?>>
+              <span class="ui"><?= $icon ?></span>
+              <span class="un">ห้อง <?= $u ?></span>
+              <span class="ust"><?= $label ?></span>
+            </label>
+            <?php endfor; ?>
           </div>
+          <div class="unit-summary" id="unitSummary"></div>
+        </div>
 
-          <div class="form-group">
-            <label>จำนวนผู้ใหญ่</label>
-            <input type="number" name="adults" min="1" value="<?= (int)$guests ?>" required>
+        <!-- ── Section 2: วันที่พัก ── -->
+        <div class="sec-hd" style="border-top:1px solid var(--border);">
+          <div class="sec-num">2</div>
+          <div>
+            <div class="sec-title">กำหนดวันเข้าพัก</div>
+            <div class="sec-sub">เช็คอิน 14:00 น. · เช็คเอาท์ 12:00 น.</div>
           </div>
-
-          <div class="form-group">
-            <label>วันเช็คอิน</label>
-            <input type="date" name="checkin_date"
-                   value="<?= htmlspecialchars($checkin) ?>" required>
-          </div>
-
-          <div class="form-group">
-            <label>วันเช็คเอาท์</label>
-            <input type="date" name="checkout_date"
-                   value="<?= htmlspecialchars($checkout) ?>" required>
-          </div>
-
-          <div class="form-group">
-            <label>จำนวนเด็ก</label>
-            <input type="number" name="children" min="0" value="0">
-          </div>
-
-          <div class="form-group">
-            <label>วิธีชำระเงิน</label>
-            <select name="payment_method">
-              <option value="โอนเงิน">โอนเงิน</option>
-              <option value="ชำระเงินสด">ชำระเงินสด</option>
-            </select>
-          </div>
-
-          <div class="form-group full">
-            <label>หมายเหตุเพิ่มเติม</label>
-            <textarea name="note" placeholder="ข้อมูลเพิ่มเติม หรือความต้องการพิเศษ..."></textarea>
+        </div>
+        <div class="sec-body">
+          <div class="date-row">
+            <div class="fg">
+              <label>เช็คอิน <span class="req">*</span></label>
+              <div class="fi"><span class="fi-icon">📅</span>
+                <input type="date" name="checkin_date" id="checkinDate" value="<?= htmlspecialchars($checkin) ?>" required>
+              </div>
+            </div>
+            <div class="date-sep">→</div>
+            <div class="fg">
+              <label>เช็คเอาท์ <span class="req">*</span></label>
+              <div class="fi"><span class="fi-icon">📅</span>
+                <input type="date" name="checkout_date" id="checkoutDate" value="<?= htmlspecialchars($checkout) ?>" required>
+              </div>
+            </div>
+            <div class="nights-badge" id="nightsBadge">— คืน</div>
           </div>
         </div>
 
-        <button type="submit" class="btn-submit" id="submitBtn">ยืนยันการจอง</button>
-      </form>
+        <!-- ── Section 3: ข้อมูลผู้จอง ── -->
+        <div class="sec-hd" style="border-top:1px solid var(--border);">
+          <div class="sec-num">3</div>
+          <div>
+            <div class="sec-title">ข้อมูลผู้เข้าพัก</div>
+            <div class="sec-sub">กรุณากรอกข้อมูลให้ถูกต้องเพื่อรับการยืนยัน</div>
+          </div>
+        </div>
+        <div class="sec-body">
+          <div class="form-grid">
+            <div class="fg">
+              <label>ชื่อ-นามสกุล <span class="req">*</span></label>
+              <div class="fi"><span class="fi-icon">👤</span>
+                <input type="text" name="customer_name" placeholder="กรอกชื่อ-นามสกุล"
+                       value="<?= htmlspecialchars($user_name) ?>" required>
+              </div>
+            </div>
+            <div class="fg">
+              <label>เบอร์โทรศัพท์ <span class="req">*</span></label>
+              <div class="fi"><span class="fi-icon">📞</span>
+                <input type="text" name="phone" placeholder="0XX-XXX-XXXX"
+                       value="<?= htmlspecialchars($user_phone) ?>" required>
+              </div>
+            </div>
+            <div class="fg">
+              <label>อีเมล</label>
+              <div class="fi"><span class="fi-icon">✉️</span>
+                <input type="email" name="email" placeholder="example@email.com"
+                       value="<?= htmlspecialchars($user_email) ?>">
+              </div>
+            </div>
+            <div class="fg">
+              <label>ผู้ใหญ่ <span class="req">*</span></label>
+              <div class="fi"><span class="fi-icon">👥</span>
+                <input type="number" name="adults" id="adultsInp" min="1" value="<?= (int)$guests ?>" required>
+              </div>
+            </div>
+            <div class="fg">
+              <label>เด็ก</label>
+              <div class="fi"><span class="fi-icon">🧒</span>
+                <input type="number" name="children" min="0" value="0">
+              </div>
+            </div>
+            <div class="fg">
+              <label>วิธีชำระเงิน</label>
+              <div class="fi fi-no-icon"><span class="fi-icon">💳</span>
+                <select name="payment_method" style="padding-left:36px;">
+                  <option value="โอนเงิน">💳 โอนเงิน PromptPay</option>
+                  <option value="ชำระเงินสด">💵 ชำระเงินสด ณ ที่พัก</option>
+                </select>
+              </div>
+            </div>
+            <div class="fg full">
+              <label>หมายเหตุ / ความต้องการพิเศษ</label>
+              <div class="fi"><span class="fi-icon" style="top:14px;">📝</span>
+                <textarea name="note" placeholder="เช่น ต้องการเตียงเสริม, แพ้อาหาร, เวลาเช็คอินพิเศษ..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    </div>
-  </div>
+        <!-- ── Submit ── -->
+        <div class="submit-wrap">
+          <button type="submit" class="submit-btn" id="submitBtn">
+            <span>🏨</span><span>ยืนยันการจองและไปชำระเงิน</span>
+          </button>
+          <div class="submit-sub">ระบบจะนำท่านไปหน้าชำระเงิน PromptPay ทันที</div>
+        </div>
+
+      </form>
+    </div><!-- end form-panel -->
+
+  </div><!-- end layout -->
 </div>
 
 <script>
-(function () {
-  const cards   = document.querySelectorAll('.unit-card:not(.unit-taken)');
-  const summary = document.getElementById('unitSummary');
-  const hidden  = document.getElementById('unitHiddenContainer');
+(function(){
+  const PRICE = <?= (float)$room['price'] ?>;
+  const cards  = document.querySelectorAll('.uc:not(.ut)');
+  const hidden = document.getElementById('unitHiddenContainer');
+  const sumEl  = document.getElementById('unitSummary');
+  const checkinEl  = document.getElementById('checkinDate');
+  const checkoutEl = document.getElementById('checkoutDate');
+  const nightsBadge= document.getElementById('nightsBadge');
+  const sumRooms   = document.getElementById('sumRooms');
+  const sumNights  = document.getElementById('sumNights');
+  const sumTotal   = document.getElementById('sumTotal');
+  const sumBreak   = document.getElementById('sumBreakdown');
 
-  cards.forEach(card => {
-    card.addEventListener('click', () => {
-      const cb = card.querySelector('input[type="checkbox"]');
-      cb.checked = !cb.checked;
-      card.classList.toggle('unit-selected', cb.checked);
-      refreshSummary();
-    });
-  });
+  function getNights(){
+    const ci=new Date(checkinEl.value), co=new Date(checkoutEl.value);
+    if(isNaN(ci)||isNaN(co)||co<=ci) return 0;
+    return Math.round((co-ci)/864e5);
+  }
+  function getSelCount(){
+    return document.querySelectorAll('.uc input:checked').length;
+  }
+  function fmt(n){ return n.toLocaleString('th-TH',{minimumFractionDigits:0,maximumFractionDigits:0}); }
 
-  function refreshSummary() {
-    const selected = [...document.querySelectorAll('.unit-card input:checked')]
-      .map(cb => parseInt(cb.value));
-
-    // อัปเดต summary
-    if (selected.length > 0) {
-      const names = selected.map(n => 'ห้องที่ ' + n).join(', ');
-      summary.textContent = '✓ เลือกแล้ว: ' + names + ' (รวม ' + selected.length + ' ห้อง)';
-      summary.classList.add('show');
+  function updateCalc(){
+    const nights = getNights();
+    const rooms  = getSelCount();
+    nightsBadge.textContent = nights > 0 ? '🌙 '+nights+' คืน' : '— คืน';
+    if(rooms>0&&nights>0){
+      const total = PRICE*nights*rooms;
+      sumRooms.textContent  = rooms+' ห้อง';
+      sumNights.textContent = nights+' คืน';
+      sumTotal.textContent  = '฿'+fmt(total);
+      sumBreak.textContent  = '฿'+fmt(PRICE)+' × '+rooms+' ห้อง × '+nights+' คืน';
     } else {
-      summary.textContent = '';
-      summary.classList.remove('show');
+      sumRooms.textContent  = rooms > 0 ? rooms+' ห้อง' : '—';
+      sumNights.textContent = nights > 0 ? nights+' คืน' : '—';
+      sumTotal.textContent  = '—';
+      sumBreak.textContent  = '\u00a0';
     }
-
-    // sync hidden fields ไปกับ form
-    hidden.innerHTML = '';
-    selected.forEach(n => {
-      const inp = document.createElement('input');
-      inp.type  = 'hidden';
-      inp.name  = 'room_units[]';
-      inp.value = n;
-      hidden.appendChild(inp);
-    });
   }
 
-  document.getElementById('bookingForm').addEventListener('submit', function (e) {
-    const selected = document.querySelectorAll('.unit-card input:checked').length;
-    if (selected === 0) {
-      alert('กรุณาเลือกห้องอย่างน้อย 1 ห้อง');
-      e.preventDefault();
-      return;
+  function syncUnits(){
+    const selected = [...document.querySelectorAll('.uc input:checked')].map(c=>parseInt(c.value));
+    hidden.innerHTML = '';
+    selected.forEach(n=>{
+      const inp=document.createElement('input');
+      inp.type='hidden'; inp.name='room_units[]'; inp.value=n;
+      hidden.appendChild(inp);
+    });
+    if(selected.length>0){
+      sumEl.textContent='✓ เลือกแล้ว: '+selected.map(n=>'ห้อง '+n).join(', ')+' ('+selected.length+' ห้อง)';
+      sumEl.classList.add('show');
+    } else {
+      sumEl.textContent=''; sumEl.classList.remove('show');
     }
+    updateCalc();
+  }
+
+  cards.forEach(card=>{
+    card.addEventListener('click',()=>{
+      const cb=card.querySelector('input');
+      cb.checked=!cb.checked;
+      card.classList.toggle('us',cb.checked);
+      syncUnits();
+    });
   });
+
+  checkinEl.addEventListener('change',()=>{
+    if(checkoutEl.value <= checkinEl.value){
+      const d=new Date(checkinEl.value); d.setDate(d.getDate()+1);
+      checkoutEl.value=d.toISOString().slice(0,10);
+    }
+    updateCalc();
+  });
+  checkoutEl.addEventListener('change', updateCalc);
+
+  document.getElementById('bookingForm').addEventListener('submit',function(e){
+    if(getSelCount()===0){ alert('กรุณาเลือกห้องอย่างน้อย 1 ห้อง'); e.preventDefault(); return; }
+    if(getNights()===0){ alert('กรุณาเลือกวันเช็คอินและเช็คเอาท์ให้ถูกต้อง'); e.preventDefault(); return; }
+    const btn=document.getElementById('submitBtn');
+    btn.innerHTML='<span>⏳</span><span>กำลังดำเนินการ...</span>';
+    btn.disabled=true;
+  });
+
+  updateCalc();
 })();
 </script>
 </body>

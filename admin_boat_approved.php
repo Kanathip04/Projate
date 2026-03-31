@@ -91,8 +91,8 @@ $stmt = $conn->prepare("SELECT * FROM boat_bookings {$where} ORDER BY id DESC");
 if (!empty($params)) $stmt->bind_param($types, ...$params);
 $stmt->execute(); $result = $stmt->get_result();
 
-// รายการอนุมัติแล้ว
-$whereApproved = "WHERE payment_provider='cash' AND payment_status='cash_paid' AND (archived IS NULL OR archived=0)";
+// รายการอนุมัติแล้ว (ทุก payment method ที่ booking_status='approved')
+$whereApproved = "WHERE booking_status='approved' AND (archived IS NULL OR archived=0)";
 $paramsA = []; $typesA = "";
 if ($search !== '') {
     $whereApproved .= " AND (full_name LIKE ? OR phone LIKE ? OR booking_ref LIKE ?)";

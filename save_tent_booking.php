@@ -7,11 +7,16 @@ $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 if ($conn->connect_error) die("เชื่อมต่อฐานข้อมูลไม่สำเร็จ: " . $conn->connect_error);
 
-/* === เพิ่มคอลัมน์ tent_units ถ้ายังไม่มี === */
+/* === เพิ่มคอลัมน์ถ้ายังไม่มี === */
 $colCheck = $conn->query("SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA='backoffice_db' AND TABLE_NAME='tent_bookings' AND COLUMN_NAME='tent_units'");
 if ($colCheck && (int)$colCheck->fetch_assoc()['cnt'] === 0) {
     $conn->query("ALTER TABLE tent_bookings ADD COLUMN tent_units TEXT DEFAULT NULL");
+}
+$colCheck2 = $conn->query("SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA='backoffice_db' AND TABLE_NAME='tent_bookings' AND COLUMN_NAME='payment_method'");
+if ($colCheck2 && (int)$colCheck2->fetch_assoc()['cnt'] === 0) {
+    $conn->query("ALTER TABLE tent_bookings ADD COLUMN payment_method VARCHAR(50) DEFAULT 'โอนเงิน'");
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -27,8 +32,10 @@ $email         = trim($_POST['email'] ?? '');
 $guests        = max(1, (int)($_POST['guests'] ?? 1));
 $checkin_date  = trim($_POST['checkin_date'] ?? '');
 $checkout_date = trim($_POST['checkout_date'] ?? '');
-$note          = trim($_POST['note'] ?? '');
-$raw_units     = $_POST['tent_units'] ?? [];
+$note           = trim($_POST['note'] ?? '');
+$payment_method = in_array(trim($_POST['payment_method'] ?? ''), ['โอนเงิน','เงินสด'])
+                    ? trim($_POST['payment_method']) : 'โอนเงิน';
+$raw_units      = $_POST['tent_units'] ?? [];
 if (!is_array($raw_units)) $raw_units = [];
 $selected_units   = array_values(array_filter(array_map('intval', $raw_units), fn($u) => $u > 0));
 $tent_units_json  = !empty($selected_units) ? json_encode($selected_units) : null;
@@ -61,12 +68,12 @@ if (!empty($errors)) {
 
 $status = 'pending';
 $stmt2 = $conn->prepare(
-    "INSERT INTO tent_bookings (tent_id, full_name, phone, email, tent_type, guests, checkin_date, checkout_date, note, booking_status, tent_units)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO tent_bookings (tent_id, full_name, phone, email, tent_type, guests, checkin_date, checkout_date, note, booking_status, tent_units, payment_method)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 );
-$stmt2->bind_param("issssisssss",
+$stmt2->bind_param("issssissssss",
     $tent_id, $customer_name, $phone, $email, $tent_name,
-    $guests, $checkin_date, $checkout_date, $note, $status, $tent_units_json
+    $guests, $checkin_date, $checkout_date, $note, $status, $tent_units_json, $payment_method
 );
 
 if ($stmt2->execute()):

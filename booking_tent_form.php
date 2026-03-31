@@ -275,6 +275,29 @@ textarea{min-height:100px;resize:vertical;}
                     </div>
                 </div>
 
+                <!-- วิธีชำระเงิน -->
+                <div style="margin:20px 0;">
+                    <label style="display:block;font-size:13px;font-weight:700;color:#555;margin-bottom:10px;">💳 วิธีชำระเงิน</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <label id="pm-transfer" style="display:flex;align-items:center;gap:12px;border:2px solid var(--ink);border-radius:12px;padding:14px 16px;cursor:pointer;background:rgba(26,26,46,.06);transition:.2s;">
+                            <input type="radio" name="payment_method" value="โอนเงิน" checked style="display:none;">
+                            <span style="font-size:1.5rem;">🏦</span>
+                            <div>
+                                <div style="font-size:14px;font-weight:800;color:var(--ink);">โอนเงิน</div>
+                                <div style="font-size:11px;color:#888;">ผ่าน QR Code / PromptPay</div>
+                            </div>
+                        </label>
+                        <label id="pm-cash" style="display:flex;align-items:center;gap:12px;border:2px solid #ddd;border-radius:12px;padding:14px 16px;cursor:pointer;background:#fafafa;transition:.2s;">
+                            <input type="radio" name="payment_method" value="เงินสด" style="display:none;">
+                            <span style="font-size:1.5rem;">💵</span>
+                            <div>
+                                <div style="font-size:14px;font-weight:800;color:var(--ink);">เงินสด</div>
+                                <div style="font-size:11px;color:#888;">ชำระกับเจ้าหน้าที่</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
                 <button type="submit" class="btn-submit">⛺ ยืนยันการจองเต็นท์</button>
             </form>
         </div>
@@ -335,6 +358,20 @@ document.querySelector('[name=checkin_date]').addEventListener('change', functio
         co.value = d.toISOString().split('T')[0];
     }
     co.min = new Date(new Date(this.value).getTime()+86400000).toISOString().split('T')[0];
+});
+
+// payment method highlight
+document.querySelectorAll('input[name="payment_method"]').forEach(function(radio){
+    radio.closest('label').addEventListener('click', function(){
+        document.querySelectorAll('input[name="payment_method"]').forEach(function(r){
+            var lbl = r.closest('label');
+            lbl.style.borderColor = '#ddd';
+            lbl.style.background  = '#fafafa';
+        });
+        this.style.borderColor = '#1a1a2e';
+        this.style.background  = 'rgba(26,26,46,.06)';
+        this.querySelector('input').checked = true;
+    });
 });
 </script>
 </body>

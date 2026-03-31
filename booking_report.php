@@ -118,6 +118,26 @@ $roomGuests = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM room_book
 $tentGuests = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM tent_bookings WHERE " . dateWhere('created_at',$dateFrom,$dateTo) . " AND archived=0")->fetch_assoc()['n'];
 $stayGuests = $roomGuests + $tentGuests; // คนเข้าพักรวม
 
+// ── Revenue breakdown: ห้องพัก (room_bookings JOIN rooms) ──
+$_roomRevQ = function($conn, $where) {
+    return (float)$conn->query("SELECT COALESCE(SUM(r.price * GREATEST(DATEDIFF(rb.checkout_date,rb.checkin_date),1)),0) s
+        FROM room_bookings rb LEFT JOIN rooms r ON rb.room_id=r.id
+        WHERE $where AND rb.booking_status='approved' AND rb.archived=0")->fetch_assoc()['s'];
+};
+$revRoomToday = $_roomRevQ($conn, "DATE(rb.created_at)='$today'");
+$revRoomMonth = $_roomRevQ($conn, "DATE(rb.created_at) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "'");
+$revRoomYear  = $_roomRevQ($conn, "DATE(rb.created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31'");
+
+// ── Revenue breakdown: เต็นท์ (tent_bookings JOIN tents) ──
+$_tentRevQ = function($conn, $where) {
+    return (float)$conn->query("SELECT COALESCE(SUM(te.price_per_night * GREATEST(DATEDIFF(tb.checkout_date,tb.checkin_date),1)),0) s
+        FROM tent_bookings tb LEFT JOIN tents te ON tb.tent_id=te.id
+        WHERE $where AND tb.booking_status='approved' AND tb.archived=0")->fetch_assoc()['s'];
+};
+$revTentToday = $_tentRevQ($conn, "DATE(tb.created_at)='$today'");
+$revTentMonth = $_tentRevQ($conn, "DATE(tb.created_at) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "'");
+$revTentYear  = $_tentRevQ($conn, "DATE(tb.created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31'");
+
 // ── Revenue breakdown: วันนี้ / เดือนนี้ / ปีนี้ (เรือ) ──
 $_revQ = function($conn, $where) {
     return $conn->query("SELECT
@@ -1033,6 +1053,74 @@ $qnavLinks = [
     </div>
   </div>
 </div>
+
+<!-- ── ห้องพัก ── -->
+<?php if ($serviceType === 'all' || $serviceType === 'room'): ?>
+<div class="sec-hd">รายได้จากห้องพัก</div>
+<div class="rev-grid">
+  <div class="rev-card today-card">
+    <div class="rev-period">วันนี้</div>
+    <div class="rev-amt">฿<?= number_format($revRoomToday, 0) ?></div>
+    <div class="rev-sub"><?= date('d/m/Y', strtotime($today)) ?></div>
+    <div class="rev-detail">
+      <div class="rev-row"><span class="rl">จำนวนลูกค้า</span><span class="rv"><?= number_format($roomGuestToday) ?> คน</span></div>
+      <div class="rev-row"><span class="rl">รายการจอง</span><span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM room_bookings WHERE DATE(created_at)='$today' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span></div>
+    </div>
+  </div>
+  <div class="rev-card month-card">
+    <div class="rev-period">เดือนนี้ (<?= date('m/Y') ?>)</div>
+    <div class="rev-amt">฿<?= number_format($revRoomMonth, 0) ?></div>
+    <div class="rev-sub">ยอดสะสมเดือนนี้</div>
+    <div class="rev-detail">
+      <div class="rev-row"><span class="rl">จำนวนลูกค้า</span><span class="rv"><?= number_format($roomGuestMonth) ?> คน</span></div>
+      <div class="rev-row"><span class="rl">รายการจอง</span><span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM room_bookings WHERE DATE(created_at) BETWEEN '".date('Y-m-01')."' AND '".date('Y-m-t')."' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span></div>
+    </div>
+  </div>
+  <div class="rev-card year-card">
+    <div class="rev-period">ปีนี้ (พ.ศ. <?= $thisYear+543 ?>)</div>
+    <div class="rev-amt">฿<?= number_format($revRoomYear, 0) ?></div>
+    <div class="rev-sub">ยอดสะสมทั้งปี</div>
+    <div class="rev-detail">
+      <div class="rev-row"><span class="rl">จำนวนลูกค้า</span><span class="rv"><?= number_format($roomGuestYear) ?> คน</span></div>
+      <div class="rev-row"><span class="rl">รายการจอง</span><span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM room_bookings WHERE DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span></div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
+<!-- ── เต็นท์ ── -->
+<?php if ($serviceType === 'all' || $serviceType === 'tent'): ?>
+<div class="sec-hd">รายได้จากเต็นท์</div>
+<div class="rev-grid">
+  <div class="rev-card today-card">
+    <div class="rev-period">วันนี้</div>
+    <div class="rev-amt">฿<?= number_format($revTentToday, 0) ?></div>
+    <div class="rev-sub"><?= date('d/m/Y', strtotime($today)) ?></div>
+    <div class="rev-detail">
+      <div class="rev-row"><span class="rl">จำนวนลูกค้า</span><span class="rv"><?= number_format($tentGuestToday) ?> คน</span></div>
+      <div class="rev-row"><span class="rl">รายการจอง</span><span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM tent_bookings WHERE DATE(created_at)='$today' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span></div>
+    </div>
+  </div>
+  <div class="rev-card month-card">
+    <div class="rev-period">เดือนนี้ (<?= date('m/Y') ?>)</div>
+    <div class="rev-amt">฿<?= number_format($revTentMonth, 0) ?></div>
+    <div class="rev-sub">ยอดสะสมเดือนนี้</div>
+    <div class="rev-detail">
+      <div class="rev-row"><span class="rl">จำนวนลูกค้า</span><span class="rv"><?= number_format($tentGuestMonth) ?> คน</span></div>
+      <div class="rev-row"><span class="rl">รายการจอง</span><span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM tent_bookings WHERE DATE(created_at) BETWEEN '".date('Y-m-01')."' AND '".date('Y-m-t')."' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span></div>
+    </div>
+  </div>
+  <div class="rev-card year-card">
+    <div class="rev-period">ปีนี้ (พ.ศ. <?= $thisYear+543 ?>)</div>
+    <div class="rev-amt">฿<?= number_format($revTentYear, 0) ?></div>
+    <div class="rev-sub">ยอดสะสมทั้งปี</div>
+    <div class="rev-detail">
+      <div class="rev-row"><span class="rl">จำนวนลูกค้า</span><span class="rv"><?= number_format($tentGuestYear) ?> คน</span></div>
+      <div class="rev-row"><span class="rl">รายการจอง</span><span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM tent_bookings WHERE DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span></div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
 
 <?php endif; // end serviceType !== 'checkin' for revenue section ?>
 

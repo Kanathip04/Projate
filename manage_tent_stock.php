@@ -15,17 +15,20 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 $currentPage = basename($_SERVER['PHP_SELF']);
 $message = ''; $message_type = 'success';
 
+// เพิ่มคอลัมน์ archived ถ้ายังไม่มี
+$conn->query("ALTER TABLE equipment_bookings ADD COLUMN IF NOT EXISTS archived TINYINT(1) NOT NULL DEFAULT 0");
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $id     = (int)($_POST['id'] ?? 0);
 
     if ($action === 'restore' && $id > 0) {
-        $st = $conn->prepare("UPDATE tent_bookings SET archived=0, booking_status='approved' WHERE id=?");
+        $st = $conn->prepare("UPDATE equipment_bookings SET archived=0 WHERE id=?");
         $st->bind_param("i", $id); $st->execute(); $st->close();
-        $message = "คืนรายการกลับสู่อนุมัติแล้วเรียบร้อย";
+        $message = "คืนรายการกลับสู่ชำระแล้วเรียบร้อย";
     }
     if ($action === 'delete' && $id > 0) {
-        $st = $conn->prepare("DELETE FROM tent_bookings WHERE id=?");
+        $st = $conn->prepare("DELETE FROM equipment_bookings WHERE id=?");
         $st->bind_param("i", $id); $st->execute(); $st->close();
         $message = "ลบรายการเรียบร้อยแล้ว";
     }
@@ -38,11 +41,11 @@ $search = trim($_GET['search'] ?? '');
 $where  = "WHERE archived=1";
 $params = []; $types = "";
 if ($search !== '') {
-    $where .= " AND (full_name LIKE ? OR phone LIKE ? OR tent_type LIKE ?)";
+    $where .= " AND (full_name LIKE ? OR phone LIKE ? OR email LIKE ?)";
     $like = "%{$search}%"; $params = [$like,$like,$like]; $types = "sss";
 }
 
-$stmt = $conn->prepare("SELECT * FROM tent_bookings {$where} ORDER BY id DESC");
+$stmt = $conn->prepare("SELECT * FROM equipment_bookings {$where} ORDER BY id DESC");
 if (!empty($params)) $stmt->bind_param($types, ...$params);
 $stmt->execute(); $result = $stmt->get_result();
 $total = $result->num_rows;
@@ -170,37 +173,79 @@ include 'admin_layout_top.php';
       <thead>
         <tr>
           <th style="width:44px;">#</th>
+          <th>เลขที่บิล</th>
           <th>ผู้จอง</th>
           <th>ติดต่อ</th>
-          <th>ประเภทเต็นท์</th>
-          <th>วันเข้าพัก</th>
-          <th>วันออก</th>
+          <th>อุปกรณ์ / ราคา</th>
+          <th>วันเข้า–ออก</th>
           <th>สถานะ</th>
           <th>วันที่จอง</th>
-          <th style="width:180px;">จัดการ</th>
+          <th style="width:160px;">จัดการ</th>
         </tr>
       </thead>
       <tbody>
-        <?php if ($result && $result->num_rows > 0): ?>
+        <?php if ($result && $result->num_rows > 0): $no=1; ?>
           <?php while ($row = $result->fetch_assoc()): ?>
+          <?php
+            // เลขที่บิล
+            $_bkDate = date('Ymd', strtotime($row['created_at']));
+            $_seqR = $conn->query("SELECT COUNT(*) AS seq FROM equipment_bookings WHERE DATE(created_at)=DATE('".$conn->real_escape_string($row['created_at'])."') AND id<=".(int)$row['id']);
+            $_seq  = (int)($_seqR ? $_seqR->fetch_assoc()['seq'] : 1);
+            $_billRef = 'EQUIP-'.$_bkDate.'-'.str_pad($_seq,3,'0',STR_PAD_LEFT);
+            // อุปกรณ์
+            $items = [];
+            if (!empty($row['items_json'])) {
+                $decoded = json_decode($row['items_json'], true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $item) {
+                        $name = $item['name'] ?? ($item['tent_name'] ?? '');
+                        $qty  = (int)($item['qty'] ?? ($item['quantity'] ?? 1));
+                        $unit = $item['unit'] ?? 'ชิ้น';
+                        if ($name) $items[] = h($name).' &times;'.$qty.' '.h($unit);
+                    }
+                }
+            }
+            // คืน
+            $nights = 1;
+            if (!empty($row['checkin_date']) && !empty($row['checkout_date'])) {
+                $d1 = new DateTime($row['checkin_date']);
+                $d2 = new DateTime($row['checkout_date']);
+                $nights = max(1, (int)$d1->diff($d2)->days);
+            }
+          ?>
           <tr>
-            <td style="color:var(--muted);font-size:.76rem;"><?= (int)$row['id'] ?></td>
+            <td style="color:var(--muted);font-size:.76rem;"><?= $no++ ?></td>
+            <td style="font-size:.78rem;font-weight:700;color:#15803d;white-space:nowrap;"><?= h($_billRef) ?></td>
             <td>
               <div class="arc-name"><?= h($row['full_name']) ?></div>
-              <div class="arc-meta">👥 <?= (int)$row['guests'] ?> คน</div>
+              <div class="arc-meta">👥 <?= (int)($row['guests'] ?? 1) ?> คน</div>
             </td>
             <td>
-              <div><?= h($row['phone']) ?></div>
-              <div class="arc-meta"><?= h($row['email'] ?: '—') ?></div>
+              <div><?= h($row['phone'] ?? '—') ?></div>
+              <div class="arc-meta"><?= h($row['email'] ?? '—') ?></div>
             </td>
-            <td><?= h($row['tent_type'] ?: '—') ?></td>
-            <td style="font-size:.8rem;">📅 <?= h($row['checkin_date'] ?? '—') ?></td>
-            <td style="font-size:.8rem;color:var(--muted);"><?= h($row['checkout_date'] ?? '—') ?></td>
+            <td>
+              <?php if (!empty($items)): ?>
+                <div style="display:flex;flex-wrap:wrap;gap:3px;">
+                  <?php foreach ($items as $it): ?>
+                    <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:.65rem;font-weight:700;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.28);color:#15803d;">🎒 <?= $it ?></span>
+                  <?php endforeach; ?>
+                </div>
+              <?php else: ?><span style="color:var(--muted);font-size:.75rem;">-</span>
+              <?php endif; ?>
+              <?php if (!empty($row['total_price'])): ?>
+                <div class="arc-meta">฿ <?= number_format((float)$row['total_price'], 2) ?></div>
+              <?php endif; ?>
+            </td>
+            <td>
+              <div style="font-size:.79rem;">📅 <?= h($row['checkin_date'] ?? '—') ?></div>
+              <div style="font-size:.79rem;color:var(--muted);">→ <?= h($row['checkout_date'] ?? '—') ?> (<?= $nights ?> คืน)</div>
+            </td>
             <td><span class="badge-archived">📦 จัดเก็บแล้ว</span></td>
             <td style="font-size:.75rem;color:var(--muted);"><?= h(substr($row['created_at'],0,16)) ?></td>
             <td>
               <div class="arc-actions">
-                <form method="POST" class="mif" onsubmit="return confirm('คืนรายการนี้กลับไปหน้าอนุมัติ?')">
+                <form method="POST" class="mif" onsubmit="return confirm('คืนรายการนี้กลับไปหน้าชำระแล้ว?')">
                   <input type="hidden" name="action" value="restore">
                   <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
                   <button class="arc-btn arc-btn-restore" style="padding:5px 11px;font-size:.74rem;">↩ คืนกลับ</button>

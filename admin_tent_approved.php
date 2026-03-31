@@ -6,8 +6,10 @@ $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 if ($conn->connect_error) die("DB Error: " . $conn->connect_error);
 
-function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+// เพิ่มคอลัมน์ archived ถ้ายังไม่มี
+$conn->query("ALTER TABLE equipment_bookings ADD COLUMN IF NOT EXISTS archived TINYINT(1) NOT NULL DEFAULT 0");
 
+function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
 $currentPage = basename($_SERVER['PHP_SELF']);
 $message = ''; $message_type = 'success';
@@ -15,6 +17,12 @@ $message = ''; $message_type = 'success';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $id = (int)($_POST['id'] ?? 0);
+
+    if ($action === 'archive_all') {
+        // จัดเก็บทุกรายการที่ payment_status='paid' และยังไม่ถูก archive
+        $conn->query("UPDATE equipment_bookings SET archived=1 WHERE payment_status='paid' AND (archived IS NULL OR archived=0)");
+        header("Location: manage_tent_stock.php?msg=" . urlencode("จัดเก็บข้อมูลเรียบร้อยแล้ว") . "&type=success"); exit;
+    }
     if ($action === 'cancel' && $id > 0) {
         $st = $conn->prepare("UPDATE equipment_bookings SET payment_status='failed', booking_status='pending' WHERE id=?");
         $st->bind_param("i", $id); $st->execute(); $st->close();
@@ -31,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (isset($_GET['msg'])) { $message = $_GET['msg']; $message_type = $_GET['type'] ?? 'success'; }
 $search = trim($_GET['search'] ?? '');
 
-$where = "WHERE payment_status='paid'";
+$where = "WHERE payment_status='paid' AND (archived IS NULL OR archived=0)";
 $params = []; $types = "";
 if ($search !== '') {
     $where .= " AND (full_name LIKE ? OR phone LIKE ? OR email LIKE ?)";
@@ -106,6 +114,11 @@ include 'admin_layout_top.php';
         <div class="tk-banner-links">
             <a href="admin_tent_list.php" class="tk-banner-link">📋 รายการรออนุมัติ</a>
             <a href="manage_tents.php" class="tk-banner-link">🏕 จัดการเต็นท์</a>
+            <form method="POST" style="display:inline;" onsubmit="return confirm('ยืนยันจัดเก็บข้อมูลที่ชำระแล้วทั้งหมด?')">
+                <input type="hidden" name="action" value="archive_all">
+                <button type="submit" class="tk-banner-link" style="cursor:pointer;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);">📦 จัดเก็บข้อมูล</button>
+            </form>
+            <a href="manage_tent_stock.php" class="tk-banner-link">🗂 ดูข้อมูลจัดเก็บ</a>
         </div>
     </div>
 

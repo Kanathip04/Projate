@@ -17,11 +17,23 @@ define('PAYEE_LAST_NAME',    'คุ้มชาติตา');
  */
 function isPayeeNameValid(string $name): bool {
     if ($name === '') return false;
+    // Normalize Unicode NFC เพื่อแก้ปัญหา combining characters ภาษาไทย
+    // (AI อาจส่ง "คุ้" ในลำดับ byte ต่างกัน แต่ตามองเห็นเหมือนกัน)
+    if (class_exists('Normalizer')) {
+        $name = \Normalizer::normalize($name, \Normalizer::NFC) ?: $name;
+    }
     // ตัด prefix คำนำหน้า (น.ส., นางสาว, นาย, นาง, ฯลฯ)
     $norm = preg_replace('/^(น\.ส\.?\s*|นางสาว\s*|นาย\s*|นาง\s*|Mr\.?\s*|Ms\.?\s*|Mrs\.?\s*)/u', '', trim($name));
     $norm = preg_replace('/\s+/u', ' ', $norm);
-    return mb_strpos($norm, PAYEE_FIRST_NAME) !== false
-        && mb_strpos($norm, PAYEE_LAST_NAME)  !== false;
+
+    $first = PAYEE_FIRST_NAME;
+    $last  = PAYEE_LAST_NAME;
+    if (class_exists('Normalizer')) {
+        $first = \Normalizer::normalize($first, \Normalizer::NFC) ?: $first;
+        $last  = \Normalizer::normalize($last,  \Normalizer::NFC) ?: $last;
+    }
+    return mb_strpos($norm, $first) !== false
+        && mb_strpos($norm, $last)  !== false;
 }
 
 $rawBody = file_get_contents('php://input');

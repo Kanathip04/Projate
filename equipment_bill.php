@@ -189,6 +189,12 @@ function promptpayPayload(string $target, float $amount): string {
 }
 $qrPayload = promptpayPayload(PROMPTPAY_ID, $total * $nights);
 $payStatus = $bk['payment_status'] ?? 'unpaid';
+
+// Auto-redirect ไปหน้าสลิปทันทีถ้าชำระแล้ว (ยกเว้นเมื่อเพิ่ง upload สลิป)
+if ($payStatus === 'paid' && !isset($_GET['uploaded'])) {
+    header("Location: equipment_ticket.php?id=$id");
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="th">

@@ -16,8 +16,8 @@ $st->bind_param("s",$user_email); $st->execute(); $res = $st->get_result();
 while ($r = $res->fetch_assoc()) { $r['type']='room'; $allBookings[] = $r; }
 $st->close();
 
-/* ── เต็นท์ ── */
-$st2 = $conn->prepare("SELECT id, full_name, tent_type AS title, checkin_date AS date_from, checkout_date AS date_to, guests, booking_status, created_at, NULL AS booking_ref, NULL AS payment_status, NULL AS paid_at FROM tent_bookings WHERE email=? ORDER BY id DESC");
+/* ── เต็นท์ (equipment_bookings) ── */
+$st2 = $conn->prepare("SELECT id, full_name, 'เช่าอุปกรณ์แคมป์ปิ้ง' AS title, checkin_date AS date_from, checkout_date AS date_to, NULL AS guests, booking_status, created_at, NULL AS booking_ref, payment_status, paid_at FROM equipment_bookings WHERE email=? ORDER BY id DESC");
 $st2->bind_param("s",$user_email); $st2->execute(); $res2 = $st2->get_result();
 while ($r = $res2->fetch_assoc()) { $r['type']='tent'; $allBookings[] = $r; }
 $st2->close();
@@ -280,8 +280,9 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);}
       $ti   = typeInfo($b['type']);
       $bkSt = $b['booking_status'] ?? 'pending';
       $payS = $b['payment_status'] ?? null;
-      $needPay = ($b['type']==='boat' && in_array($payS,['unpaid','failed',null,'']));
+      $needPay = (in_array($b['type'],['boat','tent']) && in_array($payS,['unpaid','failed',null,'']));
       $refStr = $b['booking_ref'] ? 'Ref: '.$b['booking_ref'] : '#'.$b['id'];
+      $equipRef = 'EQUIP-'.str_pad($b['id'],5,'0',STR_PAD_LEFT);
     ?>
     <div class="bk-card" data-btype="<?= $b['type'] ?>">
       <div class="bk-main" onclick="toggleDetail(<?= $i ?>)">
@@ -304,7 +305,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);}
             <?php if ($b['guests']): ?>
             <span class="bk-meta">👥 <?= (int)$b['guests'] ?> คน</span>
             <?php endif; ?>
-            <?php if ($b['type']==='boat' && $payS): ?>
+            <?php if (in_array($b['type'],['boat','tent']) && $payS): ?>
             <span class="bk-status <?= bsCls($payS) ?>" style="font-size:.7rem;padding:2px 8px;"><?= bsText($payS) ?></span>
             <?php endif; ?>
             <span class="bk-meta" style="margin-left:auto;">🕐 <?= date('d/m/Y H:i',strtotime($b['created_at'])) ?></span>
@@ -314,8 +315,12 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);}
           <button class="detail-btn" onclick="event.stopPropagation();toggleDetail(<?= $i ?>)">
             รายละเอียด ▾
           </button>
-          <?php if ($needPay): ?>
+          <?php if ($needPay && $b['type']==='boat'): ?>
           <a href="payment_slip.php?ref=<?= urlencode($b['booking_ref']) ?>" class="pay-btn" onclick="event.stopPropagation()">
+            💳 ชำระเงิน
+          </a>
+          <?php elseif ($needPay && $b['type']==='tent'): ?>
+          <a href="equipment_bill.php?id=<?= (int)$b['id'] ?>" class="pay-btn" onclick="event.stopPropagation()">
             💳 ชำระเงิน
           </a>
           <?php endif; ?>
@@ -351,7 +356,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);}
             <div class="d-label">สถานะการจอง</div>
             <div class="d-val"><?= bsText($bkSt) ?></div>
           </div>
-          <?php if ($b['type']==='boat' && $payS): ?>
+          <?php if (in_array($b['type'],['boat','tent']) && $payS): ?>
           <div class="d-item">
             <div class="d-label">สถานะการชำระ</div>
             <div class="d-val"><?= bsText($payS) ?></div>
@@ -377,6 +382,18 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);}
         <?php if ($b['type']==='boat' && !empty($b['booking_ref'])): ?>
         <div style="margin-top:10px;">
           <a href="queue_ticket.php?ref=<?= urlencode($b['booking_ref']) ?>" class="detail-btn" style="background:#15803d;">🎫 ดูบัตรคิว</a>
+        </div>
+        <?php endif; ?>
+        <?php if ($b['type']==='tent'): ?>
+        <div class="bk-pay-section" style="margin-top:12px;">
+          <?php if ($needPay): ?>
+          <a href="equipment_bill.php?id=<?= (int)$b['id'] ?>" class="pay-btn">💳 ไปชำระเงิน</a>
+          <?php elseif ($payS === 'waiting_verify'): ?>
+          <a href="equipment_bill.php?id=<?= (int)$b['id'] ?>" class="pay-btn" style="background:#d97706;">⏳ ติดตามสถานะ</a>
+          <?php elseif ($payS === 'paid'): ?>
+          <a href="equipment_ticket.php?id=<?= (int)$b['id'] ?>" class="detail-btn" style="background:#15803d;">🎫 ดูสลิปการจอง</a>
+          <?php endif; ?>
+          <span style="font-size:.75rem;color:var(--muted);font-family:monospace;"><?= $equipRef ?></span>
         </div>
         <?php endif; ?>
       </div>

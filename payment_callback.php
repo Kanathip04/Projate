@@ -15,23 +15,29 @@ define('PAYEE_LAST_NAME',    'คุ้มชาติตา');
  * ตรวจชื่อผู้รับเงินในสลิป
  * รองรับ: "สุรัชฎา คุ้มชาติตา", "น.ส. สุรัชฎา คุ้มชาติตา", "น.ส สุรัชฎา คุ้มชาติตา", ฯลฯ
  */
+/**
+ * Normalize Thai combining characters ให้อยู่ในลำดับ NFC
+ * แก้ปัญหา: AI อาจส่ง tone mark + sara u ในลำดับสลับกัน
+ * เช่น "คุ้" = ค+ุ+้ (ถูก) หรือ ค+้+ุ (ผิดลำดับ) → ตามองเห็นเหมือนกันแต่ byte ต่างกัน
+ */
+function thaiNormalize(string $s): string {
+    // สลับ tone mark (U+0E48–0E4B) ที่อยู่ก่อน sara u/uu (U+0E38–0E39) → ให้ sara ขึ้นก่อน
+    $s = preg_replace('/([\x{0E48}\x{0E49}\x{0E4A}\x{0E4B}])([\x{0E38}\x{0E39}])/u', '$2$1', $s);
+    // ใช้ PHP Normalizer เพิ่มเติม ถ้า intl extension ติดตั้งอยู่
+    if (class_exists('Normalizer')) {
+        $s = \Normalizer::normalize($s, \Normalizer::NFC) ?: $s;
+    }
+    return $s;
+}
+
 function isPayeeNameValid(string $name): bool {
     if ($name === '') return false;
-    // Normalize Unicode NFC เพื่อแก้ปัญหา combining characters ภาษาไทย
-    // (AI อาจส่ง "คุ้" ในลำดับ byte ต่างกัน แต่ตามองเห็นเหมือนกัน)
-    if (class_exists('Normalizer')) {
-        $name = \Normalizer::normalize($name, \Normalizer::NFC) ?: $name;
-    }
+    $name = thaiNormalize($name);
     // ตัด prefix คำนำหน้า (น.ส., นางสาว, นาย, นาง, ฯลฯ)
-    $norm = preg_replace('/^(น\.ส\.?\s*|นางสาว\s*|นาย\s*|นาง\s*|Mr\.?\s*|Ms\.?\s*|Mrs\.?\s*)/u', '', trim($name));
-    $norm = preg_replace('/\s+/u', ' ', $norm);
-
-    $first = PAYEE_FIRST_NAME;
-    $last  = PAYEE_LAST_NAME;
-    if (class_exists('Normalizer')) {
-        $first = \Normalizer::normalize($first, \Normalizer::NFC) ?: $first;
-        $last  = \Normalizer::normalize($last,  \Normalizer::NFC) ?: $last;
-    }
+    $norm  = preg_replace('/^(น\.ส\.?\s*|นางสาว\s*|นาย\s*|นาง\s*|Mr\.?\s*|Ms\.?\s*|Mrs\.?\s*)/u', '', trim($name));
+    $norm  = preg_replace('/\s+/u', ' ', $norm);
+    $first = thaiNormalize(PAYEE_FIRST_NAME);
+    $last  = thaiNormalize(PAYEE_LAST_NAME);
     return mb_strpos($norm, $first) !== false
         && mb_strpos($norm, $last)  !== false;
 }

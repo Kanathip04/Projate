@@ -25,6 +25,23 @@ if ($colCheck && (int)$colCheck->fetch_assoc()['cnt'] === 0) {
     $conn->query("ALTER TABLE room_bookings ADD COLUMN room_units TEXT DEFAULT NULL");
 }
 
+/* === เพิ่มคอลัมน์สำหรับระบบชำระเงินใน room_bookings (safe: ไม่ error ถ้ามีอยู่แล้ว) === */
+foreach ([
+    "payment_status ENUM('unpaid','waiting_verify','paid','failed','manual_review') DEFAULT 'unpaid'",
+    "payment_slip VARCHAR(500) DEFAULT NULL",
+    "paid_at DATETIME DEFAULT NULL",
+    "approved_at DATETIME DEFAULT NULL",
+    "total_price DECIMAL(10,2) DEFAULT NULL",
+    "room_price DECIMAL(10,2) DEFAULT NULL",
+    "booking_ref VARCHAR(50) DEFAULT NULL",
+] as $sbColDef) {
+    $sbColName = strtok($sbColDef, ' ');
+    $sbChk = $conn->query("SHOW COLUMNS FROM room_bookings LIKE '$sbColName'");
+    if ($sbChk && $sbChk->num_rows === 0) {
+        $conn->query("ALTER TABLE room_bookings ADD COLUMN $sbColDef");
+    }
+}
+
 /* -----------------------------
    รับเฉพาะ POST
 ------------------------------ */
@@ -159,6 +176,44 @@ if (!$bind) {
 ------------------------------ */
 if ($stmt->execute()) {
     $booking_id = $stmt->insert_id;
+
+    /* === อัปเดต booking_ref, room_price, total_price === */
+    $booking_ref_val = 'ROOM-' . str_pad($booking_id, 5, '0', STR_PAD_LEFT);
+    $room_price_val  = (float)($_POST['room_price'] ?? 0);
+
+    /* คำนวณจำนวนคืน */
+    $sb_nights = 1;
+    if (!empty($checkin_date) && !empty($checkout_date)) {
+        $sb_d1 = new DateTime($checkin_date);
+        $sb_d2 = new DateTime($checkout_date);
+        $sb_nights = max(1, (int)$sb_d1->diff($sb_d2)->days);
+    }
+
+    /* ถ้าไม่ได้ส่ง room_price มาใน POST ให้ดึงจาก rooms */
+    if ($room_price_val <= 0 && $room_id > 0) {
+        $rpSt = $conn->prepare("SELECT price FROM rooms WHERE id = ? LIMIT 1");
+        $rpSt->bind_param("i", $room_id);
+        $rpSt->execute();
+        $rpRow = $rpSt->get_result()->fetch_assoc();
+        $rpSt->close();
+        $room_price_val = (float)($rpRow['price'] ?? 0);
+    }
+
+    $total_price_val = $room_price_val * $sb_nights * max(1, count($selected_units));
+
+    $upStmt = $conn->prepare(
+        "UPDATE room_bookings SET booking_ref = ?, room_price = ?, total_price = ? WHERE id = ?"
+    );
+    $upStmt->bind_param("sddi", $booking_ref_val, $room_price_val, $total_price_val, $booking_id);
+    $upStmt->execute();
+    $upStmt->close();
+
+    $stmt->close();
+    $conn->close();
+    header("Location: room_bill.php?id=$booking_id");
+    exit;
+
+    // ── รหัสล่างนี้ไม่ถูก execute แล้ว (เก็บไว้เพื่อ reference) ──
     ?>
     <!DOCTYPE html>
     <html lang="th">

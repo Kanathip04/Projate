@@ -128,9 +128,28 @@ foreach ([
     }
 }
 
-// ── ตรวจว่าเป็น equipment booking หรือ boat booking ──
+// ── เพิ่ม column ที่ขาดใน room_bookings ──
+foreach ([
+    "booking_ref VARCHAR(50) DEFAULT NULL",
+    "payment_status ENUM('unpaid','waiting_verify','paid','failed','manual_review') DEFAULT 'unpaid'",
+    "payment_slip VARCHAR(500) DEFAULT NULL",
+    "paid_at DATETIME DEFAULT NULL",
+    "approved_at DATETIME DEFAULT NULL",
+    "total_price DECIMAL(10,2) DEFAULT NULL",
+    "room_price DECIMAL(10,2) DEFAULT NULL",
+] as $colDef) {
+    $colName = strtok($colDef, ' ');
+    $chk = $conn->query("SHOW COLUMNS FROM room_bookings LIKE '$colName'");
+    if ($chk && $chk->num_rows === 0) {
+        $conn->query("ALTER TABLE room_bookings ADD COLUMN $colDef");
+    }
+}
+
+// ── ตรวจว่าเป็น equipment, room หรือ boat booking ──
 $isEquipment = (strpos($booking_ref, 'EQUIP-') === 0);
-$equipId = 0;
+$isRoom      = (strpos($booking_ref, 'ROOM-')  === 0);
+$equipId     = 0;
+$roomId      = 0;
 
 if ($isEquipment) {
     // ── Equipment booking ──
@@ -148,6 +167,23 @@ if ($isEquipment) {
     }
     // ใช้ id จริงเป็น booking_id สำหรับ payment_slips
     $booking['booking_ref'] = $booking_ref;
+
+} elseif ($isRoom) {
+    // ── Room booking ──
+    $roomId = (int)preg_replace('/\D/', '', $booking_ref);
+    $stmt = $conn->prepare("SELECT * FROM room_bookings WHERE id = ? LIMIT 1");
+    $stmt->bind_param("i", $roomId);
+    $stmt->execute();
+    $booking = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$booking) {
+        http_response_code(404);
+        echo json_encode(['ok'=>false,'error'=>'Room booking not found']);
+        exit;
+    }
+    $booking['booking_ref'] = $booking_ref;
+
 } else {
     // ── Boat booking ──
     $stmt = $conn->prepare("SELECT * FROM boat_bookings WHERE booking_ref = ? LIMIT 1");
@@ -195,7 +231,7 @@ function updateSlipRecord($conn, $booking_id, $fields) {
 }
 
 // ── Helper: อัปเดต status ตามประเภท booking ──
-function updateBookingStatus($conn, $isEquipment, $equipId, $booking_ref, $status, $note = null) {
+function updateBookingStatus($conn, $isEquipment, $isRoom, $equipId, $roomId, $booking_ref, $status, $note = null) {
     if ($isEquipment) {
         $bookingStatus = ($status === 'paid') ? 'approved' : 'pending';
         if ($note !== null) {
@@ -204,6 +240,15 @@ function updateBookingStatus($conn, $isEquipment, $equipId, $booking_ref, $statu
         } else {
             $st = $conn->prepare("UPDATE equipment_bookings SET payment_status=?, booking_status=? WHERE id=?");
             $st->bind_param("ssi", $status, $bookingStatus, $equipId);
+        }
+    } elseif ($isRoom) {
+        $bookingStatus = ($status === 'paid') ? 'approved' : 'pending';
+        if ($note !== null) {
+            $st = $conn->prepare("UPDATE room_bookings SET payment_status=?, booking_status=?, note=CONCAT(COALESCE(note,''),?) WHERE id=?");
+            $st->bind_param("sssi", $status, $bookingStatus, $note, $roomId);
+        } else {
+            $st = $conn->prepare("UPDATE room_bookings SET payment_status=?, booking_status=? WHERE id=?");
+            $st->bind_param("ssi", $status, $bookingStatus, $roomId);
         }
     } else {
         if ($note !== null) {
@@ -220,7 +265,7 @@ function updateBookingStatus($conn, $isEquipment, $equipId, $booking_ref, $statu
 // ── กรณี AI rate limit / retry ──
 if ($is429 || $retryNeeded || $rejectReason === 'AI_RATE_LIMIT') {
     $note = "\n[AUTO] AI ยืนยันไม่ได้ (rate limit) รอ admin ตรวจสลิปเอง [" . date('Y-m-d H:i') . "]";
-    updateBookingStatus($conn, $isEquipment, $equipId ?? 0, $booking_ref, 'manual_review', $note);
+    updateBookingStatus($conn, $isEquipment, $isRoom, $equipId ?? 0, $roomId ?? 0, $booking_ref, 'manual_review', $note);
 
     updateSlipRecord($conn, $booking['id'], [
         'verification_status' => 'manual_review',
@@ -234,7 +279,7 @@ if ($is429 || $retryNeeded || $rejectReason === 'AI_RATE_LIMIT') {
 // ── กรณี manual_review (AI อ่านไม่ชัด) ──
 if ($vStatus === 'manual_review') {
     $note = "\n[AUTO] AI อ่านสลิปไม่ชัด (confidence ต่ำ) รอ admin ตรวจ [" . date('Y-m-d H:i') . "]";
-    updateBookingStatus($conn, $isEquipment, $equipId ?? 0, $booking_ref, 'manual_review', $note);
+    updateBookingStatus($conn, $isEquipment, $isRoom, $equipId ?? 0, $roomId ?? 0, $booking_ref, 'manual_review', $note);
 
     updateSlipRecord($conn, $booking['id'], [
         'verification_status' => 'manual_review',
@@ -259,7 +304,7 @@ if ($slipRefNo) {
 
     if ($dupRef) {
         $note = "\n[AUTO] เลขอ้างอิงซ้ำกับ " . $dupRef['booking_ref'] . " ref:" . $slipRefNo . " [" . date('Y-m-d H:i') . "]";
-        updateBookingStatus($conn, $isEquipment, $equipId ?? 0, $booking_ref, 'duplicate', $note);
+        updateBookingStatus($conn, $isEquipment, $isRoom, $equipId ?? 0, $roomId ?? 0, $booking_ref, 'duplicate', $note);
 
         updateSlipRecord($conn, $booking['id'], [
             'verification_status' => 'duplicate',
@@ -312,7 +357,7 @@ if ($verified && $slipDatetime) {
                 : "เวลาในสลิป ({$slipFmt}) อยู่ในอนาคต";
 
             $note = "\n[AUTO] ตรวจเวลาไม่ผ่าน: {$reason} [" . date('Y-m-d H:i') . "]";
-            updateBookingStatus($conn, $isEquipment, $equipId ?? 0, $booking_ref, 'failed', $note);
+            updateBookingStatus($conn, $isEquipment, $isRoom, $equipId ?? 0, $roomId ?? 0, $booking_ref, 'failed', $note);
 
             updateSlipRecord($conn, $booking['id'], [
                 'verification_status' => 'rejected',
@@ -332,7 +377,7 @@ if ($verified) {
     if ($slipPayeeName === '') {
         // AI อ่านชื่อผู้รับไม่ได้ → manual_review
         $note = "\n[AUTO] AI อ่านชื่อผู้รับไม่ได้ รอ admin ตรวจสอบ [" . date('Y-m-d H:i') . "]";
-        updateBookingStatus($conn, $isEquipment, $equipId, $booking_ref, 'manual_review', $note);
+        updateBookingStatus($conn, $isEquipment, $isRoom, $equipId, $roomId, $booking_ref, 'manual_review', $note);
         updateSlipRecord($conn, $booking['id'], [
             'verification_status' => 'manual_review',
             'verification_reason' => 'AI อ่านชื่อผู้รับไม่ได้',
@@ -349,7 +394,7 @@ if ($verified) {
             // AI บอก verified+amount matched แต่ชื่อไม่ผ่าน PHP check
             // → น่าจะเป็นปัญหา Unicode encoding → ส่ง manual_review แทน reject
             $note = "\n[AUTO] AI ยืนยันแล้ว แต่ PHP ตรวจชื่อไม่ผ่าน (encoding?) รอ admin ยืนยัน: {$slipPayeeName} [" . date('Y-m-d H:i') . "]";
-            updateBookingStatus($conn, $isEquipment, $equipId, $booking_ref, 'manual_review', $note);
+            updateBookingStatus($conn, $isEquipment, $isRoom, $equipId, $roomId, $booking_ref, 'manual_review', $note);
             updateSlipRecord($conn, $booking['id'], [
                 'verification_status' => 'manual_review',
                 'verification_reason' => 'PHP ตรวจชื่อไม่ผ่าน (อาจเป็น encoding) รอ admin',
@@ -359,7 +404,7 @@ if ($verified) {
         }
 
         // AI ไม่ได้ยืนยัน + ชื่อไม่ผ่าน → reject
-        updateBookingStatus($conn, $isEquipment, $equipId, $booking_ref, 'failed', $note);
+        updateBookingStatus($conn, $isEquipment, $isRoom, $equipId, $roomId, $booking_ref, 'failed', $note);
         updateSlipRecord($conn, $booking['id'], [
             'verification_status' => 'rejected',
             'verification_reason' => $reason,
@@ -391,6 +436,27 @@ if ($verified && $amountMatched) {
             'booking_ref' => $booking_ref,
             'ticket_url'  => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/equipment_ticket.php?id=' . $equipId,
         ]);
+
+    } elseif ($isRoom) {
+        // Room booking: อัปเดต room_bookings
+        $upStmt = $conn->prepare(
+            "UPDATE room_bookings
+             SET payment_status='paid', booking_status='approved',
+                 paid_at=NOW(), approved_at=NOW()
+             WHERE id=?"
+        );
+        $upStmt->bind_param("i", $roomId);
+        $upStmt->execute(); $upStmt->close();
+
+        updateSlipRecord($conn, $booking['id'], ['verification_status'=>'paid']);
+
+        echo json_encode([
+            'ok'          => true,
+            'action'      => 'approved',
+            'booking_ref' => $booking_ref,
+            'ticket_url'  => 'http://' . $_SERVER['HTTP_HOST'] . '/Projate/room_ticket.php?id=' . $roomId,
+        ]);
+
     } else {
         // Boat booking: คำนวณคิวและอัปเดต boat_bookings
         $today  = date('Y-m-d');
@@ -423,7 +489,7 @@ if ($verified && $amountMatched) {
 } elseif ($vStatus === 'suspicious') {
     // ── น่าสงสัย ──
     $note = "\n[AUTO] สลิปน่าสงสัย: $rejectReason [" . date('Y-m-d H:i') . "]";
-    updateBookingStatus($conn, $isEquipment, $equipId ?? 0, $booking_ref, 'suspicious', $note);
+    updateBookingStatus($conn, $isEquipment, $isRoom, $equipId ?? 0, $roomId ?? 0, $booking_ref, 'suspicious', $note);
 
     updateSlipRecord($conn, $booking['id'], [
         'verification_status' => 'suspicious',
@@ -437,7 +503,7 @@ if ($verified && $amountMatched) {
     $failNote = "\n[AUTO] สลิปไม่ผ่าน: " .
         ($rejectReason ?: "ยอดไม่ตรง (฿$slipAmount / ต้องจ่าย ฿{$booking['total_amount']})") .
         " [" . date('Y-m-d H:i') . "]";
-    updateBookingStatus($conn, $isEquipment, $equipId ?? 0, $booking_ref, 'failed', $failNote);
+    updateBookingStatus($conn, $isEquipment, $isRoom, $equipId ?? 0, $roomId ?? 0, $booking_ref, 'failed', $failNote);
 
     updateSlipRecord($conn, $booking['id'], [
         'verification_status' => 'rejected',

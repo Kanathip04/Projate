@@ -351,7 +351,7 @@ body::before {
 <?php
 // กำหนด section ที่ active menu อยู่ใน section ไหน
 $_sectionMap = [
-  'overview'  => ['dashboard','report','admin_report','charts'],
+  'overview'  => ['dashboard','report','admin_report','charts','walkin_archive'],
   'booking'   => ['booking','booking_approved','booking_archive','rooms','tent_booking','tent_approved','tent_manage','tent_stock','boat_booking','boat_queue','boat_approve','boat_archive'],
   'content'   => ['news_add','news_manage','popup','banner','about','survey'],
   'settings'  => ['users','password','profile'],
@@ -377,6 +377,9 @@ foreach ($_sectionMap as $_sec => $_items) {
     </a>
     <a href="booking_report.php" class="menu-item <?= $activeMenu==='admin_report'?'active':'' ?>">
       <span class="icon">📊</span><span class="text">กราฟรายงาน</span>
+    </a>
+    <a href="admin_walkin_archive.php" class="menu-item <?= $activeMenu==='walkin_archive'?'active':'' ?>">
+      <span class="icon">📦</span><span class="text">จัดเก็บ Walk-in</span>
     </a>
   </div>
 </div>

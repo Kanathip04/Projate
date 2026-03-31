@@ -8,12 +8,9 @@ header('Content-Type: application/json; charset=utf-8');
 
 define('CALLBACK_SECRET',    'wrbri_n8n_secret_2026');
 define('SLIP_MAX_AGE_SEC',   420);   // ยอมรับสลิปย้อนหลังได้ไม่เกิน 7 นาที (5 นาที + buffer 2 นาที)
-// ใช้ explicit Unicode code points เพื่อป้องกันปัญหา encoding ของไฟล์ PHP
-// สุรัช = ส(0E2A) ุ(0E38) ร(0E23) ั(0E31) ช(0E0A)  [ตัด ฎา ออกเพราะ AI อาจอ่าน ฎ→ด]
-define('PAYEE_FIRST_NAME', "\u{0E2A}\u{0E38}\u{0E23}\u{0E31}\u{0E0A}");
-// คุ้มชาติ = ค(0E04) ุ(0E38) ้(0E49) ม(0E21) ช(0E0A) า(0E32) ต(0E15) ิ(0E34)
-// [ตัด ตา ท้ายออก เพราะ AI อ่าน "คุ้มชาติตา" เป็น "คุ้มชาติ ดา" บ่อย]
-define('PAYEE_LAST_NAME',  "\u{0E04}\u{0E38}\u{0E49}\u{0E21}\u{0E0A}\u{0E32}\u{0E15}\u{0E34}");
+// ตรวจเฉพาะส่วนที่ AI อ่านได้ถูกต้องสม่ำเสมอ (ตัดส่วนท้ายที่ AI มักอ่านผิดออก)
+define('PAYEE_FIRST_NAME', 'สุรัช');     // ตัด ฎา ออก (AI อาจอ่าน ฎ→ด)
+define('PAYEE_LAST_NAME',  'คุ้มชาติ'); // ตัด ตา ออก (AI อ่าน ตา→ดา บ่อย)
 
 /**
  * ตรวจชื่อผู้รับเงินในสลิป
@@ -115,6 +112,20 @@ if ($conn->connect_error) {
     http_response_code(500);
     echo json_encode(['ok'=>false,'error'=>'DB Error']);
     exit;
+}
+
+// ── เพิ่ม column ที่ขาดใน equipment_bookings (safe: ไม่ error ถ้ามีอยู่แล้ว) ──
+foreach ([
+    "booking_status  VARCHAR(30)  DEFAULT 'pending'",
+    "provider_txn_id VARCHAR(100) DEFAULT NULL",
+    "paid_at         DATETIME     DEFAULT NULL",
+    "approved_at     DATETIME     DEFAULT NULL",
+] as $colDef) {
+    $colName = strtok($colDef, ' ');
+    $chk = $conn->query("SHOW COLUMNS FROM equipment_bookings LIKE '$colName'");
+    if ($chk && $chk->num_rows === 0) {
+        $conn->query("ALTER TABLE equipment_bookings ADD COLUMN $colDef");
+    }
 }
 
 // ── ตรวจว่าเป็น equipment booking หรือ boat booking ──

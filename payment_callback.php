@@ -9,10 +9,11 @@ header('Content-Type: application/json; charset=utf-8');
 define('CALLBACK_SECRET',    'wrbri_n8n_secret_2026');
 define('SLIP_MAX_AGE_SEC',   420);   // ยอมรับสลิปย้อนหลังได้ไม่เกิน 7 นาที (5 นาที + buffer 2 นาที)
 // ใช้ explicit Unicode code points เพื่อป้องกันปัญหา encoding ของไฟล์ PHP
-// สุรัชฎา = ส(0E2A) ุ(0E38) ร(0E23) ั(0E31) ช(0E0A) ฎ(0E0E) า(0E32)
-define('PAYEE_FIRST_NAME', "\u{0E2A}\u{0E38}\u{0E23}\u{0E31}\u{0E0A}\u{0E0E}\u{0E32}");
-// คุ้มชาติตา = ค(0E04) ุ(0E38) ้(0E49) ม(0E21) ช(0E0A) า(0E32) ต(0E15) ิ(0E34) ต(0E15) า(0E32)
-define('PAYEE_LAST_NAME',  "\u{0E04}\u{0E38}\u{0E49}\u{0E21}\u{0E0A}\u{0E32}\u{0E15}\u{0E34}\u{0E15}\u{0E32}");
+// สุรัช = ส(0E2A) ุ(0E38) ร(0E23) ั(0E31) ช(0E0A)  [ตัด ฎา ออกเพราะ AI อาจอ่าน ฎ→ด]
+define('PAYEE_FIRST_NAME', "\u{0E2A}\u{0E38}\u{0E23}\u{0E31}\u{0E0A}");
+// คุ้มชาติ = ค(0E04) ุ(0E38) ้(0E49) ม(0E21) ช(0E0A) า(0E32) ต(0E15) ิ(0E34)
+// [ตัด ตา ท้ายออก เพราะ AI อ่าน "คุ้มชาติตา" เป็น "คุ้มชาติ ดา" บ่อย]
+define('PAYEE_LAST_NAME',  "\u{0E04}\u{0E38}\u{0E49}\u{0E21}\u{0E0A}\u{0E32}\u{0E15}\u{0E34}");
 
 /**
  * ตรวจชื่อผู้รับเงินในสลิป

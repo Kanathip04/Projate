@@ -27,20 +27,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if (isset($_GET['msg'])) { $message = $_GET['msg']; $message_type = $_GET['type'] ?? 'success'; }
-$search = trim($_GET['search'] ?? '');
+$search    = trim($_GET['search']    ?? '');
+$filterDate = trim($_GET['filter_date'] ?? '');
 
 $where = "WHERE archived=1";
 $params = []; $types = "";
 if ($search !== '') {
     $where .= " AND (full_name LIKE ? OR phone LIKE ? OR booking_ref LIKE ?)";
-    $like = "%{$search}%"; $params = [$like,$like,$like]; $types = "sss";
+    $like = "%{$search}%"; $params[] = $like; $params[] = $like; $params[] = $like; $types .= "sss";
+}
+if ($filterDate !== '') {
+    $where .= " AND DATE(COALESCE(approved_at, created_at)) = ?";
+    $params[] = $filterDate; $types .= "s";
 }
 $stmt = $conn->prepare("SELECT * FROM boat_bookings {$where} ORDER BY approved_at DESC, id DESC");
 if (!empty($params)) $stmt->bind_param($types, ...$params);
 $stmt->execute(); $result = $stmt->get_result();
 $total = $result->num_rows;
 
-// Stats
+// Stats (ทั้งหมด ไม่ filter)
 $sr = $conn->query("SELECT COUNT(*) t, SUM(total_amount) rev FROM boat_bookings WHERE archived=1")->fetch_assoc();
 $stat_total   = (int)($sr['t']   ?? 0);
 $stat_revenue = (float)($sr['rev'] ?? 0);
@@ -98,6 +103,16 @@ include 'admin_layout_top.php';
 .arc-search{padding:14px 22px;border-bottom:1px solid var(--border);
   display:flex;gap:9px;flex-wrap:wrap;align-items:center;background:#fdfcfa;}
 .arc-sw{position:relative;flex:1;min-width:180px;}
+.arc-date-input{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;
+  font-family:'Sarabun',sans-serif;font-size:.84rem;color:var(--ink);background:#fff;outline:none;
+  cursor:pointer;}
+.arc-date-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,169,110,.12);}
+.arc-btn-date{background:var(--ink);color:#fff;border:none;border-radius:8px;padding:8px 16px;
+  font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;transition:.18s;white-space:nowrap;}
+.arc-btn-date:hover{background:#2a2a4a;transform:translateY(-1px);}
+.arc-filter-active{background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;
+  padding:5px 12px;font-size:.76rem;font-weight:700;color:#1d4ed8;display:inline-flex;align-items:center;gap:6px;}
 .arc-sw::before{content:'🔍';position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:.72rem;pointer-events:none;}
 .arc-sw input{width:100%;padding:8px 12px 8px 34px;border:1.5px solid var(--border);
   border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.84rem;color:var(--ink);background:#fff;outline:none;}
@@ -199,11 +214,22 @@ include 'admin_layout_top.php';
         <input type="text" name="search" placeholder="ค้นหาชื่อ, เบอร์โทร, หมายเลขจอง..."
                value="<?= h($search) ?>">
       </div>
-      <button type="submit" class="arc-btn arc-btn-primary">ค้นหา</button>
-      <?php if ($search): ?>
+      <input type="date" name="filter_date" class="arc-date-input"
+             value="<?= h($filterDate) ?>" title="กรองตามวันที่อนุมัติ">
+      <button type="submit" class="arc-btn-date">📋 ดูรายงาน</button>
+      <?php if ($search || $filterDate): ?>
         <a href="<?= h($currentPage) ?>" class="arc-btn arc-btn-ghost">ล้าง</a>
       <?php endif; ?>
     </div>
+    <?php if ($filterDate): ?>
+    <div style="padding:8px 22px;background:#fdfcfa;border-bottom:1px solid var(--border);">
+      <span class="arc-filter-active">
+        📅 แสดงวันที่: <?= h(date('d/m/Y', strtotime($filterDate))) ?>
+        &nbsp;·&nbsp; <?= $total ?> รายการ
+        <a href="<?= h($currentPage).($search?'?search='.urlencode($search):'') ?>" style="color:#1d4ed8;text-decoration:none;font-size:.9rem;">✕</a>
+      </span>
+    </div>
+    <?php endif; ?>
   </form>
 
   <div class="arc-table-wrap">

@@ -151,7 +151,10 @@ input,button,select{font-family:inherit;}
 .pill-date{background:#fff;color:#7a7a8c;border:1px solid #e8e4de;}
 
 /* ── GRID ── */
-.room-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;}
+.room-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;justify-content:center;}
+@supports(grid-template-columns:repeat(auto-fill,minmax(320px,1fr))){
+  .room-grid{grid-template-columns:repeat(auto-fill,minmax(320px,380px));}
+}
 
 /* ── CARD ── */
 .rc{background:#fff;border-radius:18px;border:1.5px solid #e8e4de;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .2s,transform .2s;}
@@ -224,24 +227,6 @@ input,button,select{font-family:inherit;}
     <div class="hero-eyebrow">ที่พักภายในสถาบัน</div>
     <div class="hero-title">จองห้องพัก <em>วลัยรุกขเวช</em></div>
     <div class="hero-sub">ห้องพักมาตรฐาน บรรยากาศสงบร่มรื่น พร้อมสิ่งอำนวยความสะดวกครบครัน</div>
-
-    <form method="GET" action="booking_room.php">
-      <div class="searchbar">
-        <div class="sb-group">
-          <label>เช็คอิน</label>
-          <input type="date" name="checkin" value="<?= htmlspecialchars($checkin_q) ?>" required>
-        </div>
-        <div class="sb-group">
-          <label>เช็คเอาท์</label>
-          <input type="date" name="checkout" value="<?= htmlspecialchars($checkout_q) ?>" required>
-        </div>
-        <div class="sb-group" style="max-width:110px;">
-          <label>ผู้เข้าพัก</label>
-          <input type="number" name="guests" min="1" max="20" value="<?= $guests_q ?>" required>
-        </div>
-        <button type="submit" class="sb-btn">🔍 ค้นหา</button>
-      </div>
-    </form>
   </div>
 </div>
 
@@ -250,10 +235,6 @@ input,button,select{font-family:inherit;}
 
   <div class="sec-hd">
     <div class="sec-title">ห้องพักที่ว่าง</div>
-    <div class="sec-meta">
-      <span class="sec-pill pill-avail">✓ ว่าง <?= $availCount ?> ประเภท</span>
-      <span class="sec-pill pill-date"><?= thDate($checkin_q) ?> — <?= thDate($checkout_q) ?> · <?= $nights_q ?> คืน</span>
-    </div>
   </div>
 
   <div class="room-grid">

@@ -128,6 +128,12 @@ include 'admin_layout_top.php';
 .arc-btn-restore:hover{background:#dbeafe;}
 .arc-btn-del{background:#fef2f2;color:var(--danger);border:1.5px solid #fecaca;}
 .arc-btn-del:hover{background:#fee2e2;}
+.arc-btn-slip{background:#f0fdf4;color:#15803d;border:1.5px solid #86efac;}
+.arc-btn-slip:hover{background:#dcfce7;}
+.slip-lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;padding:20px;}
+.slip-lb.open{display:flex;}
+.slip-lb img{max-width:90vw;max-height:88vh;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.5);}
+.slip-lb-close{position:fixed;top:18px;right:22px;font-size:2rem;color:#fff;cursor:pointer;background:none;border:none;line-height:1;}
 
 .arc-table-wrap{overflow-x:auto;}
 .arc-table{width:100%;border-collapse:collapse;min-width:1100px;}
@@ -159,6 +165,12 @@ include 'admin_layout_top.php';
 .date-block{font-size:.77rem;}
 .date-block-sub{font-size:.72rem;color:var(--muted);margin-top:2px;}
 </style>
+
+<!-- Slip Lightbox -->
+<div class="slip-lb" id="slipLb">
+  <button class="slip-lb-close" onclick="closeSLB()">✕</button>
+  <img id="slipLbImg" src="" alt="สลิป">
+</div>
 
 <?php if ($message !== ''): ?>
 <div class="arc-alert <?= $message_type==='error'?'arc-alert-err':'arc-alert-ok' ?>">
@@ -305,6 +317,9 @@ include 'admin_layout_top.php';
             <td><span class="badge-archived">📦 จัดเก็บแล้ว</span></td>
             <td>
               <div class="arc-actions">
+                <?php if (!empty($row['payment_slip'])): ?>
+                  <button onclick="openSLB('<?= h($row['payment_slip']) ?>')" class="arc-btn arc-btn-slip" style="padding:5px 11px;font-size:.74rem;">🖼 ดูสลิป</button>
+                <?php endif; ?>
                 <form method="POST" class="mif" onsubmit="return confirm('คืนรายการนี้กลับไปหน้าอนุมัติแล้ว?')">
                   <input type="hidden" name="action" value="restore">
                   <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
@@ -332,4 +347,9 @@ include 'admin_layout_top.php';
   </div>
 </div>
 
+<script>
+function openSLB(src){document.getElementById('slipLbImg').src=src;document.getElementById('slipLb').classList.add('open');}
+function closeSLB(){document.getElementById('slipLb').classList.remove('open');document.getElementById('slipLbImg').src='';}
+document.getElementById('slipLb').addEventListener('click',function(e){if(e.target===this)closeSLB();});
+</script>
 <?php $stmt->close(); $conn->close(); include 'admin_layout_bottom.php'; ?>

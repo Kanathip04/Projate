@@ -590,6 +590,27 @@ if (dz) {
     b.disabled = true;
   });
 }
+
+// Auto-refresh เมื่อสถานะ waiting_verify
+<?php if ($payStatus === 'waiting_verify'): ?>
+(function() {
+  const bookingId = <?= $id ?>;
+  let tries = 0;
+  const maxTries = 24; // หยุดหลัง 2 นาที
+  const timer = setInterval(async () => {
+    tries++;
+    if (tries > maxTries) { clearInterval(timer); return; }
+    try {
+      const res = await fetch('equipment_status_check.php?id=' + bookingId);
+      const data = await res.json();
+      if (data.status && data.status !== 'waiting_verify') {
+        clearInterval(timer);
+        location.reload();
+      }
+    } catch(e) {}
+  }, 5000);
+})();
+<?php endif; ?>
 </script>
 <?php $conn->close(); ?>
 </body>

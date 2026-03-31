@@ -153,7 +153,40 @@ $roomId      = 0;
 
 if ($isEquipment) {
     // ── Equipment booking ──
-    $equipId = (int)preg_replace('/\D/', '', $booking_ref);
+    // booking_ref คือ EQUIP-YYYYMMDD-NNN ซึ่งไม่ใช่ DB id
+    // ดึง booking_id จริงจาก payment_slips ที่บันทึกตอนอัปโหลดสลิป
+    $equipId = 0;
+    $psStmt = $conn->prepare("SELECT booking_id FROM payment_slips WHERE booking_ref = ? AND booking_type = 'equipment' ORDER BY id DESC LIMIT 1");
+    $psStmt->bind_param("s", $booking_ref);
+    $psStmt->execute();
+    $psRow = $psStmt->get_result()->fetch_assoc();
+    $psStmt->close();
+
+    if ($psRow) {
+        $equipId = (int)$psRow['booking_id'];
+    } else {
+        // fallback: หาจากวันที่ + ลำดับ
+        $parts = explode('-', $booking_ref); // ['EQUIP','YYYYMMDD','NNN']
+        $seq   = isset($parts[2]) ? (int)$parts[2] : 0;
+        $ds    = $parts[1] ?? '';
+        if (strlen($ds) === 8 && $seq > 0) {
+            $dateFormatted = substr($ds,0,4).'-'.substr($ds,4,2).'-'.substr($ds,6,2);
+            $offset = $seq - 1;
+            $fbStmt = $conn->prepare("SELECT id FROM equipment_bookings WHERE DATE(created_at) = ? ORDER BY id ASC LIMIT 1 OFFSET ?");
+            $fbStmt->bind_param("si", $dateFormatted, $offset);
+            $fbStmt->execute();
+            $fbRow = $fbStmt->get_result()->fetch_assoc();
+            $fbStmt->close();
+            if ($fbRow) $equipId = (int)$fbRow['id'];
+        }
+    }
+
+    if ($equipId <= 0) {
+        http_response_code(404);
+        echo json_encode(['ok'=>false,'error'=>'Equipment booking not found']);
+        exit;
+    }
+
     $stmt = $conn->prepare("SELECT * FROM equipment_bookings WHERE id = ? LIMIT 1");
     $stmt->bind_param("i", $equipId);
     $stmt->execute();

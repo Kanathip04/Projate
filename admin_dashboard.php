@@ -227,7 +227,7 @@ include "admin_layout_top.php";
     <div style="overflow-x:auto;">
       <table class="lm-table">
         <thead>
-          32<th>#</th>
+          <th>#</th>
             <th>ชื่อเล่น</th>
             <th>ประเภท</th>
             <th>เวลา</th>

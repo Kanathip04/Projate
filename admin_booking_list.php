@@ -257,6 +257,20 @@ include 'admin_layout_top.php';
                 <td>
                   <div style="font-size:0.79rem;">📅 <?= h($row['checkin_date']) ?></div>
                   <div style="font-size:0.79rem;color:var(--muted);">→ <?= h($row['checkout_date']) ?></div>
+                  <?php
+                    $pm = trim($row['payment_method'] ?? '');
+                    if ($pm !== ''):
+                      $pmIcon  = ($pm === 'เงินสด') ? '💵' : '🏦';
+                      $pmColor = ($pm === 'เงินสด') ? '#15803d' : '#1d4ed8';
+                      $pmBg    = ($pm === 'เงินสด') ? '#f0fdf4' : '#eff6ff';
+                      $pmBdr   = ($pm === 'เงินสด') ? '#86efac' : '#bfdbfe';
+                  ?>
+                  <div style="margin-top:5px;">
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;background:<?= $pmBg ?>;color:<?= $pmColor ?>;border:1px solid <?= $pmBdr ?>;">
+                      <?= $pmIcon ?> <?= h($pm) ?>
+                    </span>
+                  </div>
+                  <?php endif; ?>
                 </td>
                 <td>
                   <span class="bk-badge <?= statusBadge($row['booking_status']) ?>">

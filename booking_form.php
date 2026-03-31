@@ -263,7 +263,8 @@ a{text-decoration:none;}
 
       <div class="room-card">
         <?php if ($roomImg): ?>
-          <img src="<?= htmlspecialchars($roomImg) ?>" alt="<?= htmlspecialchars($room['room_name']) ?>" class="room-img">
+          <img src="<?= htmlspecialchars($roomImg) ?>" alt="<?= htmlspecialchars($room['room_name']) ?>" class="room-img"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
         <?php else: ?>
           <div class="room-img-ph">🏨</div>
         <?php endif; ?>

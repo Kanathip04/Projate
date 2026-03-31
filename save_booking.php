@@ -34,6 +34,7 @@ foreach ([
     "total_price DECIMAL(10,2) DEFAULT NULL",
     "room_price DECIMAL(10,2) DEFAULT NULL",
     "booking_ref VARCHAR(50) DEFAULT NULL",
+    "payment_method VARCHAR(50) DEFAULT 'โอนเงิน'",
 ] as $sbColDef) {
     $sbColName = strtok($sbColDef, ' ');
     $sbChk = $conn->query("SHOW COLUMNS FROM room_bookings LIKE '$sbColName'");
@@ -62,8 +63,10 @@ $checkin_date  = trim($_POST['checkin_date'] ?? '');
 $checkout_date = trim($_POST['checkout_date'] ?? '');
 $adults        = isset($_POST['adults']) ? (int)$_POST['adults'] : 1;
 $children      = isset($_POST['children']) ? (int)$_POST['children'] : 0;
-$note          = trim($_POST['note'] ?? '');
-$raw_units     = $_POST['room_units'] ?? [];
+$note           = trim($_POST['note'] ?? '');
+$payment_method = in_array(trim($_POST['payment_method'] ?? ''), ['โอนเงิน','ชำระเงินสด'])
+                    ? trim($_POST['payment_method']) : 'โอนเงิน';
+$raw_units      = $_POST['room_units'] ?? [];
 if (!is_array($raw_units)) $raw_units = [];
 $selected_units = array_values(array_filter(array_map('intval', $raw_units), fn($u) => $u > 0));
 $room_units_json = !empty($selected_units) ? json_encode($selected_units) : null;
@@ -130,8 +133,8 @@ if (!empty($errors)) {
    ใช้คอลัมน์ตามตารางจริง
 ------------------------------ */
 $sql = "INSERT INTO room_bookings
-        (room_id, full_name, phone, email, room_type, guests, checkin_date, checkout_date, note, booking_status, room_units)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        (room_id, full_name, phone, email, room_type, guests, checkin_date, checkout_date, note, booking_status, room_units, payment_method)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 $stmt = $conn->prepare($sql);
 
@@ -153,7 +156,7 @@ note          = s
 status        = s
 */
 $bind = $stmt->bind_param(
-    "issssisssss",
+    "issssissssss",
     $room_id,
     $full_name,
     $phone,
@@ -164,7 +167,8 @@ $bind = $stmt->bind_param(
     $checkout_date,
     $note,
     $status,
-    $room_units_json
+    $room_units_json,
+    $payment_method
 );
 
 if (!$bind) {

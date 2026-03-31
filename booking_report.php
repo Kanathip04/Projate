@@ -322,6 +322,14 @@ if ($serviceType === 'boat') {
     $ctxRevenue = 0;
     $ctxGuests  = $tentGuests;
     $ctxLabel   = 'เต็นท์';
+} elseif ($serviceType === 'checkin') {
+    $ctxTotal   = $totalCheckinPeriod;
+    $ctxPaid    = $boatCheckinPeriod;
+    $ctxWaiting = $roomCheckinPeriod;
+    $ctxCancel  = $tentCheckinPeriod;
+    $ctxRevenue = 0;
+    $ctxGuests  = $totalCheckinPeriod;
+    $ctxLabel   = 'ข้อมูลเช็คอิน';
 } else {
     $ctxTotal   = $totalAll;
     $ctxPaid    = $totalPaid;
@@ -403,6 +411,7 @@ $qnavLinks = [
 .svc-tab.active.boat{background:#1d6fad;border-color:#1d6fad;}
 .svc-tab.active.room{background:#a07c3a;border-color:#a07c3a;}
 .svc-tab.active.tent{background:#2e7d32;border-color:#2e7d32;}
+.svc-tab.active.checkin{background:#0d9488;border-color:#0d9488;}
 .stab-cnt{background:rgba(255,255,255,.22);color:inherit;padding:1px 7px;
   border-radius:20px;font-size:.7rem;font-weight:800;}
 .svc-tab:not(.active) .stab-cnt{background:#f0efec;color:var(--muted);}
@@ -582,6 +591,9 @@ $qnavLinks = [
   <a href="<?= htmlspecialchars($baseUrl.'&service=tent') ?>" class="svc-tab tent<?= $serviceType==='tent'?' active tent':'' ?>">
     ⛺ เต็นท์ <span class="stab-cnt"><?= $tentData['total'] ?></span>
   </a>
+  <a href="<?= htmlspecialchars($baseUrl.'&service=checkin') ?>" class="svc-tab checkin<?= $serviceType==='checkin'?' active checkin':'' ?>">
+    🚪 ข้อมูลเช็คอิน <span class="stab-cnt"><?= $totalCheckinPeriod ?></span>
+  </a>
 </div>
 
 <!-- Filter -->
@@ -641,6 +653,102 @@ $qnavLinks = [
   </div>
 </form>
 
+<?php if ($serviceType === 'checkin'): ?>
+<div class="sec-hd">ข้อมูลเช็คอิน · <?= $labelRange ?></div>
+
+<!-- Check-in KPI cards -->
+<div class="kpi-grid" style="margin-bottom:12px;">
+  <div class="kpi-card" style="border-left-color:#0d9488;">
+    <div class="kpi-icon">🚪</div>
+    <div class="kpi-lbl">เช็คอินรวม (ช่วงที่เลือก)</div>
+    <div class="kpi-val" style="color:#0d9488;"><?= number_format($totalCheckinPeriod) ?></div>
+    <div class="kpi-sub">คน ทุกบริการ</div>
+  </div>
+  <div class="kpi-card boat">
+    <div class="kpi-icon">🚣</div>
+    <div class="kpi-lbl">เรือพาย</div>
+    <div class="kpi-val" style="color:#1d6fad;"><?= number_format($boatCheckinPeriod) ?></div>
+    <div class="kpi-sub">คน</div>
+  </div>
+  <div class="kpi-card" style="border-left-color:#a07c3a;">
+    <div class="kpi-icon">🏨</div>
+    <div class="kpi-lbl">ห้องพัก</div>
+    <div class="kpi-val" style="color:#a07c3a;"><?= number_format($roomCheckinPeriod) ?></div>
+    <div class="kpi-sub">คน</div>
+  </div>
+  <div class="kpi-card green">
+    <div class="kpi-icon">⛺</div>
+    <div class="kpi-lbl">เต็นท์</div>
+    <div class="kpi-val" style="color:#2e7d32;"><?= number_format($tentCheckinPeriod) ?></div>
+    <div class="kpi-sub">คน</div>
+  </div>
+  <div class="kpi-card" style="border-left-color:#0d9488;">
+    <div class="kpi-icon">📅</div>
+    <div class="kpi-lbl">เช็คอินวันนี้</div>
+    <div class="kpi-val" style="color:#0d9488;"><?= number_format($totalCheckinToday) ?></div>
+    <div class="kpi-sub">คน (<?= $today ?>)</div>
+  </div>
+  <div class="kpi-card blue">
+    <div class="kpi-icon">📆</div>
+    <div class="kpi-lbl">เช็คอินเดือนนี้</div>
+    <div class="kpi-val" style="color:#1d6fad;"><?= number_format($totalCheckinMonth) ?></div>
+    <div class="kpi-sub">คน</div>
+  </div>
+</div>
+
+<!-- Check-in detail table -->
+<div class="stat-card" style="margin-bottom:12px;">
+  <div class="stat-card-hd">
+    <span style="font-size:1.1rem;">🚪</span>
+    <span class="stat-card-title">จำนวนผู้เช็คอิน แยกตามบริการ</span>
+    <span style="font-size:.72rem;color:var(--muted);margin-left:auto;">นับจากวันเช็คอินจริง เฉพาะที่อนุมัติแล้ว</span>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="stat-table">
+      <thead>
+        <tr>
+          <th>บริการ</th>
+          <th class="num"><span class="stat-period-badge today">วันนี้</span></th>
+          <th class="num"><span class="stat-period-badge month">เดือนนี้</span></th>
+          <th class="num"><span class="stat-period-badge year">ปีนี้</span></th>
+          <th class="num">ช่วงที่เลือก (<?= $labelRange ?>)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="pay-badge svc-boat">🚣 เรือพาย</span></td>
+          <td class="num"><?= number_format($boatCheckinToday) ?> คน</td>
+          <td class="num"><?= number_format($boatCheckinMonth) ?> คน</td>
+          <td class="num"><?= number_format($boatCheckinYear) ?> คน</td>
+          <td class="num"><?= number_format($boatCheckinPeriod) ?> คน</td>
+        </tr>
+        <tr>
+          <td><span class="pay-badge svc-room">🏨 ห้องพัก</span></td>
+          <td class="num"><?= number_format($roomCheckinToday) ?> คน</td>
+          <td class="num"><?= number_format($roomCheckinMonth) ?> คน</td>
+          <td class="num"><?= number_format($roomCheckinYear) ?> คน</td>
+          <td class="num"><?= number_format($roomCheckinPeriod) ?> คน</td>
+        </tr>
+        <tr>
+          <td><span class="pay-badge svc-tent">⛺ เต็นท์</span></td>
+          <td class="num"><?= number_format($tentCheckinToday) ?> คน</td>
+          <td class="num"><?= number_format($tentCheckinMonth) ?> คน</td>
+          <td class="num"><?= number_format($tentCheckinYear) ?> คน</td>
+          <td class="num"><?= number_format($tentCheckinPeriod) ?> คน</td>
+        </tr>
+        <tr style="background:#f0fdfa;font-weight:800;">
+          <td><strong>รวมทั้งหมด</strong></td>
+          <td class="num" style="color:#0d9488;"><?= number_format($totalCheckinToday) ?> คน</td>
+          <td class="num" style="color:#0d9488;"><?= number_format($totalCheckinMonth) ?> คน</td>
+          <td class="num" style="color:#0d9488;"><?= number_format($totalCheckinYear) ?> คน</td>
+          <td class="num" style="color:#0d9488;"><?= number_format($totalCheckinPeriod) ?> คน</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<?php else: ?>
 <div class="sec-hd">ภาพรวม — <?= $ctxLabel ?> · <?= $labelRange ?></div>
 <div class="kpi-grid">
   <div class="kpi-card blue">
@@ -700,7 +808,10 @@ $qnavLinks = [
   <?php endif; ?>
 </div>
 
+<?php endif; // end serviceType === 'checkin' ?>
+
 <!-- ═══ สถิติจำนวนผู้ใช้งาน ═══ -->
+<?php if ($serviceType !== 'checkin'): ?>
 <div class="sec-hd">สถิติจำนวนผู้ใช้งาน (จำนวนคน)</div>
 
 <!-- Guest counts: วันนี้ / เดือนนี้ / ปีนี้ -->
@@ -808,7 +919,10 @@ $qnavLinks = [
   </div>
 </div>
 
+<?php endif; // end serviceType !== 'checkin' for stats section ?>
+
 <!-- ═══ รายได้จากเช่าเรือ ═══ -->
+<?php if ($serviceType !== 'checkin'): ?>
 <div class="sec-hd">รายได้จากเช่าเรือพาย</div>
 <div class="rev-grid">
   <div class="rev-card today-card">
@@ -870,6 +984,9 @@ $qnavLinks = [
   </div>
 </div>
 
+<?php endif; // end serviceType !== 'checkin' for revenue section ?>
+
+<?php if ($serviceType !== 'checkin'): ?>
 <div class="sec-hd">กราฟ</div>
 <!-- Charts row 1 -->
 <div class="chart-grid">
@@ -963,6 +1080,8 @@ $qnavLinks = [
   </div>
 </div>
 <?php endif; ?>
+
+<?php endif; // end serviceType !== 'checkin' for charts + svc sections ?>
 
 <div class="sec-hd">รายละเอียดการจอง</div>
 <!-- Booking table -->

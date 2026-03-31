@@ -376,10 +376,7 @@ foreach ($_sectionMap as $_sec => $_items) {
       <span class="icon">📈</span><span class="text">รายงานเช็คอิน</span>
     </a>
     <a href="booking_report.php" class="menu-item <?= $activeMenu==='admin_report'?'active':'' ?>">
-      <span class="icon">📋</span><span class="text">รายงานการจอง</span>
-    </a>
-    <a href="admin_charts.php" class="menu-item <?= $activeMenu==='charts'?'active':'' ?>">
-      <span class="icon">📉</span><span class="text">กราฟรายงาน</span>
+      <span class="icon">📊</span><span class="text">กราฟรายงาน</span>
     </a>
   </div>
 </div>

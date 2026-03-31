@@ -18,7 +18,7 @@ $thDate="$d {$thMonths[$m]} $y";
 
 $bookings = $arch ? json_decode($arch['bookings_json'], true) : [];
 
-$pageTitle="Archive: $thDate"; $activeMenu="boat_queue";
+$pageTitle="Archive: $thDate"; $activeMenu="boat_archive";
 include 'admin_layout_top.php';
 ?>
 <style>

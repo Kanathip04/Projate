@@ -90,7 +90,8 @@ if ($checkout === '' || $checkout <= $checkin) {
     $checkout = date('Y-m-d', strtotime($checkin . ' +1 day'));
 }
 
-$availCount = $total_rooms - count($takenUnits);
+$approvedCount = count(array_filter($takenUnits, fn($s) => $s === 'approved'));
+$availCount = $total_rooms - $approvedCount;
 
 $roomImg = '';
 foreach (['image_path','image'] as $col) {
@@ -195,7 +196,9 @@ a{text-decoration:none;}
 .uc.us .ust{color:rgba(255,255,255,.6);}
 .uc.us::after{content:'✓';position:absolute;top:5px;right:7px;color:var(--gold);font-size:.78rem;font-weight:900;}
 .uc.ut{background:#f1f5f9;border-color:#e2e8f0;cursor:not-allowed;opacity:.55;}
-.uc.ut.up{background:#fffbeb;border-color:#fde68a;opacity:.7;}
+.uc.upv{background:#fffbeb;border-color:#fde68a;}
+.uc.upv:hover{border-color:#f59e0b;background:#fef3c7;transform:translateY(-2px);}
+.uc.upv .ust{color:#92400e;}
 .ui{font-size:1.5rem;line-height:1;}
 .un{font-size:.8rem;font-weight:800;color:var(--ink);text-align:center;}
 .ust{font-size:.67rem;color:var(--muted);text-align:center;}
@@ -351,10 +354,10 @@ a{text-decoration:none;}
           <div class="unit-grid">
             <?php for ($u = 1; $u <= $total_rooms; $u++):
               $uSt   = $takenUnits[$u] ?? 'available';
-              $isAv  = ($uSt === 'available');
-              $cls   = 'uc' . (!$isAv ? ' ut' . ($uSt==='pending'?' up':'') : '');
-              $icon  = $isAv ? '🏠' : ($uSt==='pending' ? '⏳' : '🔒');
-              $label = $isAv ? 'ว่าง' : ($uSt==='pending' ? 'รออนุมัติ' : 'จองแล้ว');
+              $isAv  = ($uSt !== 'approved');
+              $cls   = 'uc' . ($uSt === 'approved' ? ' ut' : ($uSt === 'pending' ? ' upv' : ''));
+              $icon  = $uSt === 'approved' ? '🔒' : ($uSt === 'pending' ? '⏳' : '🏠');
+              $label = $uSt === 'approved' ? 'จองแล้ว' : ($uSt === 'pending' ? 'รออนุมัติ' : 'ว่าง');
             ?>
             <label class="<?= $cls ?>" id="ul<?= $u ?>">
               <input type="checkbox" name="room_units[]" value="<?= $u ?>" <?= $isAv?'':'disabled' ?>>

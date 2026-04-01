@@ -184,7 +184,7 @@ if ($stmt->execute()) {
     /* === อัปเดต booking_ref, room_price, total_price === */
     $seqResRoom = $conn->query("SELECT COUNT(*) AS seq FROM room_bookings WHERE DATE(created_at) = CURDATE() AND id <= $booking_id");
     $dailySeqRoom = (int)($seqResRoom ? $seqResRoom->fetch_assoc()['seq'] : 1);
-    $booking_ref_val = date('d') . date('m') . ((int)date('Y') + 543) . str_pad($dailySeqRoom, 3, '0', STR_PAD_LEFT);
+    $booking_ref_val = 'ROOM-' . date('Y') . date('m') . date('d') . '-' . str_pad($dailySeqRoom, 3, '0', STR_PAD_LEFT);
     $room_price_val  = (float)($_POST['room_price'] ?? 0);
 
     /* คำนวณจำนวนคืน */

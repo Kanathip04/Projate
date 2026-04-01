@@ -75,15 +75,12 @@ $bk = $st->get_result()->fetch_assoc();
 $st->close();
 if (!$bk) { header("Location: booking_room.php"); exit; }
 
-/* คำนวณเลขใบเสร็จ รูปแบบ DDMMYYYYTHAI + NNN */
-$_rbTs  = strtotime($bk['created_at']);
-$_rbDay = date('d', $_rbTs);
-$_rbMon = date('m', $_rbTs);
-$_rbYth = (int)date('Y', $_rbTs) + 543;
+/* คำนวณเลขใบเสร็จ รูปแบบ ROOM-YYYYMMDD-NNN */
+$_rbTs      = strtotime($bk['created_at']);
 $_rbDateStr = date('Y-m-d', $_rbTs);
 $_rbSeqRes  = $conn->query("SELECT COUNT(*) AS seq FROM room_bookings WHERE DATE(created_at) = '$_rbDateStr' AND id <= $id");
 $_rbSeq     = (int)($_rbSeqRes ? $_rbSeqRes->fetch_assoc()['seq'] : 1);
-$_roomBookingRef = $_rbDay . $_rbMon . $_rbYth . str_pad($_rbSeq, 3, '0', STR_PAD_LEFT);
+$_roomBookingRef = 'ROOM-' . date('Y', $_rbTs) . date('m', $_rbTs) . date('d', $_rbTs) . '-' . str_pad($_rbSeq, 3, '0', STR_PAD_LEFT);
 
 define('PROMPTPAY_ID', '0611360322');
 

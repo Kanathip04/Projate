@@ -32,11 +32,8 @@ if (($bk['payment_status'] ?? '') !== 'paid') {
     $conn->close(); header("Location: room_bill.php?id=$id"); exit;
 }
 
-/* คำนวณเลขใบเสร็จ รูปแบบ DDMMYYYYTHAI + NNN (นับลำดับรายวัน) */
-$_ts  = strtotime($bk['created_at']);
-$_day = date('d', $_ts);
-$_mon = date('m', $_ts);
-$_yth = (int)date('Y', $_ts) + 543;
+/* คำนวณเลขใบเสร็จ รูปแบบ ROOM-YYYYMMDD-NNN (นับลำดับรายวัน) */
+$_ts      = strtotime($bk['created_at']);
 $_dateStr = date('Y-m-d', $_ts);
 $_seqRes  = $conn->query("SELECT COUNT(*) AS seq FROM room_bookings WHERE DATE(created_at) = '$_dateStr' AND id <= $id");
 $_seq     = (int)($_seqRes ? $_seqRes->fetch_assoc()['seq'] : 1);
@@ -56,7 +53,7 @@ if (!empty($bk['checkin_date']) && !empty($bk['checkout_date'])) {
 $roomPrice   = (float)($bk['room_price'] ?? $bk['r_price'] ?? 0);
 $subtotal    = $roomPrice * $nights * $numRooms;
 $total       = (float)($bk['total_price'] ?? $subtotal);
-$bookingRef  = $_day . $_mon . $_yth . str_pad($_seq, 3, '0', STR_PAD_LEFT);
+$bookingRef  = 'ROOM-' . date('Y', $_ts) . date('m', $_ts) . date('d', $_ts) . '-' . str_pad($_seq, 3, '0', STR_PAD_LEFT);
 $receiptDate = !empty($bk['paid_at'])
     ? date('d/m/Y H:i', strtotime($bk['paid_at']))
     : date('d/m/Y H:i');

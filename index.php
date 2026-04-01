@@ -1059,7 +1059,7 @@ img{display:block;}
 
       <a href="booking_tent.php" class="bk-card bk-card-tent">
         <div class="bk-card-glow"></div>
-        <div class="bk-badge-new">แคมป์ปิ้ง</div>
+        <div class="bk-badge-new">พร้อมใช้งาน</div>
         <div class="bk-card-top">
           <div class="bk-icon">⛺</div>
           <div class="bk-avail-dot"></div>
@@ -1079,7 +1079,7 @@ img{display:block;}
 
       <a href="booking_boat.php" class="bk-card bk-card-boat bk-card-featured">
         <div class="bk-card-glow"></div>
-        <div class="bk-badge-new bk-badge-hot">🔥 ใหม่!</div>
+        <div class="bk-badge-new bk-badge-hot">พร้อมใช้งาน</div>
         <div class="bk-card-top">
           <div class="bk-icon">🚣</div>
           <div class="bk-avail-dot"></div>

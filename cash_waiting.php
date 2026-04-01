@@ -36,7 +36,10 @@ if (!empty($booking['queue_id'])) {
 
 $conn->close();
 
-$isPaid = ($booking['payment_status'] === 'cash_paid');
+$isPaid    = ($booking['payment_status'] === 'cash_paid');
+$amount    = (float)($booking['total_amount'] ?? 0);
+$boatDate  = !empty($booking['boat_date']) ? date('d/m/Y', strtotime($booking['boat_date'])) : '-';
+$timeRange = $queueInfo ? substr($queueInfo['time_start'],0,5).'–'.substr($queueInfo['time_end'],0,5) : '00:00–23:59';
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -44,178 +47,163 @@ $isPaid = ($booking['payment_status'] === 'cash_paid');
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>รอชำระเงินสด | สถาบันวิจัยวลัยรุกขเวช</title>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
-  --ink:#0d1b2a;--blue:#1565c0;--blue-lt:#e3f2fd;
-  --green:#15803d;--green-bg:#ecfdf3;
-  --bg:#eef4fb;--muted:#5f7281;--border:#dde6f0;
-  --navy:#0d1b2a;
+    --ink:#1a1a2e;--gold:#c9a96e;--gold-dark:#a8864d;
+    --bg:#f5f1eb;--card:#fff;--muted:#7a7a8c;
+    --border:#e8e4de;--success:#15803d;--success-bg:#ecfdf3;
 }
-body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px;}
-.hero{background:linear-gradient(160deg,#071423 0%,#0d2344 45%,#1565c0 100%);color:#fff;padding:40px 20px;width:100%;text-align:center;border-radius:0 0 24px 24px;margin:-20px -20px 0 -20px;width:calc(100% + 40px);margin-bottom:24px;}
-.hero h1{font-family:'Kanit',sans-serif;font-size:1.6rem;font-weight:900;margin-bottom:6px;}
-.hero p{font-size:.9rem;opacity:.8;}
+body{font-family:'Sarabun','Segoe UI',sans-serif;background:var(--bg);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+.page{max-width:560px;width:100%;}
 
-.card{background:#fff;border-radius:18px;box-shadow:0 4px 24px rgba(13,27,42,.08);width:100%;max-width:480px;overflow:hidden;}
+.top-bar{
+    background:linear-gradient(135deg,#071423 0%,#0d2344 50%,#1565c0 100%);
+    border-radius:22px 22px 0 0;padding:32px 32px 28px;text-align:center;position:relative;overflow:hidden;
+}
+.top-bar::before{
+    content:'';position:absolute;inset:0;
+    background:radial-gradient(ellipse at 20% 50%,rgba(21,111,173,.35) 0%,transparent 60%),
+                radial-gradient(ellipse at 80% 20%,rgba(201,169,110,.12) 0%,transparent 50%);
+    pointer-events:none;
+}
+.checkmark{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:32px;position:relative;z-index:1;animation:pop .4s cubic-bezier(.175,.885,.32,1.275) both;}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.top-bar h1{font-size:24px;font-weight:800;color:#fff;margin-bottom:6px;position:relative;z-index:1;}
+.top-bar p{font-size:14px;color:rgba(255,255,255,.72);position:relative;z-index:1;}
+.booking-ref{display:inline-block;margin-top:14px;padding:6px 18px;border-radius:999px;background:rgba(201,169,110,.18);border:1px solid rgba(201,169,110,.4);color:var(--gold);font-size:13px;font-weight:700;position:relative;z-index:1;}
 
-.ref-banner{background:linear-gradient(135deg,var(--navy),#1565c0);color:#fff;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;}
-.ref-label{font-size:.72rem;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
-.ref-no{font-family:'Kanit',sans-serif;font-size:1.5rem;font-weight:900;letter-spacing:.02em;}
-.status-badge{padding:6px 14px;border-radius:99px;font-size:.75rem;font-weight:800;}
-.badge-waiting{background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.3);}
-.badge-paid{background:#dcfce7;color:#166534;}
+.card-body{background:var(--card);border:1px solid var(--border);border-top:none;border-radius:0 0 22px 22px;padding:28px 28px 32px;box-shadow:0 12px 30px rgba(26,26,46,.08);}
 
-.info-body{padding:20px 24px;}
-.info-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
-.info-row:last-child{border-bottom:none;}
-.info-ico{font-size:1.1rem;width:24px;text-align:center;flex-shrink:0;}
-.info-lbl{font-size:.72rem;color:var(--muted);font-weight:600;margin-bottom:2px;}
-.info-val{font-size:.9rem;font-weight:700;color:var(--ink);}
+.info-grid{display:flex;flex-direction:column;gap:12px;margin-bottom:24px;}
+.info-row{display:flex;align-items:flex-start;gap:14px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:14px;}
+.info-icon{width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;background:rgba(26,26,46,.06);}
+.info-label{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:3px;}
+.info-value{font-size:15px;font-weight:700;color:var(--ink);}
+.info-value.amount{font-size:22px;color:#1565c0;}
 
-.amount-row{background:var(--blue-lt);border-radius:12px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin:16px 0;}
-.amount-lbl{font-size:.8rem;font-weight:600;color:var(--blue);}
-.amount-val{font-family:'Kanit',sans-serif;font-size:2rem;font-weight:900;color:var(--blue);}
+.note-box{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px 16px;font-size:13px;color:#92400e;line-height:1.7;margin-bottom:22px;}
+.note-box ol{padding-left:18px;margin-top:6px;}
+.note-box .note-title{font-weight:800;margin-bottom:4px;}
 
-.instruction-box{background:#fffbeb;border:1.5px solid #fcd34d;border-radius:12px;padding:16px 18px;margin:0 0 16px;}
-.instruction-box .ins-title{font-size:.85rem;font-weight:800;color:#92400e;margin-bottom:8px;}
-.instruction-box ol{padding-left:18px;color:#78350f;}
-.instruction-box ol li{font-size:.82rem;line-height:1.8;}
-
-.paid-box{background:var(--green-bg);border:1.5px solid #86efac;border-radius:12px;padding:20px;text-align:center;margin:0 0 16px;}
+.paid-box{background:var(--success-bg);border:1px solid #86efac;border-radius:14px;padding:20px;text-align:center;margin-bottom:22px;}
 .paid-icon{font-size:2.5rem;margin-bottom:8px;}
-.paid-title{font-size:1rem;font-weight:800;color:var(--green);}
-.paid-sub{font-size:.8rem;color:#166534;margin-top:4px;}
-.queue-big{font-family:'Kanit',sans-serif;font-size:3rem;font-weight:900;color:var(--green);margin:8px 0;}
+.paid-title{font-size:1rem;font-weight:800;color:var(--success);}
+.queue-big{font-family:'Kanit',sans-serif;font-size:3rem;font-weight:900;color:var(--success);margin:8px 0;}
 
-.btn-row{padding:0 24px 24px;display:flex;flex-direction:row;gap:8px;}
-.btn-print{background:var(--navy);color:#fff;border:none;border-radius:12px;padding:14px 20px;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.2s;}
-.btn-print:hover{background:#1565c0;}
-.btn-back{background:transparent;color:var(--muted);border:1.5px solid var(--border);border-radius:12px;padding:12px 20px;font-family:'Sarabun',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;display:block;}
+.btn-group{display:flex;gap:10px;}
+.btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:14px 18px;border-radius:14px;font-family:'Sarabun',sans-serif;font-size:15px;font-weight:700;text-decoration:none;transition:all .2s;}
+.btn-primary{background:linear-gradient(135deg,#071423 0%,#1565c0 100%);color:#fff;}
+.btn-primary:hover{opacity:.88;}
+.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--border);}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold-dark);}
 
-.org-footer{text-align:center;font-size:.72rem;color:var(--muted);margin-top:20px;line-height:1.8;}
+.org-footer{text-align:center;font-size:.72rem;color:var(--muted);margin-top:16px;line-height:1.8;}
 
-@media print {
-  body{background:#fff;}
-  .btn-row,.hero{display:none;}
-  .card{box-shadow:none;border:1px solid #ddd;}
+@media(max-width:480px){
+    .top-bar{padding:26px 20px 22px;}
+    .card-body{padding:20px 18px 26px;}
+    .btn-group{flex-direction:column;}
 }
+@media print{body{background:#fff;}.btn-group,.org-footer{display:none;}.card-body{box-shadow:none;}}
 </style>
 </head>
 <body>
+<div class="page">
 
-<div class="hero">
-  <div>🚣 ระบบจองคิวพายเรือ</div>
-  <h1><?= $isPaid ? 'ชำระเงินสำเร็จแล้ว' : 'รอชำระเงินสด' ?></h1>
-  <p>สถาบันวิจัยวลัยรุกขเวช</p>
-</div>
-
-<div class="card">
-
-  <!-- Booking Ref Banner -->
-  <div class="ref-banner">
-    <div>
-      <div class="ref-label">หมายเลขการจอง</div>
-      <div class="ref-no"><?= h($booking['booking_ref']) ?></div>
+    <div class="top-bar">
+        <div class="checkmark"><?= $isPaid ? '✓' : '🚣' ?></div>
+        <h1><?= $isPaid ? 'ชำระเงินสำเร็จแล้ว' : 'ส่งคำขอจองสำเร็จ' ?></h1>
+        <p>ระบบบันทึกข้อมูลการจองเรียบร้อยแล้ว</p>
+        <div class="booking-ref">หมายเลขการจอง <?= h($booking['booking_ref']) ?></div>
     </div>
-    <?php if ($isPaid): ?>
-      <span class="status-badge badge-paid">✓ ชำระแล้ว</span>
-    <?php else: ?>
-      <span class="status-badge badge-waiting">⏳ รอชำระ</span>
-    <?php endif; ?>
-  </div>
 
-  <!-- Booking Info -->
-  <div class="info-body">
-    <div class="info-row">
-      <span class="info-ico">👤</span>
-      <div>
-        <div class="info-lbl">ชื่อผู้จอง</div>
-        <div class="info-val"><?= h($booking['full_name']) ?></div>
-      </div>
-    </div>
-    <div class="info-row">
-      <span class="info-ico">📋</span>
-      <div>
-        <div class="info-lbl">คิวที่จอง</div>
-        <div class="info-val"><?= h($booking['queue_name']) ?></div>
-      </div>
-    </div>
-    <div class="info-row">
-      <span class="info-ico">📅</span>
-      <div>
-        <div class="info-lbl">วันที่</div>
-        <div class="info-val">
-          <?= !empty($booking['boat_date']) ? date('d/m/Y', strtotime($booking['boat_date'])) : '-' ?>
-          <?php if ($queueInfo): ?>
-          · <?= substr($queueInfo['time_start'],0,5) ?>–<?= substr($queueInfo['time_end'],0,5) ?>
-          <?php endif; ?>
+    <div class="card-body">
+        <div class="info-grid">
+            <div class="info-row">
+                <div class="info-icon">👤</div>
+                <div>
+                    <div class="info-label">ชื่อผู้จอง</div>
+                    <div class="info-value"><?= h($booking['full_name']) ?></div>
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-icon">📋</div>
+                <div>
+                    <div class="info-label">คิวที่จอง</div>
+                    <div class="info-value"><?= h($booking['queue_name']) ?></div>
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-icon">📅</div>
+                <div>
+                    <div class="info-label">วันที่</div>
+                    <div class="info-value"><?= $boatDate ?> · <?= $timeRange ?></div>
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-icon">🛶</div>
+                <div>
+                    <div class="info-label">ประเภทเรือ</div>
+                    <div class="info-value"><?= h($booking['boat_type'] ?: '-') ?></div>
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-icon">👥</div>
+                <div>
+                    <div class="info-label">จำนวนผู้เข้าร่วม</div>
+                    <div class="info-value"><?= (int)$booking['guests'] ?> คน</div>
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-icon">💵</div>
+                <div>
+                    <div class="info-label">ยอดที่ต้องชำระ (เงินสด)</div>
+                    <div class="info-value amount">฿<?= number_format($amount, 0) ?></div>
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-icon">💳</div>
+                <div>
+                    <div class="info-label">วิธีชำระ</div>
+                    <div class="info-value">เงินสด (ชำระกับเจ้าหน้าที่)</div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-    <div class="info-row">
-      <span class="info-ico">🛶</span>
-      <div>
-        <div class="info-lbl">ประเภทเรือ</div>
-        <div class="info-val"><?= h($booking['boat_type'] ?: '-') ?></div>
-      </div>
-    </div>
-    <div class="info-row">
-      <span class="info-ico">👥</span>
-      <div>
-        <div class="info-lbl">จำนวนผู้เข้าร่วม</div>
-        <div class="info-val"><?= (int)$booking['guests'] ?> คน</div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Amount -->
-  <div style="padding:0 24px;">
-    <div class="amount-row">
-      <div class="amount-lbl">ยอดที่ต้องชำระ (เงินสด)</div>
-      <div class="amount-val">฿<?= number_format((float)($booking['total_amount'] ?? 0), 0) ?></div>
-    </div>
-  </div>
+        <?php if ($isPaid): ?>
+        <div class="paid-box">
+            <div class="paid-icon">✅</div>
+            <div class="paid-title">เจ้าหน้าที่รับเงินสดแล้ว</div>
+            <?php if (!empty($booking['daily_queue_no'])): ?>
+            <div class="queue-big">Q<?= str_pad((int)$booking['daily_queue_no'],4,'0',STR_PAD_LEFT) ?></div>
+            <div style="font-size:.8rem;color:#166534;">หมายเลขคิวของคุณ — กรุณาแสดงต่อเจ้าหน้าที่</div>
+            <?php endif; ?>
+        </div>
+        <?php else: ?>
+        <div class="note-box">
+            <div class="note-title">📌 ขั้นตอนชำระเงิน</div>
+            <ol>
+                <li>นำหน้าจอนี้ (หรือพิมพ์) แสดงต่อเจ้าหน้าที่</li>
+                <li>ชำระเงินสดจำนวน <strong>฿<?= number_format($amount, 0) ?></strong> บาท</li>
+                <li>เจ้าหน้าที่จะออกบัตรคิวและยืนยันการจองให้</li>
+                <li>กรุณามาถึงก่อนเวลาจอง 15 นาที</li>
+            </ol>
+        </div>
+        <?php endif; ?>
 
-  <!-- Paid queue number OR instruction -->
-  <?php if ($isPaid): ?>
-  <div style="padding:0 24px;">
-    <div class="paid-box">
-      <div class="paid-icon">✅</div>
-      <div class="paid-title">เจ้าหน้าที่รับเงินสดแล้ว</div>
-      <?php if (!empty($booking['daily_queue_no'])): ?>
-      <div class="queue-big">Q<?= str_pad((int)$booking['daily_queue_no'],4,'0',STR_PAD_LEFT) ?></div>
-      <div class="paid-sub">หมายเลขคิวของคุณ — กรุณาแสดงต่อเจ้าหน้าที่</div>
-      <?php endif; ?>
+        <div class="btn-group">
+            <a href="booking_boat.php" class="btn btn-primary">🚣 จองเพิ่ม</a>
+            <a href="booking_status.php" class="btn btn-ghost">📋 ติดตามสถานะ</a>
+        </div>
     </div>
-  </div>
-  <?php else: ?>
-  <div style="padding:0 24px;">
-    <div class="instruction-box">
-      <div class="ins-title">📌 ขั้นตอนชำระเงิน</div>
-      <ol>
-        <li>นำหน้าจอนี้ (หรือพิมพ์) แสดงต่อเจ้าหน้าที่</li>
-        <li>ชำระเงินสดจำนวน <strong>฿<?= number_format((float)($booking['total_amount'] ?? 0), 0) ?></strong> บาท</li>
-        <li>เจ้าหน้าที่จะออกบัตรคิวและยืนยันการจองให้</li>
-        <li>กรุณามาถึงก่อนเวลาจอง 15 นาที</li>
-      </ol>
-    </div>
-  </div>
-  <?php endif; ?>
 
-  <!-- Buttons -->
-  <div class="btn-row">
-    <a href="booking_boat.php" class="btn-print">🚣 จองเพิ่ม</a>
-    <a href="booking_status.php" class="btn-back">📋 ติดตามสถานะ</a>
-  </div>
+    <div class="org-footer">
+        สถาบันวิจัยวลัยรุกขเวช มหาวิทยาลัยมหาสารคาม<br>
+        หมายเลขการจอง: <?= h($booking['booking_ref']) ?> · วันที่จอง: <?= date('d/m/Y H:i', strtotime($booking['created_at'])) ?>
+    </div>
 
 </div>
-
-<div class="org-footer">
-  สถาบันวิจัยวลัยรุกขเวช มหาวิทยาลัยมหาสารคาม<br>
-  หมายเลขการจอง: <?= h($booking['booking_ref']) ?> · วันที่จอง: <?= date('d/m/Y H:i', strtotime($booking['created_at'])) ?>
-</div>
-
 </body>
 </html>

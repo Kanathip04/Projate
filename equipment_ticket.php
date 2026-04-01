@@ -18,12 +18,21 @@ $st->bind_param("i", $id);
 $st->execute();
 $bk = $st->get_result()->fetch_assoc();
 $st->close();
-$conn->close();
 
-if (!$bk) { header("Location: booking_tent.php"); exit; }
+if (!$bk) { $conn->close(); header("Location: booking_tent.php"); exit; }
 if ($bk['payment_status'] !== 'paid') {
-    header("Location: equipment_bill.php?id=$id"); exit;
+    $conn->close(); header("Location: equipment_bill.php?id=$id"); exit;
 }
+
+// คำนวณ booking ref รูปแบบ DDMMYYYYTHAI + NNN (นับลำดับรายวัน)
+$_ts  = strtotime($bk['created_at']);
+$_day = date('d', $_ts);
+$_mon = date('m', $_ts);
+$_yth = (int)date('Y', $_ts) + 543;
+$_dateStr = date('Y-m-d', $_ts);
+$_seqRes  = $conn->query("SELECT COUNT(*) AS seq FROM equipment_bookings WHERE DATE(created_at) = '$_dateStr' AND id <= $id");
+$_seq     = (int)($_seqRes ? $_seqRes->fetch_assoc()['seq'] : 1);
+$conn->close();
 
 $items  = json_decode($bk['items_json'] ?? '[]', true) ?: [];
 $nights = 1;
@@ -33,7 +42,7 @@ if (!empty($bk['checkin_date']) && !empty($bk['checkout_date'])) {
     $nights = max(1, (int)$d1->diff($d2)->days);
 }
 $total      = (float)$bk['total_price'] * $nights;
-$bookingRef = 'EQUIP-' . str_pad($id, 5, '0', STR_PAD_LEFT);
+$bookingRef = $_day . $_mon . $_yth . str_pad($_seq, 3, '0', STR_PAD_LEFT);
 $approvedAt = !empty($bk['approved_at'])
     ? date('d/m/Y H:i', strtotime($bk['approved_at']))
     : date('d/m/Y H:i');
@@ -148,7 +157,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh;
     <div class="th-org">⛺ สถาบันวิจัยวลัยรุกขเวช &nbsp;·&nbsp; ระบบเช่าอุปกรณ์</div>
     <div class="th-badge">✓ ชำระเงินแล้ว</div>
     <div class="ref-label">หมายเลขการจอง</div>
-    <div class="ref-no"><span>EQUIP-</span><?= str_pad($id, 5, '0', STR_PAD_LEFT) ?></div>
+    <div class="ref-no"><?= htmlspecialchars($bookingRef) ?></div>
   </div>
 
   <!-- NOTCH -->

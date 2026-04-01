@@ -146,7 +146,8 @@ foreach ([
 }
 
 // ── ตรวจว่าเป็น equipment, room หรือ boat booking ──
-$isEquipment = (strpos($booking_ref, 'EQUIP-') === 0);
+// รูปแบบ equipment ใหม่: DDMMYYYYTHAI + NNN (11 หลัก) เช่น 01042569001
+$isEquipment = preg_match('/^\d{11}$/', $booking_ref) || (strpos($booking_ref, 'EQUIP-') === 0);
 $isRoom      = (strpos($booking_ref, 'ROOM-')  === 0);
 $equipId     = 0;
 $roomId      = 0;
@@ -169,14 +170,23 @@ if ($isEquipment) {
         }
     }
 
-    // วิธีที่ 2: fallback หาจากวันที่ + ลำดับ (OFFSET ต้องใส่ตรง SQL ไม่ใช่ bind_param)
+    // วิธีที่ 2: fallback หาจากวันที่ + ลำดับ
     if ($equipId <= 0) {
-        $parts = explode('-', $booking_ref); // ['EQUIP','YYYYMMDD','NNN']
-        $seq   = isset($parts[2]) ? (int)$parts[2] : 0;
-        $ds    = $parts[1] ?? '';
-        if (strlen($ds) === 8 && $seq > 0) {
-            $dateFormatted = substr($ds,0,4).'-'.substr($ds,4,2).'-'.substr($ds,6,2);
-            $offset = $seq - 1; // ปลอดภัยเพราะ cast เป็น int แล้ว
+        // รองรับ 2 รูปแบบ: ใหม่ = DDMMYYYYTHAI+NNN (11 หลัก), เก่า = EQUIP-YYYYMMDD-NNN
+        if (preg_match('/^\d{11}$/', $booking_ref)) {
+            $dd  = substr($booking_ref, 0, 2);
+            $mm  = substr($booking_ref, 2, 2);
+            $yy  = (int)substr($booking_ref, 4, 4) - 543; // แปลง พ.ศ. → ค.ศ.
+            $seq = (int)substr($booking_ref, 8, 3);
+            $dateFormatted = sprintf('%04d-%02s-%02s', $yy, $mm, $dd);
+        } else {
+            $parts = explode('-', $booking_ref); // ['EQUIP','YYYYMMDD','NNN']
+            $seq   = isset($parts[2]) ? (int)$parts[2] : 0;
+            $ds    = $parts[1] ?? '';
+            $dateFormatted = strlen($ds) === 8 ? substr($ds,0,4).'-'.substr($ds,4,2).'-'.substr($ds,6,2) : '';
+        }
+        if (!empty($dateFormatted) && $seq > 0) {
+            $offset = $seq - 1;
             $fbStmt = $conn->prepare("SELECT id FROM equipment_bookings WHERE DATE(created_at) = ? ORDER BY id ASC LIMIT 1 OFFSET $offset");
             if ($fbStmt) {
                 $fbStmt->bind_param("s", $dateFormatted);

@@ -59,11 +59,15 @@ $st->bind_param("i", $id); $st->execute();
 $bk = $st->get_result()->fetch_assoc(); $st->close();
 if (!$bk) { header("Location: booking_tent.php"); exit; }
 
-/* === เลขใบเสร็จ รีเซ็ตทุกวัน === */
-$_bkDate  = date('Ymd', strtotime($bk['created_at']));
-$_seqRes  = $conn->query("SELECT COUNT(*) AS seq FROM equipment_bookings WHERE DATE(created_at) = DATE('" . $conn->real_escape_string($bk['created_at']) . "') AND id <= $id");
+/* === เลขใบเสร็จ รูปแบบ DDMMYYYYTHAI + NNN รีเซ็ตทุกวัน === */
+$_bkTs    = strtotime($bk['created_at']);
+$_bkDay   = date('d', $_bkTs);
+$_bkMon   = date('m', $_bkTs);
+$_bkYth   = (int)date('Y', $_bkTs) + 543;
+$_bkDateStr = date('Y-m-d', $_bkTs);
+$_seqRes  = $conn->query("SELECT COUNT(*) AS seq FROM equipment_bookings WHERE DATE(created_at) = '$_bkDateStr' AND id <= $id");
 $_dailySeq = (int)($_seqRes ? $_seqRes->fetch_assoc()['seq'] : 1);
-$bookingRef = 'EQUIP-' . $_bkDate . '-' . str_pad($_dailySeq, 3, '0', STR_PAD_LEFT);
+$bookingRef = $_bkDay . $_bkMon . $_bkYth . str_pad($_dailySeq, 3, '0', STR_PAD_LEFT);
 
 define('PROMPTPAY_ID', '0611360322');
 

@@ -109,6 +109,8 @@ $finData = $conn->query("SELECT
 $finRoomData = $conn->query("SELECT
     COALESCE(SUM(r.price * GREATEST(DATEDIFF(rb.checkout_date, rb.checkin_date), 1)), 0) grand_total,
     COALESCE(SUM(CASE WHEN rb.booking_status='approved' THEN r.price * GREATEST(DATEDIFF(rb.checkout_date, rb.checkin_date), 1) END), 0) paid_amt,
+    COALESCE(SUM(CASE WHEN rb.booking_status='approved' AND rb.payment_method='ชำระเงินสด' THEN r.price * GREATEST(DATEDIFF(rb.checkout_date, rb.checkin_date), 1) END), 0) cash_amt,
+    COALESCE(SUM(CASE WHEN rb.booking_status='approved' AND rb.payment_method='โอนเงิน' THEN r.price * GREATEST(DATEDIFF(rb.checkout_date, rb.checkin_date), 1) END), 0) transfer_amt,
     COALESCE(SUM(CASE WHEN rb.booking_status='pending' THEN r.price * GREATEST(DATEDIFF(rb.checkout_date, rb.checkin_date), 1) END), 0) pending_amt,
     COALESCE(SUM(CASE WHEN rb.booking_status='cancelled' THEN r.price * GREATEST(DATEDIFF(rb.checkout_date, rb.checkin_date), 1) END), 0) cancelled_amt
     FROM room_bookings rb LEFT JOIN rooms r ON rb.room_id = r.id
@@ -118,6 +120,8 @@ $finRoomData = $conn->query("SELECT
 $finTentData = $conn->query("SELECT
     COALESCE(SUM(total_price), 0) grand_total,
     COALESCE(SUM(CASE WHEN booking_status='approved' THEN total_price END), 0) paid_amt,
+    COALESCE(SUM(CASE WHEN booking_status='approved' AND payment_method='เงินสด' THEN total_price END), 0) cash_amt,
+    COALESCE(SUM(CASE WHEN booking_status='approved' AND payment_method='โอนเงิน' THEN total_price END), 0) transfer_amt,
     COALESCE(SUM(CASE WHEN booking_status='pending' THEN total_price END), 0) pending_amt,
     COALESCE(SUM(CASE WHEN booking_status='cancelled' THEN total_price END), 0) cancelled_amt
     FROM equipment_bookings
@@ -1300,7 +1304,15 @@ $qnavLinks = [
   <div class="lm-card-body">
     <div class="fin-grid">
       <div class="fin-card"><div class="fin-lbl">ยอดรวมทั้งหมด</div><div class="fin-val">฿<?= number_format((float)$finRoomData['grand_total'], 2) ?></div></div>
-      <div class="fin-card"><div class="fin-lbl">อนุมัติแล้ว</div><div class="fin-val" style="color:#2e7d32;">฿<?= number_format((float)$finRoomData['paid_amt'], 2) ?></div></div>
+      <div class="fin-card"><div class="fin-lbl">อนุมัติแล้ว (รวม)</div><div class="fin-val" style="color:#2e7d32;">฿<?= number_format((float)$finRoomData['paid_amt'], 2) ?></div></div>
+      <div class="fin-card" style="border-top:3px solid #c2410c;">
+        <div class="fin-lbl">💵 เงินสด</div>
+        <div class="fin-val" style="color:#c2410c;">฿<?= number_format((float)$finRoomData['cash_amt'], 2) ?></div>
+      </div>
+      <div class="fin-card" style="border-top:3px solid #1d4ed8;">
+        <div class="fin-lbl">📱 โอน / QR Code</div>
+        <div class="fin-val" style="color:#1d4ed8;">฿<?= number_format((float)$finRoomData['transfer_amt'], 2) ?></div>
+      </div>
       <div class="fin-card" style="border-top:3px solid #d97706;">
         <div class="fin-lbl">⏳ รอดำเนินการ</div>
         <div class="fin-val" style="color:#d97706;">฿<?= number_format((float)$finRoomData['pending_amt'], 2) ?></div>
@@ -1323,7 +1335,15 @@ $qnavLinks = [
   <div class="lm-card-body">
     <div class="fin-grid">
       <div class="fin-card"><div class="fin-lbl">ยอดรวมทั้งหมด</div><div class="fin-val">฿<?= number_format((float)$finTentData['grand_total'], 2) ?></div></div>
-      <div class="fin-card"><div class="fin-lbl">อนุมัติแล้ว</div><div class="fin-val" style="color:#2e7d32;">฿<?= number_format((float)$finTentData['paid_amt'], 2) ?></div></div>
+      <div class="fin-card"><div class="fin-lbl">อนุมัติแล้ว (รวม)</div><div class="fin-val" style="color:#2e7d32;">฿<?= number_format((float)$finTentData['paid_amt'], 2) ?></div></div>
+      <div class="fin-card" style="border-top:3px solid #c2410c;">
+        <div class="fin-lbl">💵 เงินสด</div>
+        <div class="fin-val" style="color:#c2410c;">฿<?= number_format((float)$finTentData['cash_amt'], 2) ?></div>
+      </div>
+      <div class="fin-card" style="border-top:3px solid #1d4ed8;">
+        <div class="fin-lbl">📱 โอน / QR Code</div>
+        <div class="fin-val" style="color:#1d4ed8;">฿<?= number_format((float)$finTentData['transfer_amt'], 2) ?></div>
+      </div>
       <div class="fin-card" style="border-top:3px solid #d97706;">
         <div class="fin-lbl">⏳ รอดำเนินการ</div>
         <div class="fin-val" style="color:#d97706;">฿<?= number_format((float)$finTentData['pending_amt'], 2) ?></div>

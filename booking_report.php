@@ -952,60 +952,6 @@ $qnavLinks = [
 
 <!-- ═══ สถิติจำนวนผู้ใช้งาน ═══ -->
 <?php if ($serviceType !== 'checkin'): ?>
-<div class="sec-hd">สถิติจำนวนผู้ใช้งาน (จำนวนคน)</div>
-
-<!-- Guest counts: วันนี้ / เดือนนี้ / ปีนี้ -->
-<div class="stat-card" style="margin-bottom:12px;">
-  <div class="stat-card-hd">
-    <span style="font-size:1.1rem;">👥</span>
-    <span class="stat-card-title">จำนวนผู้ใช้บริการ แยกตามบริการ</span>
-    <span style="font-size:.72rem;color:var(--muted);margin-left:auto;">นับจากจำนวนคนในการจอง (guests)</span>
-  </div>
-  <div style="overflow-x:auto;">
-    <table class="stat-table">
-      <thead>
-        <tr>
-          <th>บริการ</th>
-          <th class="num"><span class="stat-period-badge today">วันนี้</span></th>
-          <th class="num"><span class="stat-period-badge month">เดือนนี้</span></th>
-          <th class="num"><span class="stat-period-badge year">ปีนี้</span></th>
-          <th class="num">ช่วงที่เลือก (<?= $labelRange ?>)</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><span class="pay-badge svc-boat">🚣 เรือพาย</span></td>
-          <td class="num"><?= number_format($boatGuestToday) ?> คน</td>
-          <td class="num"><?= number_format($boatGuestMonth) ?> คน</td>
-          <td class="num"><?= number_format($boatGuestYear) ?> คน</td>
-          <td class="num"><?= number_format($boatGuests) ?> คน</td>
-        </tr>
-        <tr>
-          <td><span class="pay-badge svc-room">🏨 ห้องพัก</span></td>
-          <td class="num"><?= number_format($roomGuestToday) ?> คน</td>
-          <td class="num"><?= number_format($roomGuestMonth) ?> คน</td>
-          <td class="num"><?= number_format($roomGuestYear) ?> คน</td>
-          <td class="num"><?= number_format($roomGuests) ?> คน</td>
-        </tr>
-        <tr>
-          <td><span class="pay-badge svc-tent">⛺ เต็นท์</span></td>
-          <td class="num"><?= number_format($tentGuestToday) ?> คน</td>
-          <td class="num"><?= number_format($tentGuestMonth) ?> คน</td>
-          <td class="num"><?= number_format($tentGuestYear) ?> คน</td>
-          <td class="num"><?= number_format($tentGuests) ?> คน</td>
-        </tr>
-        <tr style="background:#fafaf8;font-weight:800;">
-          <td><strong>รวมทั้งหมด</strong></td>
-          <td class="num"><?= number_format($boatGuestToday+$roomGuestToday+$tentGuestToday) ?> คน</td>
-          <td class="num"><?= number_format($boatGuestMonth+$roomGuestMonth+$tentGuestMonth) ?> คน</td>
-          <td class="num"><?= number_format($boatGuestYear+$roomGuestYear+$tentGuestYear) ?> คน</td>
-          <td class="num"><?= number_format($boatGuests+$roomGuests+$tentGuests) ?> คน</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
 <!-- ═══ สถิติเช็คอิน ═══ -->
 <div class="sec-hd">สถิติการเช็คอิน (จำนวนคนที่เข้าใช้บริการจริง)</div>
 <div class="stat-card" style="margin-bottom:12px;">

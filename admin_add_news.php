@@ -32,7 +32,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $message = "โพสต์ข่าวสำเร็จ";
             $messageType = "success";
         } else {
-            $message = "บันทึกข่าวไม่สำเร็จ";
+            $message = "บันทึกข่าวไม่สำเร็จ: " . $stmt->error;
             $messageType = "error";
         }
 

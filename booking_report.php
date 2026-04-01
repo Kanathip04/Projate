@@ -252,7 +252,9 @@ if ($serviceType === 'all' || $serviceType === 'boat') {
     while ($r = $rows->fetch_assoc()) $bookingRows[] = $r;
 }
 if ($serviceType === 'all' || $serviceType === 'room') {
-    $rRows = $conn->query("SELECT 'room' svc, CONCAT('RM',rb.id) ref, rb.full_name, rb.room_type subtype, rb.created_at, rb.checkin_date use_date,
+    $rRows = $conn->query("SELECT 'room' svc,
+        COALESCE(NULLIF(rb.booking_ref,''), CONCAT('ROOM-',DATE_FORMAT(rb.created_at,'%Y%m%d'),'-',LPAD((SELECT COUNT(*) FROM room_bookings r2 WHERE DATE(r2.created_at)=DATE(rb.created_at) AND r2.id<=rb.id),3,'0'))) ref,
+        rb.full_name, rb.room_type subtype, rb.created_at, rb.checkin_date use_date,
         COALESCE(r.price * GREATEST(DATEDIFF(rb.checkout_date, rb.checkin_date),1), 0) total_amount,
         rb.booking_status payment_status, rb.booking_status FROM room_bookings rb
         LEFT JOIN rooms r ON rb.room_id = r.id
@@ -260,9 +262,11 @@ if ($serviceType === 'all' || $serviceType === 'room') {
     while ($r = $rRows->fetch_assoc()) $bookingRows[] = $r;
 }
 if ($serviceType === 'all' || $serviceType === 'tent') {
-    $tRows = $conn->query("SELECT 'tent' svc, CONCAT('TN',id) ref, full_name, 'เต็นท์' subtype, created_at, checkin_date use_date,
-        total_price total_amount, booking_status payment_status, booking_status FROM equipment_bookings
-        WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND (archived IS NULL OR archived=0) AND booking_status NOT IN ('cancelled','rejected') ORDER BY created_at DESC LIMIT 50");
+    $tRows = $conn->query("SELECT 'tent' svc,
+        CONCAT('EQUIP-',DATE_FORMAT(eb.created_at,'%Y%m%d'),'-',LPAD((SELECT COUNT(*) FROM equipment_bookings eb2 WHERE DATE(eb2.created_at)=DATE(eb.created_at) AND eb2.id<=eb.id),3,'0')) ref,
+        eb.full_name, 'เต็นท์' subtype, eb.created_at, eb.checkin_date use_date,
+        eb.total_price total_amount, eb.booking_status payment_status, eb.booking_status FROM equipment_bookings eb
+        WHERE " . dateWhere('eb.created_at', $dateFrom, $dateTo) . " AND (eb.archived IS NULL OR eb.archived=0) AND eb.booking_status NOT IN ('cancelled','rejected') ORDER BY eb.created_at DESC LIMIT 50");
     while ($r = $tRows->fetch_assoc()) $bookingRows[] = $r;
 }
 if (!empty($bookingRows)) {

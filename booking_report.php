@@ -1209,24 +1209,6 @@ $qnavLinks = [
       </div>
     </div>
   </div>
-  <div class="chart-box">
-    <div class="chart-title">💵 รายได้ตามช่วงเวลา (เรือพาย)</div>
-    <div class="chart-wrap"><canvas id="chartRevenue"></canvas></div>
-  </div>
-</div>
-
-<!-- Charts row 1b: Room + Tent revenue -->
-<div class="chart-grid">
-  <div class="chart-box">
-    <div class="chart-title">🏨 รายได้ตามช่วงเวลา (ห้องพัก)</div>
-    <div class="chart-wrap"><canvas id="chartRevenueRoom"></canvas></div>
-  </div>
-  <div class="chart-box">
-    <div class="chart-title">⛺ รายได้ตามช่วงเวลา (เต็นท์)</div>
-    <div class="chart-wrap"><canvas id="chartRevenueTent"></canvas></div>
-  </div>
-</div>
-
 <!-- Charts row 1c: Combined revenue -->
 <div class="chart-grid" style="grid-template-columns:1fr;">
   <div class="chart-box">

@@ -399,33 +399,33 @@ foreach ($_sectionMap as $_sec => $_items) {
       <span class="icon">✅</span><span class="text">อนุมัติแล้ว</span>
     </a>
     <a href="admin_booking_archive.php" class="menu-item <?= $activeMenu==='booking_archive'?'active':'' ?>">
-      <span class="icon">🗂️</span><span class="text">ย้อนหลัง</span>
+      <span class="icon">🗂️</span><span class="text">จัดเก็บข้อมูล</span>
     </a>
     <a href="manage_rooms.php" class="menu-item <?= $activeMenu==='rooms'?'active':'' ?>">
       <span class="icon">🛏️</span><span class="text">จัดการห้องพัก</span>
     </a>
     <span class="menu-sub-label">⛺ เต็นท์</span>
     <a href="admin_tent_list.php" class="menu-item <?= $activeMenu==='tent_booking'?'active':'' ?>">
-      <span class="icon">⛺</span><span class="text">การจองเต็นท์</span>
+      <span class="icon">⛺</span><span class="text">ข้อมูลการจองเต็นท์</span>
     </a>
     <a href="admin_tent_approved.php" class="menu-item <?= $activeMenu==='tent_approved'?'active':'' ?>">
       <span class="icon">✅</span><span class="text">อนุมัติแล้ว</span>
     </a>
     <a href="manage_tent_stock.php" class="menu-item <?= $activeMenu==='tent_stock'?'active':'' ?>">
-      <span class="icon">📦</span><span class="text">จัดเก็บเต็นท์</span>
+      <span class="icon">📦</span><span class="text">จัดเก็บข้อมูล</span>
     </a>
     <a href="manage_tents.php" class="menu-item <?= $activeMenu==='tent_manage'?'active':'' ?>">
       <span class="icon">🏕️</span><span class="text">จัดการเต็นท์</span>
     </a>
     <span class="menu-sub-label">🚣 พายเรือ</span>
     <a href="admin_boat_bookings.php" class="menu-item <?= $activeMenu==='boat_booking'?'active':'' ?>">
-      <span class="icon">🚣</span><span class="text">การจองพายเรือ</span>
+      <span class="icon">🚣</span><span class="text">ข้อมูลการจองพายเรือ</span>
     </a>
     <a href="admin_boat_approved.php" class="menu-item <?= $activeMenu==='boat_approve'?'active':'' ?>">
       <span class="icon">✅</span><span class="text">อนุมัติการจอง</span>
     </a>
     <a href="admin_boat_archive_view.php" class="menu-item <?= $activeMenu==='boat_archive'?'active':'' ?>">
-      <span class="icon">📦</span><span class="text">จัดเก็บข้อมูลคิว</span>
+      <span class="icon">📦</span><span class="text">จัดเก็บข้อมูล</span>
     </a>
     <a href="admin_boat_queues.php" class="menu-item <?= $activeMenu==='boat_queue'?'active':'' ?>">
       <span class="icon">🛶</span><span class="text">จัดการคิวพายเรือ</span>

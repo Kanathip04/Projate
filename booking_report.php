@@ -633,7 +633,10 @@ $qnavLinks = [
   .lm-table td{ padding:5px 8px!important; border:1px solid #ddd!important; font-size:8pt!important; }
 
   /* ── Charts ── */
-  .chart-grid{ display:none!important; }
+  .chart-grid{ display:grid!important; grid-template-columns:1fr 1fr!important; gap:10px!important; margin-bottom:10px!important; page-break-inside:avoid; break-inside:avoid; }
+  .chart-box{ border:1px solid #ccc!important; border-radius:6px!important; box-shadow:none!important; padding:10px!important; page-break-inside:avoid; break-inside:avoid; }
+  .chart-title{ font-size:8pt!important; font-weight:800!important; border-bottom:1px solid #ccc!important; padding-bottom:6px!important; margin-bottom:8px!important; }
+  .chart-wrap{ height:160px!important; position:relative!important; }
 
   /* ── Badges ── */
   .pay-badge,.stat-period-badge,.kpi-card,.pay-pill{

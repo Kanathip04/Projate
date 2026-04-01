@@ -48,19 +48,19 @@ function addFilters(string $base, string $bkStatus, string $payStatus, bool $has
 $boatWhere = "WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived = 0 AND booking_status NOT IN ('cancelled','rejected')";
 $boatWhere = addFilters($boatWhere, $bkStatus, $payStatus);
 $boatData  = $conn->query("SELECT COUNT(*) total,
-    SUM(payment_status='paid') paid,
+    SUM(payment_status IN('paid','cash_paid')) paid,
     SUM(payment_status IN('unpaid','pending','waiting_verify')) waiting,
-    COALESCE(SUM(CASE WHEN payment_status='paid' THEN total_amount END),0) revenue
+    COALESCE(SUM(CASE WHEN payment_status IN('paid','cash_paid') THEN total_amount END),0) revenue
     FROM boat_bookings $boatWhere")->fetch_assoc();
 
 // ── Room bookings ──
 $roomWhere = "WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived = 0 AND booking_status NOT IN ('cancelled','rejected')";
 if ($bkStatus) $roomWhere .= " AND booking_status = '$bkStatus'";
 $roomData  = $conn->query("SELECT COUNT(*) total,
-    SUM(booking_status='approved') paid,
-    SUM(booking_status='pending') waiting,
-    0 revenue
-    FROM room_bookings $roomWhere")->fetch_assoc();
+    SUM(rb.booking_status='approved') paid,
+    SUM(rb.booking_status='pending') waiting,
+    COALESCE(SUM(CASE WHEN rb.booking_status='approved' THEN r.price * GREATEST(DATEDIFF(rb.checkout_date,rb.checkin_date),1) END),0) revenue
+    FROM room_bookings rb LEFT JOIN rooms r ON rb.room_id=r.id $roomWhere")->fetch_assoc();
 
 // ── Tent bookings (equipment_bookings) ──
 $tentWhere = "WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND (archived IS NULL OR archived = 0) AND booking_status NOT IN ('cancelled','rejected')";
@@ -68,7 +68,7 @@ if ($bkStatus) $tentWhere .= " AND booking_status = '$bkStatus'";
 $tentData  = $conn->query("SELECT COUNT(*) total,
     SUM(booking_status='approved') paid,
     SUM(booking_status='pending') waiting,
-    0 revenue
+    COALESCE(SUM(CASE WHEN booking_status='approved' THEN total_price END),0) revenue
     FROM equipment_bookings $tentWhere")->fetch_assoc();
 
 // ── Visitors ──
@@ -109,7 +109,7 @@ $finData = $conn->query("SELECT
 $totalAll     = ($boatData['total'] ?? 0) + ($roomData['total'] ?? 0) + ($tentData['total'] ?? 0);
 $totalPaid    = ($boatData['paid'] ?? 0) + ($roomData['paid'] ?? 0) + ($tentData['paid'] ?? 0);
 $totalWaiting = ($boatData['waiting'] ?? 0) + ($roomData['waiting'] ?? 0) + ($tentData['waiting'] ?? 0);
-$totalRevenue = (float)($boatData['revenue'] ?? 0);
+$totalRevenue = (float)($boatData['revenue'] ?? 0) + (float)($roomData['revenue'] ?? 0) + (float)($tentData['revenue'] ?? 0);
 
 // ── Guest counts for current period ──
 $boatGuests = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM boat_bookings WHERE " . dateWhere('created_at',$dateFrom,$dateTo) . " AND archived=0")->fetch_assoc()['n'];
@@ -350,14 +350,14 @@ if ($serviceType === 'boat') {
     $ctxTotal   = (int)$roomData['total'];
     $ctxPaid    = (int)$roomData['paid'];
     $ctxWaiting = (int)$roomData['waiting'];
-    $ctxRevenue = 0;
+    $ctxRevenue = (float)($roomData['revenue'] ?? 0);
     $ctxGuests  = $roomGuests;
     $ctxLabel   = 'ห้องพัก';
 } elseif ($serviceType === 'tent') {
     $ctxTotal   = (int)$tentData['total'];
     $ctxPaid    = (int)$tentData['paid'];
     $ctxWaiting = (int)$tentData['waiting'];
-    $ctxRevenue = 0;
+    $ctxRevenue = (float)($tentData['revenue'] ?? 0);
     $ctxGuests  = $tentGuests;
     $ctxLabel   = 'เต็นท์';
 } elseif ($serviceType === 'checkin') {
@@ -1235,14 +1235,14 @@ $qnavLinks = [
     <div class="svc-row"><span class="lbl">การจองทั้งหมด</span><span class="val"><?= $roomData['total'] ?></span></div>
     <div class="svc-row"><span class="lbl">อนุมัติแล้ว</span><span class="val" style="color:#2e7d32;"><?= $roomData['paid'] ?></span></div>
     <div class="svc-row"><span class="lbl">รอดำเนินการ</span><span class="val" style="color:#e65100;"><?= $roomData['waiting'] ?></span></div>
-    <div class="svc-row"><span class="lbl">รายได้</span><span class="val">—</span></div>
+    <div class="svc-row"><span class="lbl">รายได้</span><span class="val">฿<?= number_format((float)$roomData['revenue'], 0) ?></span></div>
   </div>
   <div class="svc-card">
     <div class="svc-title"><span class="pay-badge svc-tent">⛺</span> เต็นท์</div>
     <div class="svc-row"><span class="lbl">การจองทั้งหมด</span><span class="val"><?= $tentData['total'] ?></span></div>
     <div class="svc-row"><span class="lbl">อนุมัติแล้ว</span><span class="val" style="color:#2e7d32;"><?= $tentData['paid'] ?></span></div>
     <div class="svc-row"><span class="lbl">รอดำเนินการ</span><span class="val" style="color:#e65100;"><?= $tentData['waiting'] ?></span></div>
-    <div class="svc-row"><span class="lbl">รายได้</span><span class="val">—</span></div>
+    <div class="svc-row"><span class="lbl">รายได้</span><span class="val">฿<?= number_format((float)$tentData['revenue'], 0) ?></span></div>
   </div>
 </div>
 <?php endif; // end serviceType === 'all' for svc-grid ?>

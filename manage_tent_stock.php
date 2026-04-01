@@ -37,12 +37,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if (isset($_GET['msg'])) { $message = $_GET['msg']; $message_type = $_GET['type'] ?? 'success'; }
 
-$search = trim($_GET['search'] ?? '');
+$search      = trim($_GET['search']       ?? '');
+$filterDate  = trim($_GET['filter_date']  ?? '');
+$filterMonth = trim($_GET['filter_month'] ?? '');
+
 $where  = "WHERE archived=1";
 $params = []; $types = "";
+if ($filterDate !== '') {
+    $where .= " AND DATE(created_at) = ?";
+    $params[] = $filterDate; $types .= "s";
+} elseif ($filterMonth !== '') {
+    $where .= " AND DATE_FORMAT(created_at,'%Y-%m') = ?";
+    $params[] = $filterMonth; $types .= "s";
+}
 if ($search !== '') {
     $where .= " AND (full_name LIKE ? OR phone LIKE ? OR email LIKE ?)";
-    $like = "%{$search}%"; $params = [$like,$like,$like]; $types = "sss";
+    $like = "%{$search}%"; $params = array_merge($params,[$like,$like,$like]); $types .= "sss";
 }
 
 $stmt = $conn->prepare("SELECT * FROM equipment_bookings {$where} ORDER BY id DESC");
@@ -176,8 +186,18 @@ include 'admin_layout_top.php';
         <input type="text" name="search" placeholder="ค้นหาชื่อ, เบอร์โทร, ประเภทเต็นท์..."
                value="<?= h($search) ?>">
       </div>
+      <div>
+        <input type="date" name="filter_date" value="<?= h($filterDate) ?>"
+               style="height:36px;padding:0 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.82rem;color:var(--ink);background:#fff;outline:none;"
+               title="กรองตามวันที่">
+      </div>
+      <div>
+        <input type="month" name="filter_month" value="<?= h($filterMonth) ?>"
+               style="height:36px;padding:0 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.82rem;color:var(--ink);background:#fff;outline:none;"
+               title="กรองตามเดือน">
+      </div>
       <button type="submit" class="arc-btn arc-btn-primary">ค้นหา</button>
-      <?php if ($search): ?>
+      <?php if ($search || $filterDate || $filterMonth): ?>
         <a href="<?= h($currentPage) ?>" class="arc-btn arc-btn-ghost">ล้าง</a>
       <?php endif; ?>
     </div>

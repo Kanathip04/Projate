@@ -25,7 +25,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     if ($title !== "" && $content !== "" && $messageType !== "error") {
-        $stmt = $conn->prepare("INSERT INTO news (title, content, image) VALUES (?, ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO news (title, content, image, created_at) VALUES (?, ?, ?, NOW())");
         $stmt->bind_param("sss", $title, $content, $imageName);
 
         if ($stmt->execute()) {
@@ -278,7 +278,7 @@ include 'admin_layout_top.php';
             <div class="an-hint">รองรับ JPG, PNG, WEBP ขนาดไม่เกิน 5MB (ไม่บังคับ)</div>
             <div class="an-drop" id="dropZone">
               <input type="file" name="image" id="image" accept="image/*"
-                class="an-file-input" onchange="previewImg(event)">
+                class="an-file-input" onchange="handleImgPreview(event)">
               <div class="an-drop-icon">🖼️</div>
               <div class="an-drop-text">คลิกหรือลากไฟล์มาวางที่นี่</div>
               <div class="an-drop-sub">JPG · PNG · WEBP · สูงสุด 5MB</div>
@@ -288,7 +288,7 @@ include 'admin_layout_top.php';
                 <span class="an-preview-label">🖼️ ตัวอย่างรูปภาพ</span>
                 <button type="button" class="an-preview-rm" onclick="clearImg()">✕ ลบรูป</button>
               </div>
-              <img id="previewImg" alt="preview">
+              <img id="previewImgEl" alt="preview">
             </div>
           </div>
 
@@ -310,12 +310,12 @@ include 'admin_layout_top.php';
 </div>
 
 <script>
-function previewImg(e){
+function handleImgPreview(e){
   const f=e.target.files[0];
   if(!f)return;
   const r=new FileReader();
   r.onload=function(ev){
-    document.getElementById('previewImg').src=ev.target.result;
+    document.getElementById('previewImgEl').src=ev.target.result;
     document.getElementById('previewBox').style.display='block';
     document.getElementById('dropZone').querySelector('.an-drop-text').textContent=f.name;
   };
@@ -324,7 +324,7 @@ function previewImg(e){
 function clearImg(){
   document.getElementById('image').value='';
   document.getElementById('previewBox').style.display='none';
-  document.getElementById('previewImg').src='';
+  document.getElementById('previewImgEl').src='';
   document.getElementById('dropZone').querySelector('.an-drop-text').textContent='คลิกหรือลากไฟล์มาวางที่นี่';
 }
 function updateTitle(el){

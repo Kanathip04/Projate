@@ -388,8 +388,8 @@ a{text-decoration:none;}
     $nights=max(1,(int)(new DateTime($b['date_from']))->diff(new DateTime($b['date_to']))->days);
   }
 
-  /* needPay */
-  $needPay=(in_array($b['type'],['boat','tent'])&&in_array($payS,['unpaid','failed',null,'']));
+  /* needPay — cash bookings pay at counter, no online payment needed */
+  $needPay=(in_array($b['type'],['boat','tent'])&&in_array($payS,['unpaid','failed',null,''])&&!$isCash);
   $isWaiting=($payS==='waiting_verify'||$payS==='manual_review');
   $isPaid=($payS==='paid'||$bkSt==='approved');
 

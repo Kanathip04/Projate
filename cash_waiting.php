@@ -89,7 +89,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);min-
 .paid-sub{font-size:.8rem;color:#166534;margin-top:4px;}
 .queue-big{font-family:'Kanit',sans-serif;font-size:3rem;font-weight:900;color:var(--green);margin:8px 0;}
 
-.btn-row{padding:0 24px 24px;display:flex;flex-direction:column;gap:8px;}
+.btn-row{padding:0 24px 24px;display:flex;flex-direction:row;gap:8px;}
 .btn-print{background:var(--navy);color:#fff;border:none;border-radius:12px;padding:14px 20px;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.2s;}
 .btn-print:hover{background:#1565c0;}
 .btn-back{background:transparent;color:var(--muted);border:1.5px solid var(--border);border-radius:12px;padding:12px 20px;font-family:'Sarabun',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;display:block;}

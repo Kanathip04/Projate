@@ -475,6 +475,4 @@ if ($stmt->execute()) {
     die("Execute ไม่สำเร็จ: " . $stmt->error);
 }
 
-$stmt->close();
-$conn->close();
 ?>

@@ -94,7 +94,7 @@ $touristListRes = $conn->query("SELECT nickname, gender, age, user_type, visit_d
 $touristList = [];
 while ($tlRow = $touristListRes->fetch_assoc()) $touristList[] = $tlRow;
 
-// ── Finance (boat only has payment) ──
+// ── Finance (boat) ──
 $finData = $conn->query("SELECT
     COALESCE(SUM(total_amount),0) grand_total,
     COALESCE(SUM(CASE WHEN payment_status IN('paid','cash_paid') THEN total_amount END),0) paid_amt,
@@ -104,6 +104,24 @@ $finData = $conn->query("SELECT
     COALESCE(SUM(CASE WHEN payment_status='waiting_verify' THEN total_amount END),0) waiting_amt,
     COALESCE(SUM(CASE WHEN payment_status='failed' THEN total_amount END),0) failed_amt
     FROM boat_bookings WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived=0")->fetch_assoc();
+
+// ── Finance (room) ──
+$finRoomData = $conn->query("SELECT
+    COALESCE(SUM(r.price * GREATEST(DATEDIFF(rb.checkout_date, rb.checkin_date), 1)), 0) grand_total,
+    COALESCE(SUM(CASE WHEN rb.booking_status='approved' THEN r.price * GREATEST(DATEDIFF(rb.checkout_date, rb.checkin_date), 1) END), 0) paid_amt,
+    COALESCE(SUM(CASE WHEN rb.booking_status='pending' THEN r.price * GREATEST(DATEDIFF(rb.checkout_date, rb.checkin_date), 1) END), 0) pending_amt,
+    COALESCE(SUM(CASE WHEN rb.booking_status='cancelled' THEN r.price * GREATEST(DATEDIFF(rb.checkout_date, rb.checkin_date), 1) END), 0) cancelled_amt
+    FROM room_bookings rb LEFT JOIN rooms r ON rb.room_id = r.id
+    WHERE " . dateWhere('rb.created_at', $dateFrom, $dateTo) . " AND rb.archived = 0")->fetch_assoc();
+
+// ── Finance (tent) ──
+$finTentData = $conn->query("SELECT
+    COALESCE(SUM(total_price), 0) grand_total,
+    COALESCE(SUM(CASE WHEN booking_status='approved' THEN total_price END), 0) paid_amt,
+    COALESCE(SUM(CASE WHEN booking_status='pending' THEN total_price END), 0) pending_amt,
+    COALESCE(SUM(CASE WHEN booking_status='cancelled' THEN total_price END), 0) cancelled_amt
+    FROM equipment_bookings
+    WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND (archived IS NULL OR archived = 0)")->fetch_assoc();
 
 // ── Grand totals ──
 $totalAll     = ($boatData['total'] ?? 0) + ($roomData['total'] ?? 0) + ($tentData['total'] ?? 0);
@@ -1268,6 +1286,52 @@ $qnavLinks = [
       </div>
       <div class="fin-card"><div class="fin-lbl">ยังไม่ชำระ</div><div class="fin-val" style="color:#dc2626;">฿<?= number_format((float)$finData['unpaid_amt'], 2) ?></div></div>
       <div class="fin-card"><div class="fin-lbl">รอตรวจสอบ</div><div class="fin-val" style="color:#f59e0b;">฿<?= number_format((float)$finData['waiting_amt'], 2) ?></div></div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
+<?php if ($serviceType === 'all' || $serviceType === 'room'): ?>
+<div class="sec-hd">การเงิน (ห้องพัก)</div>
+<div class="lm-card" style="margin-bottom:20px;">
+  <div class="lm-card-header">
+    <span class="lm-card-title">💳 รายงานด้านการเงิน (ห้องพัก)</span>
+  </div>
+  <div class="lm-card-body">
+    <div class="fin-grid">
+      <div class="fin-card"><div class="fin-lbl">ยอดรวมทั้งหมด</div><div class="fin-val">฿<?= number_format((float)$finRoomData['grand_total'], 2) ?></div></div>
+      <div class="fin-card"><div class="fin-lbl">อนุมัติแล้ว</div><div class="fin-val" style="color:#2e7d32;">฿<?= number_format((float)$finRoomData['paid_amt'], 2) ?></div></div>
+      <div class="fin-card" style="border-top:3px solid #d97706;">
+        <div class="fin-lbl">⏳ รอดำเนินการ</div>
+        <div class="fin-val" style="color:#d97706;">฿<?= number_format((float)$finRoomData['pending_amt'], 2) ?></div>
+      </div>
+      <div class="fin-card" style="border-top:3px solid #9ca3af;">
+        <div class="fin-lbl">❌ ยกเลิก</div>
+        <div class="fin-val" style="color:#9ca3af;">฿<?= number_format((float)$finRoomData['cancelled_amt'], 2) ?></div>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
+<?php if ($serviceType === 'all' || $serviceType === 'tent'): ?>
+<div class="sec-hd">การเงิน (เต็นท์)</div>
+<div class="lm-card" style="margin-bottom:20px;">
+  <div class="lm-card-header">
+    <span class="lm-card-title">💳 รายงานด้านการเงิน (เต็นท์)</span>
+  </div>
+  <div class="lm-card-body">
+    <div class="fin-grid">
+      <div class="fin-card"><div class="fin-lbl">ยอดรวมทั้งหมด</div><div class="fin-val">฿<?= number_format((float)$finTentData['grand_total'], 2) ?></div></div>
+      <div class="fin-card"><div class="fin-lbl">อนุมัติแล้ว</div><div class="fin-val" style="color:#2e7d32;">฿<?= number_format((float)$finTentData['paid_amt'], 2) ?></div></div>
+      <div class="fin-card" style="border-top:3px solid #d97706;">
+        <div class="fin-lbl">⏳ รอดำเนินการ</div>
+        <div class="fin-val" style="color:#d97706;">฿<?= number_format((float)$finTentData['pending_amt'], 2) ?></div>
+      </div>
+      <div class="fin-card" style="border-top:3px solid #9ca3af;">
+        <div class="fin-lbl">❌ ยกเลิก</div>
+        <div class="fin-val" style="color:#9ca3af;">฿<?= number_format((float)$finTentData['cancelled_amt'], 2) ?></div>
+      </div>
     </div>
   </div>
 </div>

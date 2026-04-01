@@ -206,8 +206,8 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);min-
 
   <!-- Buttons -->
   <div class="btn-row">
-    <button class="btn-print" onclick="window.print()">🖨 พิมพ์ / บันทึก PDF</button>
-    <a href="booking_boat.php" class="btn-back">← กลับไปหน้าจอง</a>
+    <a href="booking_boat.php" class="btn-print">🚣 จองเพิ่ม</a>
+    <a href="booking_status.php" class="btn-back">📋 ติดตามสถานะ</a>
   </div>
 
 </div>

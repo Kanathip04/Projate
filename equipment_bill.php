@@ -358,8 +358,8 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh;disp
         </div>
 
         <div class="btn-group">
-            <button onclick="window.print()" class="btn btn-primary">🖨 พิมพ์ / บันทึก PDF</button>
-            <a href="/Projate/booking_tent.php" class="btn btn-ghost">⛺ กลับหน้าจอง</a>
+            <a href="/Projate/booking_tent.php" class="btn btn-primary">⛺ จองเพิ่ม</a>
+            <a href="/Projate/booking_status.php" class="btn btn-ghost">📋 ติดตามสถานะ</a>
         </div>
     </div>
 </div>

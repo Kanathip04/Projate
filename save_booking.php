@@ -463,7 +463,7 @@ if ($stmt->execute()) {
             </div>
 
             <div class="btn-group">
-                <a href="/Projate/booking_room.php" class="btn btn-primary">🏨 จองห้องเพิ่ม</a>
+                <a href="/Projate/booking_room.php" class="btn btn-primary">🏨 จองเพิ่ม</a>
                 <a href="/Projate/booking_status.php" class="btn btn-ghost">📋 ติดตามสถานะ</a>
             </div>
         </div>

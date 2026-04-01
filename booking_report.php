@@ -842,12 +842,7 @@ $qnavLinks = [
     <div class="kpi-val"><?= number_format($ctxWaiting) ?></div>
     <div class="kpi-sub">รายการ</div>
   </div>
-  <div class="kpi-card red">
-    <div class="kpi-icon">❌</div>
-    <div class="kpi-lbl">ยกเลิก</div>
-    <div class="kpi-val"><?= number_format($ctxCancel) ?></div>
-    <div class="kpi-sub">รายการ</div>
-  </div>
+
   <div class="kpi-card">
     <div class="kpi-icon">💰</div>
     <div class="kpi-lbl">รายได้รวม</div>

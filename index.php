@@ -878,7 +878,6 @@ img{display:block;}
     <a href="view_data.php"><span class="nav-icon">📋</span> ลงทะเบียน</a>
     <a href="survey.php"><span class="nav-icon">📝</span> แบบประเมิน</a>
     <a href="calendar.php"><span class="nav-icon">📅</span> ปฏิทิน</a>
-    <a href="about_us.php"><span class="nav-icon">🌿</span> เกี่ยวกับ</a>
     <div class="nav-book-wrap">
       <div class="nav-book-trigger">
         <span class="nav-icon">🗓️</span> จอง <span class="nav-book-arrow">▾</span>
@@ -979,7 +978,6 @@ img{display:block;}
     <a href="view_data.php"><div class="nav-drawer-icon">📋</div> ลงทะเบียนกิจกรรม</a>
     <a href="calendar.php"><div class="nav-drawer-icon">📅</div> ปฏิทินกิจกรรม</a>
     <a href="survey.php"><div class="nav-drawer-icon">📝</div> แบบประเมิน</a>
-    <a href="about_us.php"><div class="nav-drawer-icon">🌿</div> เกี่ยวกับสถาบัน</a>
     <div class="drawer-divider"></div>
     <?php if ($isLoggedIn): ?>
       <a href="profile.php"><div class="nav-drawer-icon">👤</div> โปรไฟล์ของฉัน</a>
@@ -1163,7 +1161,6 @@ img{display:block;}
           <div class="about-pill"><div class="about-pill-dot"></div> ความหลากหลายชีวภาพ</div>
           <div class="about-pill"><div class="about-pill-dot"></div> บริการวิชาการ</div>
         </div>
-        <a href="about_us.php" class="btn-about">🌿 อ่านเพิ่มเติม</a>
       </div>
     </div>
 
@@ -1288,7 +1285,6 @@ img{display:block;}
         <li><a href="news.php">ข่าวสาร</a></li>
         <li><a href="view_data.php">ลงทะเบียน</a></li>
         <li><a href="calendar.php">ปฏิทิน</a></li>
-        <li><a href="about_us.php">เกี่ยวกับสถาบัน</a></li>
         <li><a href="#booking-section">🗓️ จองบริการ</a></li>
         <li><a href="booking_room.php">↳ จองห้องพัก</a></li>
         <li><a href="booking_tent.php">↳ จองเต็นท์</a></li>
@@ -1309,7 +1305,6 @@ img{display:block;}
   <div class="footer-bottom">
     <span>© <?= date('Y') ?> สถาบันวิจัยวลัยรุกขเวช มหาวิทยาลัยมหาสารคาม</span>
     <div class="footer-bottom-links">
-      <a href="about_us.php">เกี่ยวกับ</a>
       <a href="news.php">ข่าวสาร</a>
       <a href="#booking-section">จองบริการ</a>
     </div>

@@ -100,9 +100,7 @@ $finData = $conn->query("SELECT
     COALESCE(SUM(CASE WHEN payment_status IN('paid','cash_paid') THEN total_amount END),0) paid_amt,
     COALESCE(SUM(CASE WHEN payment_status='cash_paid' OR payment_provider='cash' THEN total_amount END),0) cash_amt,
     COALESCE(SUM(CASE WHEN payment_status='paid' AND (payment_provider IS NULL OR payment_provider!='cash') THEN total_amount END),0) transfer_amt,
-    COALESCE(SUM(CASE WHEN payment_status IN('unpaid','pending') THEN total_amount END),0) unpaid_amt,
-    COALESCE(SUM(CASE WHEN payment_status='waiting_verify' THEN total_amount END),0) waiting_amt,
-    COALESCE(SUM(CASE WHEN payment_status='failed' THEN total_amount END),0) failed_amt
+    COALESCE(SUM(CASE WHEN booking_status='pending' THEN total_amount END),0) pending_amt
     FROM boat_bookings WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived=0")->fetch_assoc();
 
 // ── Finance (room) ──
@@ -1279,7 +1277,7 @@ $qnavLinks = [
   <div class="lm-card-body">
     <div class="fin-grid">
       <div class="fin-card"><div class="fin-lbl">ยอดรวมทั้งหมด</div><div class="fin-val">฿<?= number_format((float)$finData['grand_total'], 2) ?></div></div>
-      <div class="fin-card"><div class="fin-lbl">ชำระแล้ว (รวม)</div><div class="fin-val" style="color:#2e7d32;">฿<?= number_format((float)$finData['paid_amt'], 2) ?></div></div>
+      <div class="fin-card"><div class="fin-lbl">อนุมัติแล้ว (รวม)</div><div class="fin-val" style="color:#2e7d32;">฿<?= number_format((float)$finData['paid_amt'], 2) ?></div></div>
       <div class="fin-card" style="border-top:3px solid #c2410c;">
         <div class="fin-lbl">💵 เงินสด</div>
         <div class="fin-val" style="color:#c2410c;">฿<?= number_format((float)$finData['cash_amt'], 2) ?></div>
@@ -1288,8 +1286,10 @@ $qnavLinks = [
         <div class="fin-lbl">📱 โอน / QR Code</div>
         <div class="fin-val" style="color:#1d4ed8;">฿<?= number_format((float)$finData['transfer_amt'], 2) ?></div>
       </div>
-      <div class="fin-card"><div class="fin-lbl">ยังไม่ชำระ</div><div class="fin-val" style="color:#dc2626;">฿<?= number_format((float)$finData['unpaid_amt'], 2) ?></div></div>
-      <div class="fin-card"><div class="fin-lbl">รอตรวจสอบ</div><div class="fin-val" style="color:#f59e0b;">฿<?= number_format((float)$finData['waiting_amt'], 2) ?></div></div>
+      <div class="fin-card" style="border-top:3px solid #d97706;">
+        <div class="fin-lbl">⏳ รอดำเนินการ</div>
+        <div class="fin-val" style="color:#d97706;">฿<?= number_format((float)$finData['pending_amt'], 2) ?></div>
+      </div>
     </div>
   </div>
 </div>

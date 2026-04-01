@@ -179,14 +179,9 @@ include "admin_layout_top.php";
     <form method="GET">
       <div>
         <label>กรองตามวันที่</label>
-        <select name="date">
-          <option value="">— ทั้งหมด —</option>
-          <?php foreach ($dateOptions as $d): ?>
-            <option value="<?= $d ?>" <?= $filterDate===$d?'selected':'' ?>>
-              <?= date('d/m/Y', strtotime($d)) ?>
-            </option>
-          <?php endforeach; ?>
-        </select>
+        <input type="date" name="date"
+          value="<?= htmlspecialchars($filterDate) ?>"
+          style="padding:8px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.85rem;color:#0f172a;background:#fff;outline:none;height:40px;">
       </div>
       <div>
         <label>ค้นหาชื่อ / ประเภท</label>

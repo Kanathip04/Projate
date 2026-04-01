@@ -1317,10 +1317,6 @@ $qnavLinks = [
         <div class="fin-lbl">⏳ รอดำเนินการ</div>
         <div class="fin-val" style="color:#d97706;">฿<?= number_format((float)$finRoomData['pending_amt'], 2) ?></div>
       </div>
-      <div class="fin-card" style="border-top:3px solid #9ca3af;">
-        <div class="fin-lbl">❌ ยกเลิก</div>
-        <div class="fin-val" style="color:#9ca3af;">฿<?= number_format((float)$finRoomData['cancelled_amt'], 2) ?></div>
-      </div>
     </div>
   </div>
 </div>
@@ -1347,10 +1343,6 @@ $qnavLinks = [
       <div class="fin-card" style="border-top:3px solid #d97706;">
         <div class="fin-lbl">⏳ รอดำเนินการ</div>
         <div class="fin-val" style="color:#d97706;">฿<?= number_format((float)$finTentData['pending_amt'], 2) ?></div>
-      </div>
-      <div class="fin-card" style="border-top:3px solid #9ca3af;">
-        <div class="fin-lbl">❌ ยกเลิก</div>
-        <div class="fin-val" style="color:#9ca3af;">฿<?= number_format((float)$finTentData['cancelled_amt'], 2) ?></div>
       </div>
     </div>
   </div>

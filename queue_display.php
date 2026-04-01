@@ -1,24 +1,34 @@
 <?php
+session_start();
+require_once 'auth_guard.php';
 date_default_timezone_set('Asia/Bangkok');
 $conn = new mysqli("localhost", "root", "Kanathip04", "backoffice_db");
 $conn->set_charset("utf8mb4");
 if ($conn->connect_error) die("DB Error");
 
+$user_email = $_SESSION['email'] ?? $_SESSION['user_email'] ?? '';
+if ($user_email === '') { header('Location: login.php'); exit; }
+
 $today = date('Y-m-d');
-$result = $conn->query("
+$stmt = $conn->prepare("
     SELECT daily_queue_no, booking_ref, full_name, boat_type, boat_units,
            boat_date, time_start, time_end, approved_at, payment_status, payment_provider, booking_status
     FROM boat_bookings
-    WHERE DATE(approved_at) = '$today'
+    WHERE DATE(approved_at) = ?
       AND booking_status = 'approved'
       AND payment_status IN ('paid','cash_paid')
+      AND email = ?
     ORDER BY daily_queue_no ASC
 ");
+$stmt->bind_param("ss", $today, $user_email);
+$stmt->execute();
+$result = $stmt->get_result();
 
 $queues = [];
 $dbError = '';
 if ($result === false) { $dbError = $conn->error; }
 else { while ($r = $result->fetch_assoc()) $queues[] = $r; }
+$stmt->close();
 $conn->close();
 
 $thMonths = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];

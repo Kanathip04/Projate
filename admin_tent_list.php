@@ -323,11 +323,6 @@ include 'admin_layout_top.php';
                                                 <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
                                                 <button class="tk-btn tk-btn-approve" style="padding:6px 11px;font-size:.74rem;">✓ อนุมัติ</button>
                                             </form>
-                                            <form method="POST" class="tk-inline" onsubmit="return confirm('ยืนยันปฏิเสธรายการนี้?')">
-                                                <input type="hidden" name="action" value="reject">
-                                                <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                                                <button class="tk-btn tk-btn-danger" style="padding:6px 11px;font-size:.74rem;">✗ ปฏิเสธ</button>
-                                            </form>
                                         <?php endif; ?>
 
                                         <!-- View bill -->

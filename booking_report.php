@@ -114,7 +114,7 @@ $totalRevenue = (float)($boatData['revenue'] ?? 0);
 // ── Guest counts for current period ──
 $boatGuests = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM boat_bookings WHERE " . dateWhere('created_at',$dateFrom,$dateTo) . " AND archived=0")->fetch_assoc()['n'];
 $roomGuests = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM room_bookings WHERE " . dateWhere('created_at',$dateFrom,$dateTo) . " AND archived=0")->fetch_assoc()['n'];
-$tentGuests = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM equipment_bookings WHERE " . dateWhere('created_at',$dateFrom,$dateTo) . " AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
+$tentGuests = (int)$conn->query("SELECT COUNT(*) n FROM equipment_bookings WHERE " . dateWhere('created_at',$dateFrom,$dateTo) . " AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
 $stayGuests = $roomGuests + $tentGuests; // คนเข้าพักรวม
 
 // ── Revenue breakdown: ห้องพัก (room_bookings JOIN rooms) ──
@@ -159,9 +159,9 @@ $boatGuestYear  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM boat_
 $roomGuestToday = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM room_bookings WHERE DATE(created_at)='$today' AND archived=0")->fetch_assoc()['n'];
 $roomGuestMonth = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM room_bookings WHERE DATE(created_at) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "' AND archived=0")->fetch_assoc()['n'];
 $roomGuestYear  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM room_bookings WHERE DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND archived=0")->fetch_assoc()['n'];
-$tentGuestToday = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM equipment_bookings WHERE DATE(created_at)='$today' AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
-$tentGuestMonth = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM equipment_bookings WHERE DATE(created_at) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "' AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
-$tentGuestYear  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM equipment_bookings WHERE DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
+$tentGuestToday = (int)$conn->query("SELECT COUNT(*) n FROM equipment_bookings WHERE DATE(created_at)='$today' AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
+$tentGuestMonth = (int)$conn->query("SELECT COUNT(*) n FROM equipment_bookings WHERE DATE(created_at) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "' AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
+$tentGuestYear  = (int)$conn->query("SELECT COUNT(*) n FROM equipment_bookings WHERE DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
 
 // ── Check-in counts (นับจากวันเช็คอินจริง) ──
 // เรือ: boat_date | ห้อง: checkin_date | เต็นท์: checkin_date
@@ -175,10 +175,10 @@ $roomCheckinMonth  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM ro
 $roomCheckinYear   = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM room_bookings WHERE DATE(checkin_date) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND booking_status='approved' AND archived=0")->fetch_assoc()['n'];
 $roomCheckinPeriod = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM room_bookings WHERE " . dateWhere('checkin_date',$dateFrom,$dateTo) . " AND booking_status='approved' AND archived=0")->fetch_assoc()['n'];
 
-$tentCheckinToday  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM equipment_bookings WHERE DATE(checkin_date)='$today' AND booking_status='approved' AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
-$tentCheckinMonth  = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM equipment_bookings WHERE DATE(checkin_date) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "' AND booking_status='approved' AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
-$tentCheckinYear   = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM equipment_bookings WHERE DATE(checkin_date) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND booking_status='approved' AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
-$tentCheckinPeriod = (int)$conn->query("SELECT COALESCE(SUM(guests),0) n FROM equipment_bookings WHERE " . dateWhere('checkin_date',$dateFrom,$dateTo) . " AND booking_status='approved' AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
+$tentCheckinToday  = (int)$conn->query("SELECT COUNT(*) n FROM equipment_bookings WHERE DATE(checkin_date)='$today' AND booking_status='approved' AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
+$tentCheckinMonth  = (int)$conn->query("SELECT COUNT(*) n FROM equipment_bookings WHERE DATE(checkin_date) BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "' AND booking_status='approved' AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
+$tentCheckinYear   = (int)$conn->query("SELECT COUNT(*) n FROM equipment_bookings WHERE DATE(checkin_date) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND booking_status='approved' AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
+$tentCheckinPeriod = (int)$conn->query("SELECT COUNT(*) n FROM equipment_bookings WHERE " . dateWhere('checkin_date',$dateFrom,$dateTo) . " AND booking_status='approved' AND (archived IS NULL OR archived=0)")->fetch_assoc()['n'];
 
 $totalCheckinToday  = $boatCheckinToday  + $roomCheckinToday  + $tentCheckinToday;
 $totalCheckinMonth  = $boatCheckinMonth  + $roomCheckinMonth  + $tentCheckinMonth;
@@ -258,9 +258,9 @@ if ($serviceType === 'all' || $serviceType === 'room') {
     while ($r = $rRows->fetch_assoc()) $bookingRows[] = $r;
 }
 if ($serviceType === 'all' || $serviceType === 'tent') {
-    $tRows = $conn->query("SELECT 'tent' svc, CONCAT('TN',id) ref, full_name, tent_type subtype, created_at, checkin_date use_date,
+    $tRows = $conn->query("SELECT 'tent' svc, CONCAT('TN',id) ref, full_name, 'เต็นท์' subtype, created_at, checkin_date use_date,
         total_price total_amount, booking_status payment_status, booking_status FROM equipment_bookings
-        WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived=0 AND booking_status NOT IN ('cancelled','rejected') ORDER BY created_at DESC LIMIT 50");
+        WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND (archived IS NULL OR archived=0) AND booking_status NOT IN ('cancelled','rejected') ORDER BY created_at DESC LIMIT 50");
     while ($r = $tRows->fetch_assoc()) $bookingRows[] = $r;
 }
 if (!empty($bookingRows)) {

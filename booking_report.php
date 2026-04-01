@@ -1274,7 +1274,7 @@ $qnavLinks = [
 <!-- Finance -->
 <div class="lm-card" style="margin-bottom:20px;">
   <div class="lm-card-header">
-    <span class="lm-card-title">💳 รายงานด้านการเงิน (เรือพาย)</span>
+    <span class="lm-card-title">รายงานด้านการเงิน (เรือพาย)</span>
   </div>
   <div class="lm-card-body">
     <div class="fin-grid">
@@ -1299,7 +1299,7 @@ $qnavLinks = [
 <div class="sec-hd">การเงิน (ห้องพัก)</div>
 <div class="lm-card" style="margin-bottom:20px;">
   <div class="lm-card-header">
-    <span class="lm-card-title">💳 รายงานด้านการเงิน (ห้องพัก)</span>
+    <span class="lm-card-title">รายงานด้านการเงิน (ห้องพัก)</span>
   </div>
   <div class="lm-card-body">
     <div class="fin-grid">
@@ -1326,7 +1326,7 @@ $qnavLinks = [
 <div class="sec-hd">การเงิน (เต็นท์)</div>
 <div class="lm-card" style="margin-bottom:20px;">
   <div class="lm-card-header">
-    <span class="lm-card-title">💳 รายงานด้านการเงิน (เต็นท์)</span>
+    <span class="lm-card-title">รายงานด้านการเงิน (เต็นท์)</span>
   </div>
   <div class="lm-card-body">
     <div class="fin-grid">

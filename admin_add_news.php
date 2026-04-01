@@ -47,310 +47,306 @@ $pageTitle = "โพสต์ข่าวสาร";
 $activeMenu = "news_add";
 include 'admin_layout_top.php';
 ?>
-
 <style>
-.news-wrap-local{
-    max-width:980px;
-    margin:0 auto;
+:root{
+  --green:#15803d;--green2:#166534;--green-light:#f0fdf4;
+  --ink:#0f172a;--muted:#64748b;--border:#e2e8f0;
+  --card:#fff;--bg:#f8fafc;--gold:#c9a96e;
 }
-.hero-local{
-    text-align:center;
-    padding:6px 0 26px;
+.an-wrap{max-width:860px;margin:0 auto;padding-bottom:60px;}
+
+/* ── BANNER ── */
+.an-banner{
+  border-radius:20px;overflow:hidden;
+  background:linear-gradient(135deg,#0f2a1a 0%,#14532d 50%,#166534 100%);
+  padding:28px 32px;margin-bottom:28px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  position:relative;
 }
-.hero-badge-local{
-    display:inline-block;
-    padding:8px 16px;
-    border-radius:999px;
-    background:rgba(109,143,31,.12);
-    color:#5d7c18;
-    font-size:13px;
-    font-weight:700;
-    margin-bottom:16px;
+.an-banner::before{content:'';position:absolute;width:340px;height:340px;border-radius:50%;
+  background:rgba(255,255,255,.04);top:-120px;right:-60px;pointer-events:none;}
+.an-banner::after{content:'';position:absolute;width:200px;height:200px;border-radius:50%;
+  background:rgba(201,169,110,.06);bottom:-80px;left:60px;pointer-events:none;}
+.an-banner-left{position:relative;z-index:1;}
+.an-banner-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  color:rgba(255,255,255,.9);font-size:.72rem;font-weight:700;
+  padding:4px 12px;border-radius:99px;margin-bottom:12px;letter-spacing:.05em;
 }
-.hero-local h1{
-    font-size:42px;
-    line-height:1.2;
-    margin-bottom:10px;
-    font-weight:800;
-    color:#111827;
+.an-banner h1{
+  font-family:'Kanit',sans-serif;font-size:1.9rem;font-weight:900;
+  color:#fff;margin:0 0 6px;line-height:1.2;
 }
-.hero-local p{
-    max-width:720px;
-    margin:0 auto;
-    color:#6b7280;
-    line-height:1.8;
-    font-size:16px;
+.an-banner h1 em{font-style:normal;color:var(--gold);}
+.an-banner p{font-size:.83rem;color:rgba(255,255,255,.65);margin:0;max-width:420px;line-height:1.6;}
+.an-banner-links{display:flex;gap:8px;flex-wrap:wrap;position:relative;z-index:1;}
+.an-banner-link{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:7px 14px;border-radius:99px;font-size:.78rem;font-weight:700;
+  border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);
+  color:#fff;text-decoration:none;transition:all .2s;
 }
-.card-local{
-    background:#ffffff;
-    border-radius:26px;
-    box-shadow:0 14px 35px rgba(0,0,0,.06);
-    border:1px solid rgba(0,0,0,.04);
-    overflow:hidden;
+.an-banner-link:hover{background:rgba(255,255,255,.2);transform:translateY(-1px);}
+
+/* ── ALERT ── */
+.an-alert{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:14px 18px;border-radius:14px;font-size:.86rem;font-weight:600;
+  margin-bottom:22px;line-height:1.6;
 }
-.card-head-local{
-    padding:26px 28px 18px;
-    border-bottom:1px solid #eef1f4;
-    background:linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
+.an-alert-ok{background:#f0fdf4;border:1.5px solid #86efac;color:#166534;}
+.an-alert-err{background:#fef2f2;border:1.5px solid #fca5a5;color:#dc2626;}
+
+/* ── FORM CARD ── */
+.an-card{
+  background:var(--card);border-radius:20px;
+  box-shadow:0 2px 16px rgba(15,42,26,.07);border:1px solid var(--border);
+  overflow:hidden;
 }
-.fake-head-local{
-    display:flex;
-    align-items:center;
-    gap:14px;
+.an-card-head{
+  padding:20px 26px;border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,#fafcfa 0%,#fff 100%);
+  display:flex;align-items:center;gap:14px;
 }
-.avatar-local{
-    width:58px;
-    height:58px;
-    border-radius:50%;
-    background:linear-gradient(135deg, #dbeafe, #bfdbfe);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-weight:800;
-    color:#2563eb;
-    font-size:22px;
-    flex-shrink:0;
+.an-avatar{
+  width:52px;height:52px;border-radius:14px;flex-shrink:0;
+  background:linear-gradient(135deg,#dcfce7,#bbf7d0);
+  display:flex;align-items:center;justify-content:center;font-size:1.4rem;
 }
-.name-local{
-    font-weight:800;
-    font-size:18px;
-    color:#111827;
-    margin-bottom:4px;
+.an-card-title{font-size:.95rem;font-weight:800;color:var(--ink);margin-bottom:3px;}
+.an-card-sub{font-size:.78rem;color:var(--muted);}
+
+.an-card-body{padding:26px;}
+.an-grid{display:grid;gap:22px;}
+
+/* ── FIELD ── */
+.an-field{display:flex;flex-direction:column;gap:6px;}
+.an-label{
+  font-size:.82rem;font-weight:800;color:var(--ink);
+  display:flex;align-items:center;gap:6px;
 }
-.sub-local{
-    color:#6b7280;
-    font-size:14px;
-    line-height:1.6;
+.an-label span{
+  font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:4px;
+  background:#fef9c3;color:#92400e;
 }
-.card-body-local{
-    padding:26px 28px 30px;
+.an-hint{font-size:.74rem;color:var(--muted);}
+
+.an-input,.an-textarea{
+  width:100%;padding:11px 14px;
+  border:1.5px solid var(--border);border-radius:12px;
+  font-family:'Sarabun',sans-serif;font-size:.88rem;color:var(--ink);
+  background:#fff;outline:none;transition:all .2s;
 }
-.msg-local{
-    margin-bottom:18px;
-    padding:14px 16px;
-    border-radius:14px;
-    font-size:15px;
-    font-weight:600;
-    line-height:1.7;
+.an-input:focus,.an-textarea:focus{
+  border-color:var(--green);
+  box-shadow:0 0 0 3px rgba(21,128,61,.1);
 }
-.msg-local.success{
-    background:#eefaf0;
-    color:#18794e;
-    border:1px solid #ccebd7;
+.an-textarea{min-height:200px;resize:vertical;line-height:1.75;}
+
+/* ── UPLOAD ZONE ── */
+.an-drop{
+  border:2px dashed var(--border);border-radius:14px;
+  background:#fafcfa;padding:24px 20px;text-align:center;
+  cursor:pointer;transition:all .2s;position:relative;
 }
-.msg-local.error{
-    background:#fff1f2;
-    color:#be123c;
-    border:1px solid #fecdd3;
+.an-drop:hover,.an-drop.over{border-color:var(--green);background:var(--green-light);}
+.an-drop-icon{font-size:2rem;margin-bottom:8px;opacity:.5;}
+.an-drop-text{font-size:.82rem;font-weight:700;color:var(--muted);}
+.an-drop-sub{font-size:.73rem;color:#94a3b8;margin-top:3px;}
+.an-file-input{
+  position:absolute;inset:0;width:100%;height:100%;
+  opacity:0;cursor:pointer;
 }
-.form-grid-local{
-    display:grid;
-    grid-template-columns:1fr;
-    gap:18px;
+
+/* ── PREVIEW ── */
+.an-preview{
+  display:none;margin-top:14px;
+  border:1.5px solid var(--border);border-radius:14px;
+  overflow:hidden;background:#fff;
 }
-.form-group-local{
-    display:flex;
-    flex-direction:column;
-    gap:8px;
+.an-preview-bar{
+  padding:10px 14px;background:#f8fafc;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
 }
-.form-group-local label{
-    font-weight:700;
-    color:#111827;
-    font-size:15px;
+.an-preview-label{font-size:.75rem;font-weight:700;color:var(--muted);}
+.an-preview-rm{
+  font-size:.72rem;font-weight:700;color:#dc2626;cursor:pointer;
+  background:#fee2e2;border:none;border-radius:6px;padding:3px 8px;
 }
-.hint-local{
-    color:#6b7280;
-    font-size:13px;
-    margin-top:-2px;
+.an-preview img{display:block;width:100%;max-height:320px;object-fit:cover;}
+
+/* ── ACTIONS ── */
+.an-actions{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:20px 26px;border-top:1px solid var(--border);
+  background:#fafcfa;
 }
-.form-group-local input[type="text"],
-.form-group-local textarea,
-.form-group-local input[type="file"]{
-    width:100%;
-    border:1px solid #d9dee5;
-    border-radius:16px;
-    padding:15px 16px;
-    font-size:15px;
-    font-family:inherit;
-    background:#fff;
-    transition:.2s ease;
-    outline:none;
+.an-btn-submit{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:11px 28px;border:none;border-radius:12px;
+  font-family:'Sarabun',sans-serif;font-size:.88rem;font-weight:800;
+  cursor:pointer;transition:all .2s;
+  background:linear-gradient(135deg,var(--green),var(--green2));
+  color:#fff;box-shadow:0 4px 14px rgba(21,128,61,.25);
 }
-.form-group-local input[type="text"]:focus,
-.form-group-local textarea:focus,
-.form-group-local input[type="file"]:focus{
-    border-color:#6d8f1f;
-    box-shadow:0 0 0 4px rgba(109,143,31,.10);
+.an-btn-submit:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(21,128,61,.32);}
+.an-btn-reset{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:11px 18px;border:1.5px solid var(--border);border-radius:12px;
+  font-family:'Sarabun',sans-serif;font-size:.85rem;font-weight:700;
+  cursor:pointer;background:#fff;color:var(--muted);transition:all .2s;
 }
-.form-group-local textarea{
-    min-height:220px;
-    resize:vertical;
-    line-height:1.8;
-}
-.upload-box-local{
-    padding:14px;
-    border:1px dashed #cfd6de;
-    border-radius:18px;
-    background:#fafbfc;
-}
-.image-preview-local{
-    display:none;
-    margin-top:16px;
-    padding:14px;
-    background:#fff;
-    border:1px solid #e5e7eb;
-    border-radius:16px;
-}
-.image-preview-title-local{
-    font-size:14px;
-    font-weight:700;
-    color:#374151;
-    margin-bottom:10px;
-}
-.image-preview-local img{
-    display:block;
-    width:100%;
-    max-width:420px;
-    border-radius:12px;
-    border:1px solid #e5e7eb;
-    box-shadow:0 8px 20px rgba(0,0,0,.08);
-}
-.actions-local{
-    display:flex;
-    gap:12px;
-    flex-wrap:wrap;
-    margin-top:8px;
-}
-.btn-submit-local{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    border:none;
-    border-radius:14px;
-    padding:14px 22px;
-    font-size:15px;
-    font-weight:800;
-    cursor:pointer;
-    transition:.25s ease;
-    background:#6d8f1f;
-    color:#fff;
-    box-shadow:0 10px 22px rgba(109,143,31,.18);
-}
-.btn-submit-local:hover{
-    background:#5d7c18;
-    transform:translateY(-1px);
-}
-@media (max-width: 768px){
-    .hero-local h1{font-size:31px}
-    .hero-local p{font-size:15px}
-    .card-head-local,
-    .card-body-local{padding:18px}
-    .avatar-local{
-        width:50px;
-        height:50px;
-        font-size:20px;
-    }
-    .name-local{font-size:16px}
-    .form-group-local textarea{min-height:180px}
-    .image-preview-local img{max-width:100%}
-    .btn-submit-local{width:100%}
+.an-btn-reset:hover{border-color:#94a3b8;color:var(--ink);}
+.an-char-count{font-size:.73rem;color:var(--muted);margin-left:auto;}
+
+/* ── CHAR BAR ── */
+.an-char-bar{height:3px;border-radius:99px;background:#e2e8f0;margin-top:5px;overflow:hidden;}
+.an-char-fill{height:100%;border-radius:99px;background:var(--green);width:0%;transition:width .2s;}
+
+@media(max-width:600px){
+  .an-banner{padding:20px;}
+  .an-banner h1{font-size:1.5rem;}
+  .an-card-body,.an-actions{padding:18px;}
 }
 </style>
 
-<div class="news-wrap-local">
-    <div class="hero-local">
-        <div class="hero-badge-local">News Admin Panel</div>
-        <h1>โพสต์ข่าวสาร</h1>
-        <p>สร้างข่าวประชาสัมพันธ์ ข่าวกิจกรรม หรือประกาศต่าง ๆ เพื่อเผยแพร่บนหน้าเว็บไซต์ได้จากหน้านี้</p>
+<div class="an-wrap">
+
+  <!-- BANNER -->
+  <div class="an-banner">
+    <div class="an-banner-left">
+      <div class="an-banner-badge">📰 News Admin Panel</div>
+      <h1>โพสต์<em>ข่าวสาร</em></h1>
+      <p>สร้างข่าวประชาสัมพันธ์ ข่าวกิจกรรม หรือประกาศต่าง ๆ เพื่อเผยแพร่บนเว็บไซต์</p>
+    </div>
+    <div class="an-banner-links">
+      <a href="manage_news.php" class="an-banner-link">✏️ จัดการข่าว</a>
+      <a href="news.php" target="_blank" class="an-banner-link">🌐 ดูหน้าข่าว</a>
+    </div>
+  </div>
+
+  <?php if($message !== ""): ?>
+  <div class="an-alert <?= $messageType==='success' ? 'an-alert-ok' : 'an-alert-err' ?>">
+    <?= $messageType==='success' ? '✅' : '⚠️' ?> <?= htmlspecialchars($message) ?>
+    <?php if($messageType==='success'): ?>
+      &nbsp;·&nbsp;<a href="manage_news.php" style="color:var(--green);font-weight:800;">ดูรายการข่าวทั้งหมด →</a>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
+
+  <!-- FORM CARD -->
+  <div class="an-card">
+    <div class="an-card-head">
+      <div class="an-avatar">📝</div>
+      <div>
+        <div class="an-card-title">สร้างข่าวสารใหม่</div>
+        <div class="an-card-sub">กรอกข้อมูลด้านล่างแล้วกดโพสต์ข่าว — จะแสดงผลทันทีบนหน้าเว็บไซต์</div>
+      </div>
     </div>
 
-    <div class="card-local">
-        <div class="card-head-local">
-            <div class="fake-head-local">
-                <div class="avatar-local">ข</div>
-                <div>
-                    <div class="name-local">ผู้ดูแลระบบข่าวสาร</div>
-                    <div class="sub-local">กรอกหัวข้อ เนื้อหา และเลือกรูปภาพ จากนั้นกดโพสต์ข่าวเพื่อแสดงผลบนเว็บไซต์</div>
-                </div>
+    <form method="post" enctype="multipart/form-data" id="newsForm">
+      <div class="an-card-body">
+        <div class="an-grid">
+
+          <!-- หัวข้อ -->
+          <div class="an-field">
+            <label class="an-label" for="title">หัวข้อข่าว <span>จำเป็น</span></label>
+            <div class="an-hint">ตั้งชื่อข่าวให้ชัดเจน กระชับ และเข้าใจง่าย</div>
+            <input type="text" id="title" name="title" class="an-input"
+              placeholder="เช่น ประกาศกำหนดการเข้าร่วมกิจกรรมประจำปี"
+              value="<?= isset($_POST['title']) ? htmlspecialchars($_POST['title']) : '' ?>"
+              maxlength="200" oninput="updateTitle(this)" required>
+            <div class="an-char-bar"><div class="an-char-fill" id="titleFill"></div></div>
+          </div>
+
+          <!-- เนื้อหา -->
+          <div class="an-field">
+            <label class="an-label" for="content">เนื้อหาข่าว <span>จำเป็น</span></label>
+            <div class="an-hint">อธิบายรายละเอียดข่าวสาร สามารถพิมพ์ได้หลายบรรทัด</div>
+            <textarea id="content" name="content" class="an-textarea"
+              placeholder="พิมพ์รายละเอียดข่าวสารที่ต้องการเผยแพร่..."
+              oninput="updateContent(this)" required><?= isset($_POST['content']) ? htmlspecialchars($_POST['content']) : '' ?></textarea>
+            <div style="display:flex;justify-content:flex-end;">
+              <span class="an-char-count" id="contentCount">0 ตัวอักษร</span>
             </div>
+          </div>
+
+          <!-- รูปภาพ -->
+          <div class="an-field">
+            <label class="an-label" for="image">รูปภาพประกอบ</label>
+            <div class="an-hint">รองรับ JPG, PNG, WEBP ขนาดไม่เกิน 5MB (ไม่บังคับ)</div>
+            <div class="an-drop" id="dropZone">
+              <input type="file" name="image" id="image" accept="image/*"
+                class="an-file-input" onchange="previewImg(event)">
+              <div class="an-drop-icon">🖼️</div>
+              <div class="an-drop-text">คลิกหรือลากไฟล์มาวางที่นี่</div>
+              <div class="an-drop-sub">JPG · PNG · WEBP · สูงสุด 5MB</div>
+            </div>
+            <div class="an-preview" id="previewBox">
+              <div class="an-preview-bar">
+                <span class="an-preview-label">🖼️ ตัวอย่างรูปภาพ</span>
+                <button type="button" class="an-preview-rm" onclick="clearImg()">✕ ลบรูป</button>
+              </div>
+              <img id="previewImg" alt="preview">
+            </div>
+          </div>
+
         </div>
+      </div>
 
-        <div class="card-body-local">
-            <?php if($message !== ""): ?>
-                <div class="msg-local <?php echo $messageType === 'success' ? 'success' : 'error'; ?>">
-                    <?php echo htmlspecialchars($message); ?>
-                </div>
-            <?php endif; ?>
+      <div class="an-actions">
+        <button type="submit" class="an-btn-submit">
+          📢 โพสต์ข่าวสาร
+        </button>
+        <button type="reset" class="an-btn-reset" onclick="clearImg()">
+          ↺ ล้างข้อมูล
+        </button>
+        <span class="an-char-count" id="formHint" style="color:#94a3b8;font-size:.72rem;"></span>
+      </div>
+    </form>
+  </div>
 
-            <form method="post" enctype="multipart/form-data">
-                <div class="form-grid-local">
-                    <div class="form-group-local">
-                        <label for="title">หัวข้อข่าว</label>
-                        <div class="hint-local">ตั้งชื่อข่าวให้ชัดเจนและเข้าใจง่าย</div>
-                        <input
-                            type="text"
-                            id="title"
-                            name="title"
-                            value="<?php echo isset($_POST['title']) ? htmlspecialchars($_POST['title']) : ''; ?>"
-                            placeholder="เช่น ประกาศกำหนดการเข้าร่วมกิจกรรมประจำปี"
-                            required
-                        >
-                    </div>
-
-                    <div class="form-group-local">
-                        <label for="content">เนื้อหาข่าว</label>
-                        <div class="hint-local">สามารถพิมพ์รายละเอียดข่าวได้หลายบรรทัด</div>
-                        <textarea
-                            id="content"
-                            name="content"
-                            placeholder="พิมพ์รายละเอียดข่าวสารที่ต้องการเผยแพร่..."
-                            required
-                        ><?php echo isset($_POST['content']) ? htmlspecialchars($_POST['content']) : ''; ?></textarea>
-                    </div>
-
-                    <div class="form-group-local">
-                        <label for="image">เลือกรูปภาพ</label>
-                        <div class="hint-local">รองรับไฟล์ภาพสำหรับใช้เป็นภาพประกอบข่าว</div>
-
-                        <div class="upload-box-local">
-                            <input type="file" id="image" name="image" accept="image/*" onchange="previewImage(event)">
-
-                            <div class="image-preview-local" id="previewBox">
-                                <div class="image-preview-title-local">ตัวอย่างรูปที่เลือก</div>
-                                <img id="previewImg" alt="ตัวอย่างรูปภาพที่เลือก">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="actions-local">
-                        <button type="submit" class="btn-submit-local">โพสต์ข่าว</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
 </div>
 
 <script>
-function previewImage(event) {
-    const file = event.target.files[0];
-    const img = document.getElementById("previewImg");
-    const box = document.getElementById("previewBox");
-
-    if (!file) {
-        img.src = "";
-        box.style.display = "none";
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        img.src = e.target.result;
-        box.style.display = "block";
-    };
-    reader.readAsDataURL(file);
+function previewImg(e){
+  const f=e.target.files[0];
+  if(!f)return;
+  const r=new FileReader();
+  r.onload=function(ev){
+    document.getElementById('previewImg').src=ev.target.result;
+    document.getElementById('previewBox').style.display='block';
+    document.getElementById('dropZone').querySelector('.an-drop-text').textContent=f.name;
+  };
+  r.readAsDataURL(f);
 }
+function clearImg(){
+  document.getElementById('image').value='';
+  document.getElementById('previewBox').style.display='none';
+  document.getElementById('previewImg').src='';
+  document.getElementById('dropZone').querySelector('.an-drop-text').textContent='คลิกหรือลากไฟล์มาวางที่นี่';
+}
+function updateTitle(el){
+  const pct=Math.min(100,(el.value.length/200)*100);
+  document.getElementById('titleFill').style.width=pct+'%';
+  document.getElementById('titleFill').style.background=pct>80?'#dc2626':'#15803d';
+}
+function updateContent(el){
+  document.getElementById('contentCount').textContent=el.value.length+' ตัวอักษร';
+}
+// Drag-over highlight
+const dz=document.getElementById('dropZone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');});
+// Init counts
+document.addEventListener('DOMContentLoaded',()=>{
+  const t=document.getElementById('title');
+  const c=document.getElementById('content');
+  if(t.value)updateTitle(t);
+  if(c.value)updateContent(c);
+});
 </script>
 
 <?php

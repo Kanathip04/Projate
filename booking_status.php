@@ -7,420 +7,588 @@ date_default_timezone_set('Asia/Bangkok');
 $user_email = $_SESSION['email'] ?? $_SESSION['user_email'] ?? '';
 if ($user_email === '') die('ไม่พบ session email');
 
-/* ══ ดึงข้อมูลทั้ง 3 ตาราง ══ */
+function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+
+/* ══ ดึงข้อมูลทั้ง 3 ตาราง (เพิ่มรายละเอียด) ══ */
 $allBookings = [];
 
 /* ── ห้องพัก ── */
-$st = $conn->prepare("SELECT id, full_name, room_type AS title, checkin_date AS date_from, checkout_date AS date_to, guests, booking_status, created_at, NULL AS booking_ref, NULL AS payment_status, NULL AS paid_at FROM room_bookings WHERE email=? ORDER BY id DESC");
-$st->bind_param("s",$user_email); $st->execute(); $res = $st->get_result();
-while ($r = $res->fetch_assoc()) { $r['type']='room'; $allBookings[] = $r; }
+$st = $conn->prepare("SELECT id, full_name, room_type AS title, checkin_date AS date_from, checkout_date AS date_to,
+    guests, booking_status, created_at, booking_ref, payment_status, paid_at, approved_at,
+    total_price, room_price, payment_slip, payment_method,
+    rooms AS rooms_json, NULL AS items_json, NULL AS booking_ref2,
+    NULL AS daily_queue_no, NULL AS boat_count, NULL AS queue_name
+    FROM room_bookings WHERE email=? ORDER BY id DESC");
+$st->bind_param("s",$user_email); $st->execute(); $res=$st->get_result();
+while($r=$res->fetch_assoc()){ $r['type']='room'; $allBookings[]=$r; }
 $st->close();
 
-/* ── เต็นท์ (equipment_bookings) ── */
-$st2 = $conn->prepare("SELECT id, full_name, 'เช่าอุปกรณ์แคมป์ปิ้ง' AS title, checkin_date AS date_from, checkout_date AS date_to, NULL AS guests, booking_status, created_at, NULL AS booking_ref, payment_status, paid_at FROM equipment_bookings WHERE email=? ORDER BY id DESC");
-$st2->bind_param("s",$user_email); $st2->execute(); $res2 = $st2->get_result();
-while ($r = $res2->fetch_assoc()) { $r['type']='tent'; $allBookings[] = $r; }
+/* ── เต็นท์ ── */
+$st2 = $conn->prepare("SELECT id, full_name, 'เช่าอุปกรณ์แคมป์ปิ้ง' AS title,
+    checkin_date AS date_from, checkout_date AS date_to,
+    NULL AS guests, booking_status, created_at, NULL AS booking_ref, payment_status, paid_at,
+    NULL AS approved_at, total_price, NULL AS room_price, payment_slip, payment_method,
+    NULL AS rooms_json, items_json, NULL AS booking_ref2,
+    NULL AS daily_queue_no, NULL AS boat_count, NULL AS queue_name
+    FROM equipment_bookings WHERE email=? ORDER BY id DESC");
+$st2->bind_param("s",$user_email); $st2->execute(); $res2=$st2->get_result();
+while($r=$res2->fetch_assoc()){ $r['type']='tent'; $allBookings[]=$r; }
 $st2->close();
 
 /* ── เรือ ── */
-$st3 = $conn->prepare("SELECT id, full_name, queue_name AS title, boat_date AS date_from, boat_date AS date_to, NULL AS guests, booking_status, created_at, booking_ref, payment_status, paid_at FROM boat_bookings WHERE email=? ORDER BY id DESC");
-$st3->bind_param("s",$user_email); $st3->execute(); $res3 = $st3->get_result();
-while ($r = $res3->fetch_assoc()) { $r['type']='boat'; $allBookings[] = $r; }
+$st3 = $conn->prepare("SELECT id, full_name, queue_name AS title,
+    boat_date AS date_from, boat_date AS date_to,
+    NULL AS guests, booking_status, created_at, booking_ref, payment_status, paid_at,
+    approved_at, total_amount AS total_price, NULL AS room_price, payment_slip, payment_method,
+    NULL AS rooms_json, NULL AS items_json, booking_ref AS booking_ref2,
+    daily_queue_no, boat_count, queue_name
+    FROM boat_bookings WHERE email=? ORDER BY id DESC");
+$st3->bind_param("s",$user_email); $st3->execute(); $res3=$st3->get_result();
+while($r=$res3->fetch_assoc()){ $r['type']='boat'; $allBookings[]=$r; }
 $st3->close();
 
-/* เรียงตาม created_at ล่าสุดก่อน */
 usort($allBookings, fn($a,$b) => strtotime($b['created_at']) <=> strtotime($a['created_at']));
 
 /* ── helpers ── */
-function bsText($s) {
+function bsText($s){
     return ['pending'=>'รออนุมัติ','approved'=>'อนุมัติแล้ว','rejected'=>'ไม่อนุมัติ',
             'cancelled'=>'ยกเลิก','completed'=>'เสร็จสิ้น',
-            'paid'=>'ชำระแล้ว','waiting_verify'=>'รอตรวจสลิป',
-            'failed'=>'สลิปไม่ผ่าน','manual_review'=>'รอตรวจสอบ','suspicious'=>'น่าสงสัย',
-            'unpaid'=>'ยังไม่ชำระ'][$s] ?? $s;
+            'paid'=>'ชำระแล้ว','waiting_verify'=>'รอตรวจสลิป','failed'=>'สลิปไม่ผ่าน',
+            'manual_review'=>'รอตรวจสอบ','suspicious'=>'น่าสงสัย','unpaid'=>'ยังไม่ชำระ'][$s] ?? $s;
 }
-function bsCls($s) {
-    return ['pending'=>'st-pending','approved'=>'st-approved','rejected'=>'st-rejected',
-            'cancelled'=>'st-cancel','completed'=>'st-done',
-            'paid'=>'st-paid','waiting_verify'=>'st-waiting','failed'=>'st-reject',
-            'manual_review'=>'st-waiting','suspicious'=>'st-reject','unpaid'=>'st-pending'][$s] ?? 'st-pending';
+function bsDot($s){
+    return ['pending'=>'#f59e0b','approved'=>'#16a34a','rejected'=>'#dc2626','cancelled'=>'#6b7280',
+            'completed'=>'#2563eb','paid'=>'#059669','waiting_verify'=>'#d97706','failed'=>'#dc2626',
+            'manual_review'=>'#d97706','unpaid'=>'#9ca3af'][$s] ?? '#9ca3af';
 }
-function typeInfo($t) {
-    return ['room'=>['icon'=>'🏨','label'=>'ห้องพัก','color'=>'#7c3aed','bg'=>'#ede9fe'],
-            'tent'=>['icon'=>'⛺','label'=>'เต็นท์','color'=>'#d97706','bg'=>'#fef3c7'],
-            'boat'=>['icon'=>'🚣','label'=>'พายเรือ','color'=>'#0369a1','bg'=>'#e0f2fe']][$t];
+function typeInfo($t){
+    return ['room'=>['icon'=>'🏨','label'=>'ห้องพัก','color'=>'#7c3aed','bg'=>'#ede9fe','grad'=>'135deg,#7c3aed,#a855f7'],
+            'tent'=>['icon'=>'⛺','label'=>'เต็นท์','color'=>'#d97706','bg'=>'#fef3c7','grad'=>'135deg,#d97706,#f59e0b'],
+            'boat'=>['icon'=>'🚣','label'=>'พายเรือ','color'=>'#0369a1','bg'=>'#e0f2fe','grad'=>'135deg,#0369a1,#0ea5e9']][$t];
 }
-function thDate($s) {
-    if (!$s) return '-';
+function thDate($s){
+    if(!$s||$s==='0000-00-00') return '-';
     $m=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-    return date('j',$ts=strtotime($s)).' '.$m[(int)date('m',$ts)].' '.(date('Y',$ts)+543);
+    $ts=strtotime($s);
+    return date('j',$ts).' '.$m[(int)date('m',$ts)].' '.(date('Y',$ts)+543);
+}
+function genBillRef($type,$created_at,$id,$conn){
+    $d=date('Ymd',strtotime($created_at));
+    $prefix=['room'=>'ROOM-','tent'=>'EQUIP-','boat'=>'BOAT-'][$type]??'REF-';
+    $tbl=['room'=>'room_bookings','tent'=>'equipment_bookings','boat'=>'boat_bookings'][$type];
+    $r=$conn->query("SELECT COUNT(*) AS n FROM $tbl WHERE DATE(created_at)=DATE('".date('Y-m-d',strtotime($created_at))."') AND id<=$id");
+    $n=(int)($r?$r->fetch_assoc()['n']:1);
+    return $prefix.$d.'-'.str_pad($n,3,'0',STR_PAD_LEFT);
 }
 
-/* นับสถิติ */
-$counts = ['room'=>0,'tent'=>0,'boat'=>0];
-$pending = 0;
-foreach ($allBookings as $b) {
-    $counts[$b['type']]++;
-    if (in_array($b['booking_status'],['pending','waiting_verify','manual_review'])) $pending++;
-}
+$counts=['room'=>0,'tent'=>0,'boat'=>0];
+foreach($allBookings as $b) $counts[$b['type']]++;
 ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>สถานะการจองทั้งหมด</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&family=Kanit:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --ink:#0d1b2a;--gold:#c9a96e;--muted:#5f7281;
-  --bg:#f0f4f8;--card:#fff;--border:#e2e8f0;
-  --navy:#0d1b2a;--navy2:#1a3a5c;
+  --ink:#0d1b2a;--muted:#64748b;--gold:#c9a96e;
+  --bg:#f1f5f9;--card:#fff;--border:#e2e8f0;
+  --navy:#0d1b2a;--navy2:#1e3a5c;
+  --success:#059669;--warning:#d97706;--danger:#dc2626;
 }
-body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);}
-.container{width:min(960px,94%);margin:0 auto;}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+a{text-decoration:none;}
 
-/* HERO */
+/* ─── HERO ─── */
 .hero{
-  background:linear-gradient(135deg,#0d1b2a 0%,#1a2744 55%,#1e3a5c 100%);
-  padding:36px 20px 90px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#0d1b2a 0%,#162032 40%,#1a2e4a 100%);
+  padding:28px 20px 80px;position:relative;overflow:hidden;
 }
-.hero::after{content:'';position:absolute;right:-100px;top:-100px;width:420px;height:420px;
-  border-radius:50%;background:rgba(201,169,110,.07);pointer-events:none;}
-.hero-nav{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;}
+.hero::before{content:'';position:absolute;width:500px;height:500px;border-radius:50%;
+  background:radial-gradient(circle,rgba(201,169,110,.12) 0%,transparent 70%);
+  top:-150px;right:-100px;pointer-events:none;}
+.hero::after{content:'';position:absolute;width:300px;height:300px;border-radius:50%;
+  background:rgba(14,165,233,.06);bottom:-100px;left:-50px;pointer-events:none;}
+.wrap{width:min(1000px,94%);margin:0 auto;}
+.hero-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;position:relative;z-index:1;}
 .hero-nav a{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:8px 18px;border-radius:99px;text-decoration:none;color:#fff;
-  font-weight:700;font-size:.85rem;
-  border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);
-  transition:background .2s;
-}
-.hero-nav a:hover{background:rgba(255,255,255,.16);}
-.hero h1{font-family:'Kanit',sans-serif;font-size:2.4rem;font-weight:900;color:#fff;margin-bottom:8px;}
-.hero h1 span{color:var(--gold);}
-.hero-sub{font-size:.9rem;color:rgba(255,255,255,.75);max-width:600px;}
-
-/* STATS */
-.stats-row{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
-  margin:0 auto;width:min(960px,94%);
-  margin-top:-36px;position:relative;z-index:2;
-  margin-bottom:24px;
-}
-.stat-card{
-  background:var(--card);border-radius:14px;
-  box-shadow:0 4px 16px rgba(13,27,42,.1);border:1px solid var(--border);
-  padding:14px 16px;text-align:center;
-}
-.stat-num{font-family:'Kanit',sans-serif;font-size:1.8rem;font-weight:900;}
-.stat-label{font-size:.72rem;color:var(--muted);margin-top:2px;font-weight:600;}
-.stat-icon{font-size:1.1rem;margin-bottom:4px;}
-
-/* FILTER TABS */
-.filter-bar{
-  display:flex;gap:8px;flex-wrap:wrap;
-  width:min(960px,94%);margin:0 auto 16px;
-}
-.f-tab{
-  padding:7px 16px;border-radius:99px;border:1.5px solid var(--border);
-  background:var(--card);font-size:.82rem;font-weight:700;cursor:pointer;color:var(--muted);
+  display:inline-flex;align-items:center;gap:5px;
+  padding:7px 16px;border-radius:99px;color:#fff;font-size:.8rem;font-weight:700;
+  border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);
   transition:all .2s;
 }
-.f-tab:hover,.f-tab.active{border-color:var(--navy);background:var(--navy);color:#fff;}
+.hero-nav a:hover{background:rgba(255,255,255,.16);transform:translateY(-1px);}
+.hero-title{position:relative;z-index:1;}
+.hero-title h1{font-family:'Kanit',sans-serif;font-size:2.6rem;font-weight:900;color:#fff;line-height:1.15;margin-bottom:6px;}
+.hero-title h1 em{font-style:normal;color:var(--gold);}
+.hero-sub{font-size:.88rem;color:rgba(255,255,255,.65);font-weight:500;}
 
-/* CONTENT */
-.content{width:min(960px,94%);margin:0 auto;padding-bottom:60px;}
-.list{display:grid;gap:12px;}
+/* ─── STATS ─── */
+.stats-wrap{
+  width:min(1000px,94%);margin:0 auto;
+  margin-top:-44px;position:relative;z-index:10;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:14px;
+  margin-bottom:28px;
+}
+.stat-card{
+  background:var(--card);border-radius:16px;
+  box-shadow:0 4px 20px rgba(13,27,42,.1);border:1px solid var(--border);
+  padding:16px 18px;display:flex;align-items:center;gap:12px;
+  transition:transform .2s;
+}
+.stat-card:hover{transform:translateY(-2px);}
+.stat-ico{
+  width:44px;height:44px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;
+}
+.stat-body{}
+.stat-num{font-family:'Kanit',sans-serif;font-size:1.7rem;font-weight:900;line-height:1;}
+.stat-lbl{font-size:.72rem;color:var(--muted);font-weight:600;margin-top:2px;}
 
-/* BOOKING CARD */
-.bk-card{
-  background:var(--card);border-radius:16px;overflow:hidden;
-  box-shadow:0 2px 10px rgba(13,27,42,.07);border:1px solid var(--border);
+/* ─── FILTER ─── */
+.filter-wrap{width:min(1000px,94%);margin:0 auto 20px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.f-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:7px 18px;border-radius:99px;font-size:.82rem;font-weight:700;cursor:pointer;
+  border:2px solid var(--border);background:var(--card);color:var(--muted);
+  transition:all .2s;user-select:none;
+}
+.f-chip:hover{border-color:var(--navy2);color:var(--navy);}
+.f-chip.on{background:var(--navy);border-color:var(--navy);color:#fff;}
+
+/* ─── CARDS ─── */
+.list-wrap{width:min(1000px,94%);margin:0 auto;padding-bottom:60px;display:grid;gap:14px;}
+
+.bk{
+  background:var(--card);border-radius:20px;overflow:hidden;
+  box-shadow:0 2px 12px rgba(13,27,42,.07);border:1px solid var(--border);
   transition:box-shadow .2s,transform .2s;
 }
-.bk-card:hover{box-shadow:0 6px 20px rgba(13,27,42,.12);transform:translateY(-1px);}
-.bk-main{
-  display:flex;align-items:stretch;gap:0;cursor:pointer;
-}
-.bk-accent{width:5px;flex-shrink:0;}
-.bk-center{flex:1;padding:16px 18px;min-width:0;}
-.bk-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;}
-.bk-type-chip{
+.bk:hover{box-shadow:0 6px 24px rgba(13,27,42,.11);transform:translateY(-1px);}
+
+/* stripe on left */
+.bk-inner{display:flex;}
+.bk-stripe{width:6px;flex-shrink:0;border-radius:0;}
+
+.bk-body{flex:1;padding:18px 20px 14px;min-width:0;}
+.bk-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
+
+.type-pill{
   display:inline-flex;align-items:center;gap:5px;
-  border-radius:99px;padding:3px 10px;font-size:.72rem;font-weight:700;
+  padding:3px 10px;border-radius:99px;font-size:.7rem;font-weight:800;flex-shrink:0;
 }
-.bk-title{font-weight:800;font-size:.95rem;color:var(--ink);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px;}
-.bk-ref{font-size:.72rem;color:var(--muted);margin-top:2px;font-family:monospace;}
-.bk-metas{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);}
-.bk-meta{display:flex;align-items:center;gap:4px;}
-.bk-right{padding:16px 16px 16px 0;display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;}
-.bk-status{padding:4px 12px;border-radius:99px;font-size:.72rem;font-weight:700;white-space:nowrap;}
+.bk-bill{font-family:'Kanit',sans-serif;font-size:.72rem;letter-spacing:.05em;color:var(--muted);margin-top:2px;}
 
-/* status colors */
-.st-pending{background:#fef3c7;color:#92400e;}
-.st-approved{background:#dcfce7;color:#166534;}
-.st-rejected,.st-reject{background:#fee2e2;color:#991b1b;}
-.st-cancel{background:#f3f4f6;color:#374151;}
-.st-done{background:#dbeafe;color:#1d4ed8;}
-.st-paid{background:#d1fae5;color:#065f46;}
-.st-waiting{background:#fef9c3;color:#713f12;}
+.bk-name{font-weight:800;font-size:1rem;color:var(--ink);margin-bottom:6px;}
 
-.detail-btn{
+/* info row */
+.bk-info{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:.82rem;color:var(--muted);}
+.bi{display:inline-flex;align-items:center;gap:4px;font-size:.8rem;}
+.bi b{color:var(--ink);font-weight:700;}
+
+/* price badge */
+.price-tag{
+  font-family:'Kanit',sans-serif;font-size:1.1rem;font-weight:800;
+  color:var(--gold);white-space:nowrap;
+}
+
+/* status */
+.st-pill{
   display:inline-flex;align-items:center;gap:5px;
-  padding:6px 14px;border-radius:99px;font-size:.78rem;font-weight:700;
-  background:var(--navy);color:#fff;border:none;cursor:pointer;
-  text-decoration:none;transition:background .2s;white-space:nowrap;
+  padding:5px 12px;border-radius:99px;font-size:.72rem;font-weight:700;white-space:nowrap;
 }
-.detail-btn:hover{background:#1e3a5c;}
+.st-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
 
-/* DETAIL PANEL */
-.bk-detail{
-  display:none;border-top:1px solid var(--border);
-  padding:16px 20px 20px;background:#f8fafc;
+/* payment method */
+.pm-cash{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:.7rem;font-weight:700;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;}
+.pm-tf{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:.7rem;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;}
+
+/* action btns */
+.bk-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 16px;border-radius:10px;
+  font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;
+  border:none;transition:all .2s;white-space:nowrap;text-decoration:none;}
+.btn:hover{transform:translateY(-1px);}
+.btn-dark{background:var(--navy);color:#fff;}
+.btn-dark:hover{background:var(--navy2);}
+.btn-green{background:#059669;color:#fff;}
+.btn-green:hover{background:#047857;}
+.btn-amber{background:#d97706;color:#fff;}
+.btn-amber:hover{background:#b45309;}
+.btn-red{background:#dc2626;color:#fff;}
+.btn-red:hover{background:#b91c1c;}
+.btn-blue{background:#0369a1;color:#fff;}
+.btn-blue:hover{background:#075985;}
+.btn-ghost{background:#f8fafc;color:var(--muted);border:1.5px solid var(--border);}
+.btn-ghost:hover{border-color:var(--navy);color:var(--navy);}
+
+/* expand toggle */
+.expand-row{
+  display:flex;align-items:center;gap:6px;cursor:pointer;
+  padding:10px 20px;border-top:1px solid var(--border);
+  background:#fafbfc;font-size:.78rem;font-weight:700;color:var(--muted);
+  transition:background .15s;user-select:none;
 }
+.expand-row:hover{background:#f1f5f9;color:var(--ink);}
+.expand-arrow{transition:transform .25s;font-size:.7rem;}
+
+/* detail panel */
+.bk-detail{display:none;padding:18px 20px 20px;background:#f8fafc;border-top:1px dashed var(--border);}
 .bk-detail.open{display:block;}
-.detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
-.d-item{background:var(--card);border-radius:10px;border:1px solid var(--border);padding:10px 12px;}
-.d-label{font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+.detail-section{margin-bottom:14px;}
+.detail-title{font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.detail-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.d-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;}
+.d-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
+.d-lbl{font-size:.66rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
 .d-val{font-size:.85rem;font-weight:700;color:var(--ink);}
-.bk-pay-section{margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
-.pay-btn{
-  display:inline-flex;align-items:center;gap:5px;
-  padding:7px 16px;border-radius:99px;font-size:.8rem;font-weight:700;
-  background:#0369a1;color:#fff;border:none;cursor:pointer;text-decoration:none;
-}
-.pay-btn:hover{background:#075985;}
+.d-val.green{color:#059669;}
+.d-val.amber{color:#d97706;}
+.d-val.red{color:#dc2626;}
 
-/* EMPTY */
-.empty{
-  background:var(--card);border-radius:16px;padding:60px 24px;text-align:center;
-  box-shadow:0 2px 10px rgba(13,27,42,.07);border:1px solid var(--border);
-}
-.empty-icon{font-size:3rem;margin-bottom:14px;opacity:.4;}
-.empty h3{font-size:1.2rem;font-weight:800;color:var(--ink);margin-bottom:8px;}
-.empty p{color:var(--muted);font-size:.88rem;}
+/* items list */
+.item-row{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;
+  border-radius:8px;background:var(--card);border:1px solid var(--border);
+  font-size:.8rem;margin-bottom:5px;}
+.item-row:last-child{margin-bottom:0;}
+.item-name{font-weight:700;color:var(--ink);}
+.item-qty{color:var(--muted);}
 
-/* SECTION LABEL */
-.section-label{
-  font-family:'Kanit',sans-serif;font-size:.78rem;font-weight:800;
-  color:var(--muted);text-transform:uppercase;letter-spacing:.08em;
-  padding:8px 0 6px;margin-top:4px;
-}
+/* empty */
+.empty{background:var(--card);border-radius:20px;padding:70px 24px;text-align:center;
+  box-shadow:0 2px 12px rgba(13,27,42,.07);border:1px solid var(--border);}
+.empty-icon{font-size:3.5rem;margin-bottom:16px;opacity:.35;}
+.empty h3{font-size:1.2rem;font-weight:800;margin-bottom:8px;}
+.empty p{color:var(--muted);font-size:.88rem;line-height:1.7;}
 
-@media(max-width:600px){
-  .stats-row{grid-template-columns:repeat(2,1fr);}
-  .hero h1{font-size:1.8rem;}
-  .bk-title{max-width:180px;}
-  .detail-grid{grid-template-columns:repeat(2,1fr);}
-  .bk-metas{gap:8px;}
+@media(max-width:640px){
+  .stats-wrap{grid-template-columns:repeat(2,1fr);}
+  .hero-title h1{font-size:1.9rem;}
+  .d-grid{grid-template-columns:repeat(2,1fr);}
 }
 </style>
 </head>
 <body>
 
-<!-- HERO -->
 <section class="hero">
-  <div class="container">
+  <div class="wrap">
     <nav class="hero-nav">
       <a href="index.php">← หน้าหลัก</a>
       <a href="booking_boat.php">🚣 จองพายเรือ</a>
       <a href="booking_room.php">🏨 จองห้องพัก</a>
       <a href="booking_tent.php">⛺ จองเต็นท์</a>
     </nav>
-    <h1>สถานะ<span>การจอง</span></h1>
-    <p class="hero-sub">รายการจองทั้งหมดของคุณ · ห้องพัก · เต็นท์ · พายเรือ</p>
+    <div class="hero-title">
+      <h1>สถานะ<em>การจอง</em></h1>
+      <p class="hero-sub">รายการจองทั้งหมดของคุณ · ห้องพัก · เต็นท์ · พายเรือ</p>
+    </div>
   </div>
 </section>
 
 <!-- STATS -->
-<div class="stats-row">
+<div class="stats-wrap">
   <div class="stat-card">
-    <div class="stat-icon">📋</div>
-    <div class="stat-num" style="color:#0d1b2a;"><?= count($allBookings) ?></div>
-    <div class="stat-label">รายการทั้งหมด</div>
+    <div class="stat-ico" style="background:#f0f9ff;color:#0369a1;">📋</div>
+    <div class="stat-body">
+      <div class="stat-num" style="color:var(--ink);"><?= count($allBookings) ?></div>
+      <div class="stat-lbl">รายการทั้งหมด</div>
+    </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon">🏨</div>
-    <div class="stat-num" style="color:#7c3aed;"><?= $counts['room'] ?></div>
-    <div class="stat-label">ห้องพัก</div>
+    <div class="stat-ico" style="background:#ede9fe;color:#7c3aed;">🏨</div>
+    <div class="stat-body">
+      <div class="stat-num" style="color:#7c3aed;"><?= $counts['room'] ?></div>
+      <div class="stat-lbl">ห้องพัก</div>
+    </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon">⛺</div>
-    <div class="stat-num" style="color:#d97706;"><?= $counts['tent'] ?></div>
-    <div class="stat-label">เต็นท์</div>
+    <div class="stat-ico" style="background:#fef3c7;color:#d97706;">⛺</div>
+    <div class="stat-body">
+      <div class="stat-num" style="color:#d97706;"><?= $counts['tent'] ?></div>
+      <div class="stat-lbl">เต็นท์/อุปกรณ์</div>
+    </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon">🚣</div>
-    <div class="stat-num" style="color:#0369a1;"><?= $counts['boat'] ?></div>
-    <div class="stat-label">พายเรือ</div>
+    <div class="stat-ico" style="background:#e0f2fe;color:#0369a1;">🚣</div>
+    <div class="stat-body">
+      <div class="stat-num" style="color:#0369a1;"><?= $counts['boat'] ?></div>
+      <div class="stat-lbl">พายเรือ</div>
+    </div>
   </div>
 </div>
 
 <!-- FILTER -->
-<div class="filter-bar">
-  <button class="f-tab active" data-filter="all">ทั้งหมด (<?= count($allBookings) ?>)</button>
-  <button class="f-tab" data-filter="room">🏨 ห้องพัก (<?= $counts['room'] ?>)</button>
-  <button class="f-tab" data-filter="tent">⛺ เต็นท์ (<?= $counts['tent'] ?>)</button>
-  <button class="f-tab" data-filter="boat">🚣 พายเรือ (<?= $counts['boat'] ?>)</button>
+<div class="filter-wrap">
+  <button class="f-chip on" data-f="all">ทั้งหมด <span>(<?= count($allBookings) ?>)</span></button>
+  <button class="f-chip" data-f="room">🏨 ห้องพัก <span>(<?= $counts['room'] ?>)</span></button>
+  <button class="f-chip" data-f="tent">⛺ เต็นท์ <span>(<?= $counts['tent'] ?>)</span></button>
+  <button class="f-chip" data-f="boat">🚣 พายเรือ <span>(<?= $counts['boat'] ?>)</span></button>
 </div>
 
 <!-- LIST -->
-<div class="content">
-  <?php if (empty($allBookings)): ?>
+<div class="list-wrap">
+<?php if(empty($allBookings)): ?>
   <div class="empty">
     <div class="empty-icon">📭</div>
     <h3>ยังไม่มีรายการจอง</h3>
-    <p>เมื่อคุณจองบริการแล้ว รายการทั้งหมดจะแสดงที่นี่</p>
+    <p>เมื่อคุณจองบริการแล้ว รายการทั้งหมดจะปรากฏที่นี่</p>
   </div>
-  <?php else: ?>
-  <div class="list">
-    <?php foreach ($allBookings as $i => $b):
-      $ti   = typeInfo($b['type']);
-      $bkSt = $b['booking_status'] ?? 'pending';
-      $payS = $b['payment_status'] ?? null;
-      $needPay = (in_array($b['type'],['boat','tent']) && in_array($payS,['unpaid','failed',null,'']));
-      $refStr = $b['booking_ref'] ? 'Ref: '.$b['booking_ref'] : '#'.$b['id'];
-      $equipRef = 'EQUIP-'.str_pad($b['id'],5,'0',STR_PAD_LEFT);
-    ?>
-    <div class="bk-card" data-btype="<?= $b['type'] ?>">
-      <div class="bk-main" onclick="toggleDetail(<?= $i ?>)">
-        <div class="bk-accent" style="background:<?= $ti['color'] ?>;"></div>
-        <div class="bk-center">
-          <div class="bk-top">
-            <div>
-              <span class="bk-type-chip" style="background:<?= $ti['bg'] ?>;color:<?= $ti['color'] ?>;">
-                <?= $ti['icon'] ?> <?= $ti['label'] ?>
-              </span>
-            </div>
-            <div class="bk-status <?= bsCls($bkSt) ?>"><?= bsText($bkSt) ?></div>
-          </div>
-          <div class="bk-title"><?= htmlspecialchars($b['title'] ?? '-') ?></div>
-          <div class="bk-ref"><?= $refStr ?></div>
-          <div class="bk-metas" style="margin-top:6px;">
-            <?php if ($b['date_from']): ?>
-            <span class="bk-meta">📅 <?= thDate($b['date_from']) ?></span>
-            <?php endif; ?>
-            <?php if ($b['guests']): ?>
-            <span class="bk-meta">👥 <?= (int)$b['guests'] ?> คน</span>
-            <?php endif; ?>
-            <?php if (in_array($b['type'],['boat','tent']) && $payS): ?>
-            <span class="bk-status <?= bsCls($payS) ?>" style="font-size:.7rem;padding:2px 8px;"><?= bsText($payS) ?></span>
-            <?php endif; ?>
-            <span class="bk-meta" style="margin-left:auto;">🕐 <?= date('d/m/Y H:i',strtotime($b['created_at'])) ?></span>
-          </div>
+<?php else: foreach($allBookings as $i=>$b):
+  $ti    = typeInfo($b['type']);
+  $bkSt  = $b['booking_status'] ?? 'pending';
+  $payS  = $b['payment_status'] ?? null;
+  $pm    = trim($b['payment_method'] ?? '');
+  $isCash= ($pm === 'เงินสด' || $pm === 'cash');
+  $price = (float)($b['total_price'] ?? 0);
+  $billRef = $b['booking_ref'] ?? genBillRef($b['type'], $b['created_at'], $b['id'], $conn);
+
+  /* ── decode extra info ── */
+  $roomsArr = $b['rooms_json'] ? json_decode($b['rooms_json'],true) : [];
+  $itemsArr = [];
+  if(!empty($b['items_json'])){
+    $dec=json_decode($b['items_json'],true);
+    if(is_array($dec)) foreach($dec as $it){
+      $n=$it['name']??($it['tent_name']??'');
+      $q=(int)($it['qty']??($it['quantity']??1));
+      $u=$it['unit']??'ชิ้น';
+      $p=(float)($it['price_per_night']??($it['price']??0));
+      if($n) $itemsArr[]=['name'=>$n,'qty'=>$q,'unit'=>$u,'price'=>$p];
+    }
+  }
+
+  /* nights */
+  $nights=1;
+  if(!empty($b['date_from'])&&!empty($b['date_to'])&&$b['date_from']!==$b['date_to']){
+    $nights=max(1,(int)(new DateTime($b['date_from']))->diff(new DateTime($b['date_to']))->days);
+  }
+
+  /* needPay */
+  $needPay=(in_array($b['type'],['boat','tent'])&&in_array($payS,['unpaid','failed',null,'']));
+  $isWaiting=($payS==='waiting_verify'||$payS==='manual_review');
+  $isPaid=($payS==='paid'||$bkSt==='approved');
+
+  /* status color */
+  $dotColor=bsDot($bkSt);
+  $stBg=['pending'=>'#fef9c3','approved'=>'#d1fae5','rejected'=>'#fee2e2',
+         'cancelled'=>'#f3f4f6','completed'=>'#dbeafe','paid'=>'#d1fae5',
+         'waiting_verify'=>'#fef3c7','failed'=>'#fee2e2','manual_review'=>'#fef3c7',
+         'unpaid'=>'#f3f4f6'][$bkSt]??'#f3f4f6';
+  $stTx=['pending'=>'#92400e','approved'=>'#065f46','rejected'=>'#991b1b',
+         'cancelled'=>'#374151','completed'=>'#1d4ed8','paid'=>'#065f46',
+         'waiting_verify'=>'#92400e','failed'=>'#991b1b','manual_review'=>'#92400e',
+         'unpaid'=>'#6b7280'][$bkSt]??'#6b7280';
+?>
+<div class="bk" data-t="<?= $b['type'] ?>">
+  <div class="bk-inner">
+    <div class="bk-stripe" style="background:linear-gradient(<?= $ti['grad'] ?>);"></div>
+    <div class="bk-body">
+
+      <!-- HEAD ROW -->
+      <div class="bk-head">
+        <div>
+          <span class="type-pill" style="background:<?= $ti['bg'] ?>;color:<?= $ti['color'] ?>;">
+            <?= $ti['icon'] ?> <?= $ti['label'] ?>
+          </span>
+          <div class="bk-bill"><?= h($billRef) ?> · #<?= $b['id'] ?></div>
         </div>
-        <div class="bk-right">
-          <button class="detail-btn" onclick="event.stopPropagation();toggleDetail(<?= $i ?>)">
-            รายละเอียด ▾
-          </button>
-          <?php if ($needPay && $b['type']==='boat'): ?>
-          <a href="payment_slip.php?ref=<?= urlencode($b['booking_ref']) ?>" class="pay-btn" onclick="event.stopPropagation()">
-            💳 ชำระเงิน
-          </a>
-          <?php elseif ($needPay && $b['type']==='tent'): ?>
-          <a href="equipment_bill.php?id=<?= (int)$b['id'] ?>" class="pay-btn" onclick="event.stopPropagation()">
-            💳 ชำระเงิน
-          </a>
-          <?php endif; ?>
-        </div>
+        <span class="st-pill" style="background:<?= $stBg ?>;color:<?= $stTx ?>;">
+          <span class="st-dot" style="background:<?= $dotColor ?>;"></span>
+          <?= bsText($bkSt) ?>
+        </span>
       </div>
 
-      <!-- DETAIL PANEL -->
-      <div class="bk-detail" id="detail-<?= $i ?>">
-        <div class="detail-grid">
-          <div class="d-item">
-            <div class="d-label">ชื่อผู้จอง</div>
-            <div class="d-val"><?= htmlspecialchars($b['full_name'] ?? '-') ?></div>
-          </div>
-          <?php if ($b['date_from']): ?>
-          <div class="d-item">
-            <div class="d-label"><?= $b['type']==='boat' ? 'วันที่' : 'เช็คอิน' ?></div>
-            <div class="d-val"><?= thDate($b['date_from']) ?></div>
-          </div>
+      <!-- TITLE -->
+      <div class="bk-name"><?= h($b['title']??'-') ?>
+        <?php if($b['type']==='boat'&&!empty($b['daily_queue_no'])): ?>
+          <span style="font-family:'Kanit',sans-serif;font-size:.75rem;padding:2px 8px;background:#f0fdf4;color:#15803d;border-radius:6px;margin-left:6px;font-weight:800;">
+            Q<?= str_pad($b['daily_queue_no'],4,'0',STR_PAD_LEFT) ?>
+          </span>
+        <?php endif; ?>
+      </div>
+
+      <!-- INFO ROW -->
+      <div class="bk-info">
+        <?php if($b['date_from']): ?>
+        <span class="bi">📅 <b><?= thDate($b['date_from']) ?><?= ($b['date_to']&&$b['date_to']!==$b['date_from']) ? ' → '.thDate($b['date_to']) : '' ?></b></span>
+        <?php endif; ?>
+        <?php if($b['type']!=='boat'&&$nights>1): ?>
+        <span class="bi">🌙 <b><?= $nights ?> คืน</b></span>
+        <?php endif; ?>
+        <?php if($b['guests']): ?>
+        <span class="bi">👥 <b><?= (int)$b['guests'] ?> คน</b></span>
+        <?php endif; ?>
+        <?php if($b['type']==='boat'&&!empty($b['boat_count'])): ?>
+        <span class="bi">🚣 <b><?= (int)$b['boat_count'] ?> ลำ</b></span>
+        <?php endif; ?>
+        <?php if($price>0): ?>
+        <span class="price-tag">฿<?= number_format($price,0) ?></span>
+        <?php endif; ?>
+        <?php if($pm): ?>
+          <?php if($isCash): ?>
+          <span class="pm-cash">💵 เงินสด</span>
+          <?php else: ?>
+          <span class="pm-tf">🏦 <?= h($pm) ?></span>
           <?php endif; ?>
-          <?php if ($b['date_to'] && $b['date_to'] !== $b['date_from']): ?>
-          <div class="d-item">
-            <div class="d-label">เช็คเอาท์</div>
-            <div class="d-val"><?= thDate($b['date_to']) ?></div>
-          </div>
-          <?php endif; ?>
-          <?php if ($b['guests']): ?>
-          <div class="d-item">
-            <div class="d-label">จำนวนคน</div>
-            <div class="d-val"><?= (int)$b['guests'] ?> คน</div>
-          </div>
-          <?php endif; ?>
-          <div class="d-item">
-            <div class="d-label">สถานะการจอง</div>
-            <div class="d-val"><?= bsText($bkSt) ?></div>
-          </div>
-          <?php if (in_array($b['type'],['boat','tent']) && $payS): ?>
-          <div class="d-item">
-            <div class="d-label">สถานะการชำระ</div>
-            <div class="d-val"><?= bsText($payS) ?></div>
-          </div>
-          <?php endif; ?>
-          <?php if ($b['paid_at']): ?>
-          <div class="d-item">
-            <div class="d-label">ชำระเมื่อ</div>
-            <div class="d-val"><?= date('d/m/Y H:i',strtotime($b['paid_at'])) ?></div>
-          </div>
-          <?php endif; ?>
-          <div class="d-item">
-            <div class="d-label">วันที่จอง</div>
-            <div class="d-val"><?= date('d/m/Y H:i',strtotime($b['created_at'])) ?></div>
-          </div>
-        </div>
-        <?php if ($b['type']==='boat' && $needPay): ?>
-        <div class="bk-pay-section">
-          <span style="font-size:.82rem;color:var(--muted);">ยังไม่ได้ชำระเงิน —</span>
-          <a href="payment_slip.php?ref=<?= urlencode($b['booking_ref']) ?>" class="pay-btn">💳 ไปชำระเงิน</a>
+        <?php endif; ?>
+        <?php if($payS&&$payS!==$bkSt): ?>
+        <span class="bi" style="color:<?= bsDot($payS) ?>;font-weight:700;">● <?= bsText($payS) ?></span>
+        <?php endif; ?>
+        <span class="bi" style="margin-left:auto;">🕐 <?= date('d/m/Y H:i',strtotime($b['created_at'])) ?></span>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div class="bk-actions">
+        <?php if($b['type']==='boat'&&$needPay&&!empty($b['booking_ref'])): ?>
+          <a href="payment_slip.php?ref=<?= urlencode($b['booking_ref']) ?>" class="btn btn-blue">💳 ชำระเงิน</a>
+        <?php elseif($b['type']==='tent'&&$needPay): ?>
+          <a href="equipment_bill.php?id=<?= (int)$b['id'] ?>" class="btn btn-blue">💳 ชำระเงิน</a>
+        <?php elseif($b['type']==='room'&&in_array($payS,['unpaid',null,''])&&$bkSt==='approved'): ?>
+          <a href="room_bill.php?id=<?= (int)$b['id'] ?>" class="btn btn-blue">💳 ชำระเงิน</a>
+        <?php endif; ?>
+
+        <?php if($isWaiting&&$b['type']==='tent'): ?>
+          <a href="equipment_bill.php?id=<?= (int)$b['id'] ?>" class="btn btn-amber">⏳ ติดตามสถานะ</a>
+        <?php elseif($isWaiting&&$b['type']==='room'): ?>
+          <a href="room_bill.php?id=<?= (int)$b['id'] ?>" class="btn btn-amber">⏳ ติดตามสถานะ</a>
+        <?php endif; ?>
+
+        <?php if($b['type']==='tent'&&$payS==='paid'): ?>
+          <a href="equipment_ticket.php?id=<?= (int)$b['id'] ?>" class="btn btn-green">🎫 ดูใบรับเงิน</a>
+        <?php endif; ?>
+        <?php if($b['type']==='room'&&($payS==='paid'||$bkSt==='approved')): ?>
+          <a href="room_ticket.php?id=<?= (int)$b['id'] ?>" class="btn btn-green">🎫 ดูใบรับเงิน</a>
+        <?php endif; ?>
+        <?php if($b['type']==='boat'&&!empty($b['booking_ref'])&&$bkSt==='approved'): ?>
+          <a href="queue_ticket.php?ref=<?= urlencode($b['booking_ref']) ?>" class="btn btn-green">🎫 ดูบัตรคิว</a>
+        <?php endif; ?>
+        <?php if($b['type']==='tent'&&$payS==='failed'): ?>
+          <a href="equipment_bill.php?id=<?= (int)$b['id'] ?>&retry=1" class="btn btn-red">🔄 ส่งสลิปใหม่</a>
+        <?php endif; ?>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- EXPAND TOGGLE -->
+  <div class="expand-row" onclick="toggle(<?= $i ?>)">
+    <span class="expand-arrow" id="arr-<?= $i ?>">▶</span> รายละเอียดทั้งหมด
+  </div>
+
+  <!-- DETAIL PANEL -->
+  <div class="bk-detail" id="det-<?= $i ?>">
+
+    <div class="detail-section">
+      <div class="detail-title">ข้อมูลผู้จอง</div>
+      <div class="d-grid">
+        <div class="d-card"><div class="d-lbl">ชื่อ</div><div class="d-val"><?= h($b['full_name']??'-') ?></div></div>
+        <div class="d-card"><div class="d-lbl">วันที่จอง</div><div class="d-val"><?= date('d/m/Y H:i',strtotime($b['created_at'])) ?></div></div>
+        <?php if(!empty($b['approved_at'])): ?>
+        <div class="d-card"><div class="d-lbl">วันที่อนุมัติ</div><div class="d-val"><?= date('d/m/Y H:i',strtotime($b['approved_at'])) ?></div></div>
+        <?php endif; ?>
+        <?php if(!empty($b['paid_at'])): ?>
+        <div class="d-card"><div class="d-lbl">ชำระเมื่อ</div><div class="d-val green"><?= date('d/m/Y H:i',strtotime($b['paid_at'])) ?></div></div>
+        <?php endif; ?>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-title">รายละเอียดการจอง</div>
+      <div class="d-grid">
+        <div class="d-card"><div class="d-lbl">เลขที่บิล</div><div class="d-val"><?= h($billRef) ?></div></div>
+        <?php if($b['date_from']): ?>
+        <div class="d-card">
+          <div class="d-lbl"><?= $b['type']==='boat'?'วันที่':'เช็คอิน' ?></div>
+          <div class="d-val"><?= thDate($b['date_from']) ?></div>
         </div>
         <?php endif; ?>
-        <?php if ($b['type']==='boat' && !empty($b['booking_ref'])): ?>
-        <div style="margin-top:10px;">
-          <a href="queue_ticket.php?ref=<?= urlencode($b['booking_ref']) ?>" class="detail-btn" style="background:#15803d;">🎫 ดูบัตรคิว</a>
+        <?php if($b['date_to']&&$b['date_to']!==$b['date_from']): ?>
+        <div class="d-card">
+          <div class="d-lbl">เช็คเอาท์</div>
+          <div class="d-val"><?= thDate($b['date_to']) ?></div>
+        </div>
+        <div class="d-card">
+          <div class="d-lbl">จำนวนคืน</div>
+          <div class="d-val"><?= $nights ?> คืน</div>
         </div>
         <?php endif; ?>
-        <?php if ($b['type']==='tent'): ?>
-        <div class="bk-pay-section" style="margin-top:12px;">
-          <?php if ($needPay): ?>
-          <a href="equipment_bill.php?id=<?= (int)$b['id'] ?>" class="pay-btn">💳 ไปชำระเงิน</a>
-          <?php elseif ($payS === 'waiting_verify'): ?>
-          <a href="equipment_bill.php?id=<?= (int)$b['id'] ?>" class="pay-btn" style="background:#d97706;">⏳ ติดตามสถานะ</a>
-          <?php elseif ($payS === 'paid'): ?>
-          <a href="equipment_ticket.php?id=<?= (int)$b['id'] ?>" class="detail-btn" style="background:#15803d;">🎫 ดูสลิปการจอง</a>
-          <?php endif; ?>
-          <span style="font-size:.75rem;color:var(--muted);font-family:monospace;"><?= $equipRef ?></span>
+        <?php if($b['guests']): ?>
+        <div class="d-card"><div class="d-lbl">จำนวนคน</div><div class="d-val"><?= (int)$b['guests'] ?> คน</div></div>
+        <?php endif; ?>
+        <?php if($b['type']==='boat'&&!empty($b['boat_count'])): ?>
+        <div class="d-card"><div class="d-lbl">จำนวนเรือ</div><div class="d-val"><?= (int)$b['boat_count'] ?> ลำ</div></div>
+        <?php endif; ?>
+        <?php if($price>0): ?>
+        <div class="d-card"><div class="d-lbl">ยอดรวม</div><div class="d-val green">฿<?= number_format($price,2) ?></div></div>
+        <?php endif; ?>
+        <?php if($pm): ?>
+        <div class="d-card">
+          <div class="d-lbl">วิธีชำระ</div>
+          <div class="d-val"><?= $isCash ? '💵 เงินสด' : '🏦 '.h($pm) ?></div>
+        </div>
+        <?php endif; ?>
+        <div class="d-card">
+          <div class="d-lbl">สถานะการจอง</div>
+          <div class="d-val" style="color:<?= $stTx ?>"><?= bsText($bkSt) ?></div>
+        </div>
+        <?php if($payS): ?>
+        <div class="d-card">
+          <div class="d-lbl">สถานะชำระเงิน</div>
+          <div class="d-val" style="color:<?= bsDot($payS) ?>"><?= bsText($payS) ?></div>
         </div>
         <?php endif; ?>
       </div>
     </div>
-    <?php endforeach; ?>
+
+    <?php if($b['type']==='room'&&!empty($roomsArr)): ?>
+    <div class="detail-section">
+      <div class="detail-title">ห้องพักที่จอง</div>
+      <?php foreach($roomsArr as $rm): ?>
+      <div class="item-row">
+        <span class="item-name">🔑 ห้อง <?= h($rm) ?></span>
+      </div>
+      <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php if($b['type']==='tent'&&!empty($itemsArr)): ?>
+    <div class="detail-section">
+      <div class="detail-title">อุปกรณ์ที่เช่า</div>
+      <?php foreach($itemsArr as $it): ?>
+      <div class="item-row">
+        <span class="item-name">🎒 <?= h($it['name']) ?></span>
+        <span class="item-qty"><?= $it['qty'] ?> <?= h($it['unit']) ?>
+          <?= $it['price']>0 ? ' · ฿'.number_format($it['price'],0).'/คืน' : '' ?>
+        </span>
+      </div>
+      <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
   </div>
-  <?php endif; ?>
+</div>
+<?php endforeach; endif; ?>
 </div>
 
 <script>
-function toggleDetail(i) {
-    const el = document.getElementById('detail-' + i);
-    el.classList.toggle('open');
-    const btn = el.previousElementSibling.querySelector('.detail-btn');
-    btn.textContent = el.classList.contains('open') ? 'ซ่อน ▴' : 'รายละเอียด ▾';
+function toggle(i){
+  const d=document.getElementById('det-'+i);
+  const a=document.getElementById('arr-'+i);
+  d.classList.toggle('open');
+  a.style.transform=d.classList.contains('open')?'rotate(90deg)':'';
 }
-
-/* Filter tabs */
-document.querySelectorAll('.f-tab').forEach(tab => {
-    tab.addEventListener('click', function() {
-        document.querySelectorAll('.f-tab').forEach(t => t.classList.remove('active'));
-        this.classList.add('active');
-        const f = this.dataset.filter;
-        document.querySelectorAll('.bk-card').forEach(card => {
-            card.style.display = (f === 'all' || card.dataset.btype === f) ? '' : 'none';
-        });
+document.querySelectorAll('.f-chip').forEach(c=>{
+  c.addEventListener('click',function(){
+    document.querySelectorAll('.f-chip').forEach(x=>x.classList.remove('on'));
+    this.classList.add('on');
+    const f=this.dataset.f;
+    document.querySelectorAll('.bk').forEach(b=>{
+      b.style.display=(f==='all'||b.dataset.t===f)?'':'none';
     });
+  });
 });
 </script>
 </body>

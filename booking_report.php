@@ -928,65 +928,105 @@ $qnavLinks = [
 
 <?php endif; // end if checkin ?>
 <?php if ($serviceType !== 'checkin'): ?>
+<?php
+  $widgetBoat = $boatCheckinPeriod; $widgetRoom = $roomCheckinPeriod;
+  $widgetTent = $tentCheckinPeriod; $widgetWalkin = $touristTotal;
+  $widgetTotal = $widgetBoat + $widgetRoom + $widgetTent + $widgetWalkin;
+  if ($dateFrom === $dateTo) $widgetLabel = date('d/m/Y', strtotime($dateFrom));
+  else $widgetLabel = date('d/m/Y', strtotime($dateFrom)).' – '.date('d/m/Y', strtotime($dateTo));
+?>
+
+<!-- ── KPI Strip ── -->
 <div class="sec-hd">ภาพรวม — <?= $ctxLabel ?> · <?= $labelRange ?></div>
-<div class="kpi-grid">
-  <div class="kpi-card blue">
+<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px;">
+  <div class="kpi-card blue" style="padding:14px 14px;">
     <div class="kpi-icon">📋</div>
     <div class="kpi-lbl">การจองทั้งหมด</div>
     <div class="kpi-val"><?= number_format($ctxTotal) ?></div>
     <div class="kpi-sub">รายการ</div>
   </div>
-  <div class="kpi-card green">
+  <div class="kpi-card green" style="padding:14px 14px;">
     <div class="kpi-icon">✅</div>
-    <div class="kpi-lbl"><?= $serviceType==='boat' ? 'ชำระแล้ว' : 'อนุมัติแล้ว' ?></div>
+    <div class="kpi-lbl"><?= $serviceType==='boat'?'ชำระแล้ว':'อนุมัติแล้ว' ?></div>
     <div class="kpi-val"><?= number_format($ctxPaid) ?></div>
     <div class="kpi-sub">รายการ</div>
   </div>
-  <div class="kpi-card yellow">
+  <div class="kpi-card yellow" style="padding:14px 14px;">
     <div class="kpi-icon">⏳</div>
-    <div class="kpi-lbl"><?= $serviceType==='boat' ? 'รอชำระ' : 'รอดำเนินการ' ?></div>
+    <div class="kpi-lbl">รอดำเนินการ</div>
     <div class="kpi-val"><?= number_format($ctxWaiting) ?></div>
     <div class="kpi-sub">รายการ</div>
   </div>
-
-  <div class="kpi-card">
+  <div class="kpi-card" style="border-left-color:#d97706;padding:14px 14px;">
     <div class="kpi-icon">💰</div>
     <div class="kpi-lbl">รายได้รวม</div>
-    <?php if ($ctxRevenue > 0): ?>
-    <div class="kpi-val" style="font-size:1.3rem;">฿<?= number_format($ctxRevenue, 0) ?></div>
-    <div class="kpi-sub">บาท (ชำระแล้ว)</div>
-    <?php else: ?>
-    <div class="kpi-val" style="font-size:1rem;color:var(--muted);margin-top:6px;">—</div>
-    <div class="kpi-sub">ไม่มีข้อมูลรายได้</div>
-    <?php endif; ?>
+    <div class="kpi-val" style="font-size:1.2rem;color:#d97706;">฿<?= number_format($totalRevenue,0) ?></div>
+    <div class="kpi-sub">บาท</div>
   </div>
-  <div class="kpi-card teal">
+  <div class="kpi-card teal" style="padding:14px 14px;">
     <div class="kpi-icon">👥</div>
-    <div class="kpi-lbl">จำนวนคน (การจอง)</div>
+    <div class="kpi-lbl">จำนวนคน (จอง)</div>
     <div class="kpi-val"><?= number_format($ctxGuests) ?></div>
     <div class="kpi-sub">คน</div>
   </div>
-  <div class="kpi-card" style="border-left-color:#0d9488;">
+  <div class="kpi-card" style="border-left-color:#0d9488;padding:14px 14px;">
     <div class="kpi-icon">🚪</div>
-    <div class="kpi-lbl">เช็คอินจริง (<?= $labelRange ?>)</div>
+    <div class="kpi-lbl">เช็คอินจริง</div>
     <div class="kpi-val" style="color:#0d9488;"><?= number_format($totalCheckinPeriod) ?></div>
-    <div class="kpi-sub">คน (อนุมัติแล้วเท่านั้น)</div>
+    <div class="kpi-sub">คน</div>
   </div>
 </div>
 
-<?php endif; // end serviceType !== 'checkin' for KPI grid ?>
-
-<!-- ═══ สถิติจำนวนผู้ใช้งาน ═══ -->
-<?php if ($serviceType !== 'checkin'): ?>
-<!-- ═══ สถิติเช็คอิน ═══ -->
-<div class="sec-hd">สถิติการเช็คอิน (จำนวนคนที่เข้าใช้บริการจริง)</div>
-<div class="stat-card" style="margin-bottom:12px;">
-  <div class="stat-card-hd">
-    <span style="font-size:1.1rem;">🚪</span>
-    <span class="stat-card-title">จำนวนผู้เช็คอิน แยกตามบริการ</span>
-    <span style="font-size:.72rem;color:var(--muted);margin-left:auto;">นับจากวันเช็คอินจริง (boat_date / checkin_date) เฉพาะที่อนุมัติแล้ว</span>
+<!-- ── Charts Row: Revenue chart + Right column ── -->
+<div style="display:grid;grid-template-columns:1fr 320px;gap:14px;margin-bottom:16px;align-items:start;">
+  <div class="chart-box">
+    <div class="chart-title">📊 รายได้รวมทุกบริการ (เปรียบเทียบ)</div>
+    <div class="chart-wrap" style="height:250px;"><canvas id="chartRevenueAll"></canvas></div>
   </div>
-  <div style="overflow-x:auto;">
+  <div style="display:flex;flex-direction:column;gap:12px;">
+    <div class="chart-box" style="background:#f0fdf4;border:1.5px solid #bbf7d0;padding:14px;">
+      <div style="font-size:.78rem;font-weight:700;color:#15803d;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #bbf7d0;">
+        🚪 เช็คอิน (<?= htmlspecialchars($widgetLabel) ?>)
+      </div>
+      <div style="text-align:center;margin-bottom:10px;">
+        <div style="font-size:2.2rem;font-weight:800;color:#16a34a;line-height:1;"><?= number_format($widgetTotal) ?></div>
+        <div style="font-size:.75rem;color:#6b7280;">คนทั้งหมด</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <div style="background:#fff;border-radius:8px;padding:7px;text-align:center;border:1px solid #d1fae5;">
+          <div style="font-size:1.2rem;font-weight:700;color:#0d9488;"><?= number_format($widgetBoat) ?></div>
+          <div style="font-size:.68rem;color:#6b7280;">⛵ เรือ</div>
+        </div>
+        <div style="background:#fff;border-radius:8px;padding:7px;text-align:center;border:1px solid #d1fae5;">
+          <div style="font-size:1.2rem;font-weight:700;color:#7c3aed;"><?= number_format($widgetRoom) ?></div>
+          <div style="font-size:.68rem;color:#6b7280;">🏠 ห้องพัก</div>
+        </div>
+        <div style="background:#fff;border-radius:8px;padding:7px;text-align:center;border:1px solid #d1fae5;">
+          <div style="font-size:1.2rem;font-weight:700;color:#d97706;"><?= number_format($widgetTent) ?></div>
+          <div style="font-size:.68rem;color:#6b7280;">⛺ เต็นท์</div>
+        </div>
+        <div style="background:#fff;border-radius:8px;padding:7px;text-align:center;border:1px solid #d1fae5;">
+          <div style="font-size:1.2rem;font-weight:700;color:#db2777;"><?= number_format($widgetWalkin) ?></div>
+          <div style="font-size:.68rem;color:#6b7280;">🧍 walk-in</div>
+        </div>
+      </div>
+    </div>
+    <div class="chart-box" style="padding:14px;">
+      <div class="chart-title">🥧 สัดส่วนบริการ</div>
+      <div class="chart-wrap" style="height:155px;"><canvas id="chartPie"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Revenue + Check-in tables ── -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;align-items:start;">
+  <!-- Revenue table -->
+  <div class="stat-card">
+    <div class="stat-card-hd">
+      <span style="font-size:1.1rem;">💰</span>
+      <span class="stat-card-title">รายได้รายบริการ</span>
+      <span style="font-size:.7rem;color:var(--muted);margin-left:auto;">เฉพาะที่ชำระ/อนุมัติแล้ว</span>
+    </div>
     <table class="stat-table">
       <thead>
         <tr>
@@ -994,36 +1034,81 @@ $qnavLinks = [
           <th class="num"><span class="stat-period-badge today">วันนี้</span></th>
           <th class="num"><span class="stat-period-badge month">เดือนนี้</span></th>
           <th class="num"><span class="stat-period-badge year">ปีนี้</span></th>
-          <th class="num">ช่วงที่เลือก (<?= $labelRange ?>)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php if ($serviceType==='all'||$serviceType==='boat'): ?>
+        <tr>
+          <td><span class="pay-badge svc-boat">🚣 เรือพาย</span></td>
+          <td class="num">฿<?= number_format($revToday,0) ?></td>
+          <td class="num">฿<?= number_format($revMonth,0) ?></td>
+          <td class="num">฿<?= number_format($revYear,0) ?></td>
+        </tr>
+        <?php endif; if ($serviceType==='all'||$serviceType==='room'): ?>
+        <tr>
+          <td><span class="pay-badge svc-room">🏨 ห้องพัก</span></td>
+          <td class="num">฿<?= number_format($revRoomToday,0) ?></td>
+          <td class="num">฿<?= number_format($revRoomMonth,0) ?></td>
+          <td class="num">฿<?= number_format($revRoomYear,0) ?></td>
+        </tr>
+        <?php endif; if ($serviceType==='all'||$serviceType==='tent'): ?>
+        <tr>
+          <td><span class="pay-badge svc-tent">⛺ เต็นท์</span></td>
+          <td class="num">฿<?= number_format($revTentToday,0) ?></td>
+          <td class="num">฿<?= number_format($revTentMonth,0) ?></td>
+          <td class="num">฿<?= number_format($revTentYear,0) ?></td>
+        </tr>
+        <?php endif; if ($serviceType==='all'): ?>
+        <tr style="background:#f0fdf4;font-weight:800;">
+          <td><strong>รวม</strong></td>
+          <td class="num" style="color:#2e7d32;">฿<?= number_format($revToday+$revRoomToday+$revTentToday,0) ?></td>
+          <td class="num" style="color:#2e7d32;">฿<?= number_format($revMonth+$revRoomMonth+$revTentMonth,0) ?></td>
+          <td class="num" style="color:#2e7d32;">฿<?= number_format($revYear+$revRoomYear+$revTentYear,0) ?></td>
+        </tr>
+        <?php endif; ?>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Check-in table -->
+  <div class="stat-card">
+    <div class="stat-card-hd">
+      <span style="font-size:1.1rem;">🚪</span>
+      <span class="stat-card-title">เช็คอินแยกตามบริการ</span>
+      <span style="font-size:.7rem;color:var(--muted);margin-left:auto;">เฉพาะที่อนุมัติแล้ว</span>
+    </div>
+    <table class="stat-table">
+      <thead>
+        <tr>
+          <th>บริการ</th>
+          <th class="num"><span class="stat-period-badge today">วันนี้</span></th>
+          <th class="num"><span class="stat-period-badge month">เดือนนี้</span></th>
+          <th class="num">ช่วงที่เลือก</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><span class="pay-badge svc-boat">🚣 เรือพาย</span></td>
+          <td><span class="pay-badge svc-boat">🚣 เรือ</span></td>
           <td class="num"><?= number_format($boatCheckinToday) ?> คน</td>
           <td class="num"><?= number_format($boatCheckinMonth) ?> คน</td>
-          <td class="num"><?= number_format($boatCheckinYear) ?> คน</td>
           <td class="num"><?= number_format($boatCheckinPeriod) ?> คน</td>
         </tr>
         <tr>
           <td><span class="pay-badge svc-room">🏨 ห้องพัก</span></td>
           <td class="num"><?= number_format($roomCheckinToday) ?> คน</td>
           <td class="num"><?= number_format($roomCheckinMonth) ?> คน</td>
-          <td class="num"><?= number_format($roomCheckinYear) ?> คน</td>
           <td class="num"><?= number_format($roomCheckinPeriod) ?> คน</td>
         </tr>
         <tr>
           <td><span class="pay-badge svc-tent">⛺ เต็นท์</span></td>
           <td class="num"><?= number_format($tentCheckinToday) ?> คน</td>
           <td class="num"><?= number_format($tentCheckinMonth) ?> คน</td>
-          <td class="num"><?= number_format($tentCheckinYear) ?> คน</td>
           <td class="num"><?= number_format($tentCheckinPeriod) ?> คน</td>
         </tr>
         <tr style="background:#f0fdfa;font-weight:800;">
-          <td><strong>รวมทั้งหมด</strong></td>
+          <td><strong>รวม</strong></td>
           <td class="num" style="color:#0d9488;"><?= number_format($totalCheckinToday) ?> คน</td>
           <td class="num" style="color:#0d9488;"><?= number_format($totalCheckinMonth) ?> คน</td>
-          <td class="num" style="color:#0d9488;"><?= number_format($totalCheckinYear) ?> คน</td>
           <td class="num" style="color:#0d9488;"><?= number_format($totalCheckinPeriod) ?> คน</td>
         </tr>
       </tbody>
@@ -1031,231 +1116,13 @@ $qnavLinks = [
   </div>
 </div>
 
-<?php endif; // end serviceType !== 'checkin' for stats section ?>
-
-<!-- ═══ รายได้จากเช่าเรือ ═══ -->
-<?php if ($serviceType !== 'checkin'): ?>
-<div class="sec-hd">รายได้จากเช่าเรือพาย</div>
-<div class="rev-grid">
-  <div class="rev-card today-card">
-    <div class="rev-period">วันนี้</div>
-    <div class="rev-amt">฿<?= number_format($revToday, 0) ?></div>
-    <div class="rev-sub"><?= date('d/m/Y', strtotime($today)) ?></div>
-    <div class="pay-split">
-      <span class="ps-chip ps-cash">💵 สด ฿<?= number_format((float)$_revToday['cash'], 0) ?></span>
-      <span class="ps-chip ps-transfer">📱 โอน ฿<?= number_format((float)$_revToday['transfer'], 0) ?></span>
-    </div>
-    <div class="rev-detail">
-      <div class="rev-row">
-        <span class="rl">จำนวนลูกค้า (วันนี้)</span>
-        <span class="rv"><?= number_format($boatGuestToday) ?> คน</span>
-      </div>
-      <div class="rev-row">
-        <span class="rl">รายการจอง (วันนี้)</span>
-        <span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM boat_bookings WHERE DATE(created_at)='$today' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span>
-      </div>
-    </div>
-  </div>
-  <div class="rev-card month-card">
-    <div class="rev-period">เดือนนี้ (<?= date('m/Y') ?>)</div>
-    <div class="rev-amt">฿<?= number_format($revMonth, 0) ?></div>
-    <div class="rev-sub">ยอดชำระสำเร็จสะสม</div>
-    <div class="pay-split">
-      <span class="ps-chip ps-cash">💵 สด ฿<?= number_format((float)$_revMonth['cash'], 0) ?></span>
-      <span class="ps-chip ps-transfer">📱 โอน ฿<?= number_format((float)$_revMonth['transfer'], 0) ?></span>
-    </div>
-    <div class="rev-detail">
-      <div class="rev-row">
-        <span class="rl">จำนวนลูกค้า</span>
-        <span class="rv"><?= number_format($boatGuestMonth) ?> คน</span>
-      </div>
-      <div class="rev-row">
-        <span class="rl">รายการจอง</span>
-        <span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM boat_bookings WHERE DATE(created_at) BETWEEN '".date('Y-m-01')."' AND '".date('Y-m-t')."' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span>
-      </div>
-    </div>
-  </div>
-  <div class="rev-card year-card">
-    <div class="rev-period">ปีนี้ (พ.ศ. <?= $thisYear+543 ?>)</div>
-    <div class="rev-amt">฿<?= number_format($revYear, 0) ?></div>
-    <div class="rev-sub">ยอดชำระสำเร็จสะสมทั้งปี</div>
-    <div class="pay-split">
-      <span class="ps-chip ps-cash">💵 สด ฿<?= number_format((float)$_revYear['cash'], 0) ?></span>
-      <span class="ps-chip ps-transfer">📱 โอน ฿<?= number_format((float)$_revYear['transfer'], 0) ?></span>
-    </div>
-    <div class="rev-detail">
-      <div class="rev-row">
-        <span class="rl">จำนวนลูกค้า</span>
-        <span class="rv"><?= number_format($boatGuestYear) ?> คน</span>
-      </div>
-      <div class="rev-row">
-        <span class="rl">รายการจอง</span>
-        <span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM boat_bookings WHERE DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span>
-      </div>
-    </div>
-  </div>
+<!-- ── Visitor chart ── -->
+<div class="chart-box" style="margin-bottom:16px;">
+  <div class="chart-title">👥 จำนวนผู้เข้าใช้งาน (Walk-in check-in)</div>
+  <div class="chart-wrap" style="height:180px;"><canvas id="chartVisitor"></canvas></div>
 </div>
 
-<!-- ── ห้องพัก ── -->
-<?php if ($serviceType === 'all' || $serviceType === 'room'): ?>
-<div class="sec-hd">รายได้จากห้องพัก</div>
-<div class="rev-grid">
-  <div class="rev-card today-card">
-    <div class="rev-period">วันนี้</div>
-    <div class="rev-amt">฿<?= number_format($revRoomToday, 0) ?></div>
-    <div class="rev-sub"><?= date('d/m/Y', strtotime($today)) ?></div>
-    <div class="rev-detail">
-      <div class="rev-row"><span class="rl">จำนวนลูกค้า</span><span class="rv"><?= number_format($roomGuestToday) ?> คน</span></div>
-      <div class="rev-row"><span class="rl">รายการจอง</span><span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM room_bookings WHERE DATE(created_at)='$today' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span></div>
-    </div>
-  </div>
-  <div class="rev-card month-card">
-    <div class="rev-period">เดือนนี้ (<?= date('m/Y') ?>)</div>
-    <div class="rev-amt">฿<?= number_format($revRoomMonth, 0) ?></div>
-    <div class="rev-sub">ยอดสะสมเดือนนี้</div>
-    <div class="rev-detail">
-      <div class="rev-row"><span class="rl">จำนวนลูกค้า</span><span class="rv"><?= number_format($roomGuestMonth) ?> คน</span></div>
-      <div class="rev-row"><span class="rl">รายการจอง</span><span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM room_bookings WHERE DATE(created_at) BETWEEN '".date('Y-m-01')."' AND '".date('Y-m-t')."' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span></div>
-    </div>
-  </div>
-  <div class="rev-card year-card">
-    <div class="rev-period">ปีนี้ (พ.ศ. <?= $thisYear+543 ?>)</div>
-    <div class="rev-amt">฿<?= number_format($revRoomYear, 0) ?></div>
-    <div class="rev-sub">ยอดสะสมทั้งปี</div>
-    <div class="rev-detail">
-      <div class="rev-row"><span class="rl">จำนวนลูกค้า</span><span class="rv"><?= number_format($roomGuestYear) ?> คน</span></div>
-      <div class="rev-row"><span class="rl">รายการจอง</span><span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM room_bookings WHERE DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span></div>
-    </div>
-  </div>
-</div>
-<?php endif; ?>
-
-<!-- ── เต็นท์ ── -->
-<?php if ($serviceType === 'all' || $serviceType === 'tent'): ?>
-<div class="sec-hd">รายได้จากเต็นท์</div>
-<div class="rev-grid">
-  <div class="rev-card today-card">
-    <div class="rev-period">วันนี้</div>
-    <div class="rev-amt">฿<?= number_format($revTentToday, 0) ?></div>
-    <div class="rev-sub"><?= date('d/m/Y', strtotime($today)) ?></div>
-    <div class="rev-detail">
-      <div class="rev-row"><span class="rl">จำนวนลูกค้า</span><span class="rv"><?= number_format($tentGuestToday) ?> คน</span></div>
-      <div class="rev-row"><span class="rl">รายการจอง</span><span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM equipment_bookings WHERE DATE(created_at)='$today' AND (archived IS NULL OR archived=0)")->fetch_assoc()['c'] ?> รายการ</span></div>
-    </div>
-  </div>
-  <div class="rev-card month-card">
-    <div class="rev-period">เดือนนี้ (<?= date('m/Y') ?>)</div>
-    <div class="rev-amt">฿<?= number_format($revTentMonth, 0) ?></div>
-    <div class="rev-sub">ยอดสะสมเดือนนี้</div>
-    <div class="rev-detail">
-      <div class="rev-row"><span class="rl">จำนวนลูกค้า</span><span class="rv"><?= number_format($tentGuestMonth) ?> คน</span></div>
-      <div class="rev-row"><span class="rl">รายการจอง</span><span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM tent_bookings WHERE DATE(created_at) BETWEEN '".date('Y-m-01')."' AND '".date('Y-m-t')."' AND archived=0")->fetch_assoc()['c'] ?> รายการ</span></div>
-    </div>
-  </div>
-  <div class="rev-card year-card">
-    <div class="rev-period">ปีนี้ (พ.ศ. <?= $thisYear+543 ?>)</div>
-    <div class="rev-amt">฿<?= number_format($revTentYear, 0) ?></div>
-    <div class="rev-sub">ยอดสะสมทั้งปี</div>
-    <div class="rev-detail">
-      <div class="rev-row"><span class="rl">จำนวนลูกค้า</span><span class="rv"><?= number_format($tentGuestYear) ?> คน</span></div>
-      <div class="rev-row"><span class="rl">รายการจอง</span><span class="rv"><?= (int)$conn->query("SELECT COUNT(*) c FROM equipment_bookings WHERE DATE(created_at) BETWEEN '{$thisYear}-01-01' AND '{$thisYear}-12-31' AND (archived IS NULL OR archived=0)")->fetch_assoc()['c'] ?> รายการ</span></div>
-    </div>
-  </div>
-</div>
-<?php endif; ?>
-
-<?php endif; // end serviceType !== 'checkin' for revenue section ?>
-
-<?php if ($serviceType !== 'checkin'): ?>
-<div class="sec-hd">กราฟ</div>
-<!-- Charts row 1 -->
-<div class="chart-grid">
-  <div class="chart-box" style="display:flex;flex-direction:column;justify-content:center;background:#f0fdf4;border:2px solid #bbf7d0;">
-    <?php
-      // ใช้ข้อมูลช่วงวันที่ที่เลือก (Period) ไม่ใช่ hardcode วันนี้
-      $widgetBoat    = $boatCheckinPeriod;
-      $widgetRoom    = $roomCheckinPeriod;
-      $widgetTent    = $tentCheckinPeriod;
-      $widgetWalkin  = $touristTotal; // จาก tourists table ช่วงที่เลือก
-      $widgetTotal   = $widgetBoat + $widgetRoom + $widgetTent + $widgetWalkin;
-      // label ช่วงเวลา
-      if ($dateFrom === $dateTo) {
-          $widgetLabel = date('d/m/Y', strtotime($dateFrom));
-      } else {
-          $widgetLabel = date('d/m/Y', strtotime($dateFrom)) . ' – ' . date('d/m/Y', strtotime($dateTo));
-      }
-    ?>
-    <div class="chart-title" style="color:#15803d;">🚪 ข้อมูลเช็คอิน (<?= htmlspecialchars($widgetLabel) ?>)</div>
-    <div style="text-align:center;padding:18px 0 10px;">
-      <div style="font-size:3rem;font-weight:800;color:#16a34a;line-height:1;"><?= number_format($widgetTotal) ?></div>
-      <div style="font-size:.95rem;color:#6b7280;margin-top:4px;">คนทั้งหมด</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 16px;">
-      <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid #d1fae5;">
-        <div style="font-size:1.5rem;font-weight:700;color:#0d9488;"><?= number_format($widgetBoat) ?></div>
-        <div style="font-size:.8rem;color:#6b7280;">⛵ เรือพาย</div>
-      </div>
-      <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid #d1fae5;">
-        <div style="font-size:1.5rem;font-weight:700;color:#7c3aed;"><?= number_format($widgetRoom) ?></div>
-        <div style="font-size:.8rem;color:#6b7280;">🏠 ห้องพัก</div>
-      </div>
-      <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid #d1fae5;">
-        <div style="font-size:1.5rem;font-weight:700;color:#d97706;"><?= number_format($widgetTent) ?></div>
-        <div style="font-size:.8rem;color:#6b7280;">⛺ เต็นท์</div>
-      </div>
-      <div style="background:#fff;border-radius:10px;padding:10px;text-align:center;border:1px solid #d1fae5;">
-        <div style="font-size:1.5rem;font-weight:700;color:#db2777;"><?= number_format($widgetWalkin) ?></div>
-        <div style="font-size:.8rem;color:#6b7280;">🧍 check-in</div>
-      </div>
-    </div>
-  </div>
-<!-- Charts row 1c: Combined revenue -->
-<div class="chart-grid" style="grid-template-columns:1fr;">
-  <div class="chart-box">
-    <div class="chart-title">📊 รายได้รวมทุกบริการ (เปรียบเทียบ)</div>
-    <div class="chart-wrap" style="height:260px;"><canvas id="chartRevenueAll"></canvas></div>
-  </div>
-</div>
-
-<!-- Charts row 2 -->
-<div class="chart-grid">
-  <div class="chart-box">
-    <div class="chart-title">🥧 สัดส่วนประเภทบริการ</div>
-    <div class="chart-wrap"><canvas id="chartPie"></canvas></div>
-  </div>
-  <div class="chart-box">
-    <div class="chart-title">👥 จำนวนผู้เข้าใช้งาน</div>
-    <div class="chart-wrap"><canvas id="chartVisitor"></canvas></div>
-  </div>
-</div>
-
-<?php if ($serviceType === 'all'): ?>
-<div class="sec-hd">แยกตามบริการ</div>
-<!-- Service breakdown -->
-<div class="svc-grid" style="margin-bottom:20px;">
-  <div class="svc-card">
-    <div class="svc-title"><span class="pay-badge svc-boat">🚣</span> เรือพาย</div>
-    <div class="svc-row"><span class="lbl">การจองทั้งหมด</span><span class="val"><?= $boatData['total'] ?></span></div>
-    <div class="svc-row"><span class="lbl">ชำระแล้ว</span><span class="val" style="color:#2e7d32;"><?= $boatData['paid'] ?></span></div>
-    <div class="svc-row"><span class="lbl">รอชำระ</span><span class="val" style="color:#e65100;"><?= $boatData['waiting'] ?></span></div>
-    <div class="svc-row"><span class="lbl">รายได้</span><span class="val">฿<?= number_format((float)$boatData['revenue'], 0) ?></span></div>
-  </div>
-  <div class="svc-card">
-    <div class="svc-title"><span class="pay-badge svc-room">🏨</span> ห้องพัก</div>
-    <div class="svc-row"><span class="lbl">การจองทั้งหมด</span><span class="val"><?= $roomData['total'] ?></span></div>
-    <div class="svc-row"><span class="lbl">อนุมัติแล้ว</span><span class="val" style="color:#2e7d32;"><?= $roomData['paid'] ?></span></div>
-    <div class="svc-row"><span class="lbl">รอดำเนินการ</span><span class="val" style="color:#e65100;"><?= $roomData['waiting'] ?></span></div>
-    <div class="svc-row"><span class="lbl">รายได้</span><span class="val">฿<?= number_format((float)$roomData['revenue'], 0) ?></span></div>
-  </div>
-  <div class="svc-card">
-    <div class="svc-title"><span class="pay-badge svc-tent">⛺</span> เต็นท์</div>
-    <div class="svc-row"><span class="lbl">การจองทั้งหมด</span><span class="val"><?= $tentData['total'] ?></span></div>
-    <div class="svc-row"><span class="lbl">อนุมัติแล้ว</span><span class="val" style="color:#2e7d32;"><?= $tentData['paid'] ?></span></div>
-    <div class="svc-row"><span class="lbl">รอดำเนินการ</span><span class="val" style="color:#e65100;"><?= $tentData['waiting'] ?></span></div>
-    <div class="svc-row"><span class="lbl">รายได้</span><span class="val">฿<?= number_format((float)$tentData['revenue'], 0) ?></span></div>
-  </div>
-</div>
-<?php endif; // end serviceType === 'all' for svc-grid ?>
+<?php endif; // end serviceType !== 'checkin' ?>
 
 <?php if ($serviceType === 'all' || $serviceType === 'boat'): ?>
 <div class="sec-hd">การเงิน (เรือพาย)</div>
@@ -1452,29 +1319,7 @@ const dRevTent  = [<?= $jsRevenueTent ?>];
 
 const opt = {responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}}};
 
-// Booking chart
-new Chart(document.getElementById('chartBooking'),{type:'bar',data:{labels,datasets:[
-  {label:'เรือพาย',data:dBoat,backgroundColor:'rgba(29,111,173,.7)',borderRadius:4},
-  {label:'ห้องพัก',data:dRoom,backgroundColor:'rgba(201,169,110,.7)',borderRadius:4},
-  {label:'เต็นท์', data:dTent,backgroundColor:'rgba(46,125,50,.7)',borderRadius:4},
-]},options:{...opt,scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}},beginAtZero:true}}}});
-
 const revOpt = {...opt,scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10},callback:v=>'฿'+v.toLocaleString()},beginAtZero:true}}};
-
-// Revenue chart — เรือพาย
-new Chart(document.getElementById('chartRevenue'),{type:'bar',data:{labels,datasets:[
-  {label:'รายได้เรือพาย (฿)',data:dRev,backgroundColor:'rgba(29,111,173,.75)',borderRadius:4}
-]},options:revOpt});
-
-// Revenue chart — ห้องพัก
-new Chart(document.getElementById('chartRevenueRoom'),{type:'bar',data:{labels,datasets:[
-  {label:'รายได้ห้องพัก (฿)',data:dRevRoom,backgroundColor:'rgba(201,169,110,.75)',borderRadius:4}
-]},options:revOpt});
-
-// Revenue chart — เต็นท์
-new Chart(document.getElementById('chartRevenueTent'),{type:'bar',data:{labels,datasets:[
-  {label:'รายได้เต็นท์ (฿)',data:dRevTent,backgroundColor:'rgba(46,125,50,.75)',borderRadius:4}
-]},options:revOpt});
 
 // Combined revenue chart — ทุกบริการ
 new Chart(document.getElementById('chartRevenueAll'),{type:'bar',data:{labels,datasets:[

@@ -16,7 +16,7 @@ $allBookings = [];
 function safeGet($row,$key,$default=null){ return array_key_exists($key,$row)?$row[$key]:$default; }
 
 /* ── ห้องพัก ── */
-$st = $conn->prepare("SELECT * FROM room_bookings WHERE email=? AND (archived IS NULL OR archived=0) ORDER BY id DESC");
+$st = $conn->prepare("SELECT * FROM room_bookings WHERE email=? AND (archived IS NULL OR archived=0) AND booking_status NOT IN ('cancelled','rejected') ORDER BY id DESC");
 if($st){
     $st->bind_param("s",$user_email); $st->execute(); $res=$st->get_result();
     while($r=$res->fetch_assoc()){
@@ -34,7 +34,7 @@ if($st){
 }
 
 /* ── เต็นท์ ── */
-$st2 = $conn->prepare("SELECT * FROM equipment_bookings WHERE email=? AND (archived IS NULL OR archived=0) ORDER BY id DESC");
+$st2 = $conn->prepare("SELECT * FROM equipment_bookings WHERE email=? AND (archived IS NULL OR archived=0) AND booking_status NOT IN ('cancelled','rejected') ORDER BY id DESC");
 if($st2){
     $st2->bind_param("s",$user_email); $st2->execute(); $res2=$st2->get_result();
     while($r=$res2->fetch_assoc()){
@@ -52,7 +52,7 @@ if($st2){
 }
 
 /* ── เรือ ── */
-$st3 = $conn->prepare("SELECT * FROM boat_bookings WHERE email=? AND (archived IS NULL OR archived=0) ORDER BY id DESC");
+$st3 = $conn->prepare("SELECT * FROM boat_bookings WHERE email=? AND (archived IS NULL OR archived=0) AND booking_status NOT IN ('cancelled','rejected') ORDER BY id DESC");
 if($st3){
     $st3->bind_param("s",$user_email); $st3->execute(); $res3=$st3->get_result();
     while($r=$res3->fetch_assoc()){

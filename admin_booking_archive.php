@@ -174,11 +174,6 @@ include 'admin_layout_top.php';
                style="height:36px;padding:0 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.82rem;color:var(--ink);background:#fff;outline:none;"
                title="กรองตามวันที่">
       </div>
-      <div>
-        <input type="month" name="filter_month" value="<?= h($filterMonth) ?>"
-               style="height:36px;padding:0 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.82rem;color:var(--ink);background:#fff;outline:none;"
-               title="กรองตามเดือน">
-      </div>
       <button type="submit" class="arc-btn arc-btn-primary">ค้นหา</button>
       <?php if ($search || $filterDate || $filterMonth): ?>
         <a href="<?= h($currentPage) ?>" class="arc-btn arc-btn-ghost">ล้าง</a>

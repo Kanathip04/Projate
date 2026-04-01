@@ -9,43 +9,65 @@ if ($user_email === '') die('ไม่พบ session email');
 
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
-/* ══ ดึงข้อมูลทั้ง 3 ตาราง (เพิ่มรายละเอียด) ══ */
+/* ══ ดึงข้อมูลทั้ง 3 ตาราง ══ */
 $allBookings = [];
 
+/* helper: ดึง columns ที่มีจริงในตาราง */
+function safeGet($row,$key,$default=null){ return array_key_exists($key,$row)?$row[$key]:$default; }
+
 /* ── ห้องพัก ── */
-$st = $conn->prepare("SELECT id, full_name, room_type AS title, checkin_date AS date_from, checkout_date AS date_to,
-    guests, booking_status, created_at, booking_ref, payment_status, paid_at, approved_at,
-    total_price, room_price, payment_slip, payment_method,
-    rooms AS rooms_json, NULL AS items_json, NULL AS booking_ref2,
-    NULL AS daily_queue_no, NULL AS boat_count, NULL AS queue_name
-    FROM room_bookings WHERE email=? ORDER BY id DESC");
-$st->bind_param("s",$user_email); $st->execute(); $res=$st->get_result();
-while($r=$res->fetch_assoc()){ $r['type']='room'; $allBookings[]=$r; }
-$st->close();
+$st = $conn->prepare("SELECT * FROM room_bookings WHERE email=? ORDER BY id DESC");
+if($st){
+    $st->bind_param("s",$user_email); $st->execute(); $res=$st->get_result();
+    while($r=$res->fetch_assoc()){
+        $r['type']      = 'room';
+        $r['title']     = $r['room_type'] ?? 'ห้องพัก';
+        $r['date_from'] = $r['checkin_date']  ?? null;
+        $r['date_to']   = $r['checkout_date'] ?? null;
+        $r['rooms_json']= $r['rooms'] ?? null;
+        $r['items_json']= null;
+        $r['daily_queue_no'] = null;
+        $r['boat_count']     = null;
+        $allBookings[] = $r;
+    }
+    $st->close();
+}
 
 /* ── เต็นท์ ── */
-$st2 = $conn->prepare("SELECT id, full_name, 'เช่าอุปกรณ์แคมป์ปิ้ง' AS title,
-    checkin_date AS date_from, checkout_date AS date_to,
-    NULL AS guests, booking_status, created_at, NULL AS booking_ref, payment_status, paid_at,
-    NULL AS approved_at, total_price, NULL AS room_price, payment_slip, payment_method,
-    NULL AS rooms_json, items_json, NULL AS booking_ref2,
-    NULL AS daily_queue_no, NULL AS boat_count, NULL AS queue_name
-    FROM equipment_bookings WHERE email=? ORDER BY id DESC");
-$st2->bind_param("s",$user_email); $st2->execute(); $res2=$st2->get_result();
-while($r=$res2->fetch_assoc()){ $r['type']='tent'; $allBookings[]=$r; }
-$st2->close();
+$st2 = $conn->prepare("SELECT * FROM equipment_bookings WHERE email=? ORDER BY id DESC");
+if($st2){
+    $st2->bind_param("s",$user_email); $st2->execute(); $res2=$st2->get_result();
+    while($r=$res2->fetch_assoc()){
+        $r['type']      = 'tent';
+        $r['title']     = 'เช่าอุปกรณ์แคมป์ปิ้ง';
+        $r['date_from'] = $r['checkin_date']  ?? null;
+        $r['date_to']   = $r['checkout_date'] ?? null;
+        $r['rooms_json']= null;
+        $r['total_price']= $r['total_price'] ?? null;
+        $r['daily_queue_no'] = null;
+        $r['boat_count']     = null;
+        $allBookings[] = $r;
+    }
+    $st2->close();
+}
 
 /* ── เรือ ── */
-$st3 = $conn->prepare("SELECT id, full_name, queue_name AS title,
-    boat_date AS date_from, boat_date AS date_to,
-    NULL AS guests, booking_status, created_at, booking_ref, payment_status, paid_at,
-    approved_at, total_amount AS total_price, NULL AS room_price, payment_slip, payment_method,
-    NULL AS rooms_json, NULL AS items_json, booking_ref AS booking_ref2,
-    daily_queue_no, boat_count, queue_name
-    FROM boat_bookings WHERE email=? ORDER BY id DESC");
-$st3->bind_param("s",$user_email); $st3->execute(); $res3=$st3->get_result();
-while($r=$res3->fetch_assoc()){ $r['type']='boat'; $allBookings[]=$r; }
-$st3->close();
+$st3 = $conn->prepare("SELECT * FROM boat_bookings WHERE email=? ORDER BY id DESC");
+if($st3){
+    $st3->bind_param("s",$user_email); $st3->execute(); $res3=$st3->get_result();
+    while($r=$res3->fetch_assoc()){
+        $r['type']       = 'boat';
+        $r['title']      = $r['queue_name'] ?? 'พายเรือ';
+        $r['date_from']  = $r['boat_date'] ?? null;
+        $r['date_to']    = $r['boat_date'] ?? null;
+        $r['total_price']= $r['total_amount'] ?? null;
+        $r['rooms_json'] = null;
+        $r['items_json'] = null;
+        $r['guests']     = null;
+        $allBookings[] = $r;
+    }
+    $st3->close();
+}
 
 usort($allBookings, fn($a,$b) => strtotime($b['created_at']) <=> strtotime($a['created_at']));
 

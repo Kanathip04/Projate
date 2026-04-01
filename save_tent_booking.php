@@ -242,7 +242,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh;disp
 
         <div class="btn-group">
             <a href="/Projate/booking_tent.php" class="btn btn-primary">⛺ จองเต็นท์เพิ่ม</a>
-            <a href="/Projate/booking_tent_status.php" class="btn btn-ghost">📋 ติดตามสถานะ</a>
+            <a href="/Projate/booking_status.php" class="btn btn-ghost">📋 ติดตามสถานะ</a>
         </div>
     </div>
 </div>

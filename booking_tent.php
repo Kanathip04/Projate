@@ -244,7 +244,7 @@ a{text-decoration:none;}
   <div class="hero-inner">
     <div class="top-nav">
       <a href="index.php" class="nav-btn">← กลับหน้าหลัก</a>
-      <a href="booking_tent_status.php" class="nav-btn">ติดตามสถานะการจอง</a>
+      <a href="booking_status.php" class="nav-btn">ติดตามสถานะการจอง</a>
       <a href="booking_room.php" class="nav-btn">จองห้องพัก</a>
       <a href="booking_boat.php" class="nav-btn">จองคิวพายเรือ</a>
     </div>

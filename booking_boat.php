@@ -557,7 +557,7 @@ textarea{min-height:80px;resize:vertical;}
   <div class="hero-inner">
     <div class="top-nav">
       <a href="index.php" class="nav-btn">← กลับหน้าหลัก</a>
-      <a href="booking_boat_status.php" class="nav-btn">ติดตามสถานะการจอง</a>
+      <a href="booking_status.php" class="nav-btn">ติดตามสถานะการจอง</a>
       <a href="booking_room.php" class="nav-btn">จองห้องพัก</a>
       <a href="booking_tent.php" class="nav-btn">จองเต็นท์</a>
     </div>

@@ -334,7 +334,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh;disp
         <div class="btn-group no-print">
             <button onclick="window.print()" class="btn btn-print">🖨 พิมพ์ใบคิว</button>
             <a href="booking_boat.php" class="btn btn-primary">🚣 จองคิวเพิ่ม</a>
-            <a href="booking_boat_status.php" class="btn btn-ghost">📋 ติดตามสถานะ</a>
+            <a href="booking_status.php" class="btn btn-ghost">📋 ติดตามสถานะ</a>
         </div>
         <div class="booking-ref no-print">หมายเลขการจอง <?= $bookingRef ?> &nbsp;·&nbsp; <?= date('d/m/Y H:i') ?> น.</div>
     </div>

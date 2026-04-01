@@ -255,6 +255,14 @@ function promptpayPayload(string $target, float $amount): string {
 $qrPayload = promptpayPayload(PROMPTPAY_ID, $total);
 $payStatus = $bk['payment_status'] ?? 'unpaid';
 
+/* Auto redirect สำหรับ cash booking */
+$pmMethod = trim($bk['payment_method'] ?? '');
+$isCashRoom = ($pmMethod === 'เงินสด' || $pmMethod === 'cash');
+if ($isCashRoom) {
+    header("Location: booking_status.php");
+    exit;
+}
+
 /* Auto redirect ไปหน้าใบเสร็จถ้าชำระแล้ว */
 if ($payStatus === 'paid') {
     header("Location: room_ticket.php?id=$id");

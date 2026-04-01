@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'approve' && $id > 0) {
         $st = $conn->prepare("UPDATE equipment_bookings SET payment_status='paid', booking_status='approved', approved_at=NOW() WHERE id=?");
         $st->bind_param("i", $id); $st->execute(); $st->close();
-        header("Location: admin_tent_approved.php?msg=" . urlencode("อนุมัติรายการเรียบร้อยแล้ว") . "&type=success"); exit;
+        header("Location: {$currentPage}?msg=" . urlencode("อนุมัติรายการเรียบร้อยแล้ว") . "&type=success"); exit;
     }
     if ($action === 'reject' && $id > 0) {
         $st = $conn->prepare("UPDATE equipment_bookings SET payment_status='failed' WHERE id=?");

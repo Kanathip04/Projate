@@ -1227,6 +1227,14 @@ $qnavLinks = [
   </div>
 </div>
 
+<!-- Charts row 1c: Combined revenue -->
+<div class="chart-grid" style="grid-template-columns:1fr;">
+  <div class="chart-box">
+    <div class="chart-title">📊 รายได้รวมทุกบริการ (เปรียบเทียบ)</div>
+    <div class="chart-wrap" style="height:260px;"><canvas id="chartRevenueAll"></canvas></div>
+  </div>
+</div>
+
 <!-- Charts row 2 -->
 <div class="chart-grid">
   <div class="chart-box">
@@ -1485,6 +1493,13 @@ new Chart(document.getElementById('chartRevenueRoom'),{type:'bar',data:{labels,d
 new Chart(document.getElementById('chartRevenueTent'),{type:'bar',data:{labels,datasets:[
   {label:'รายได้เต็นท์ (฿)',data:dRevTent,backgroundColor:'rgba(46,125,50,.75)',borderRadius:4}
 ]},options:revOpt});
+
+// Combined revenue chart — ทุกบริการ
+new Chart(document.getElementById('chartRevenueAll'),{type:'bar',data:{labels,datasets:[
+  {label:'เรือพาย (฿)',   data:dRev,     backgroundColor:'rgba(29,111,173,.8)', borderRadius:4},
+  {label:'ห้องพัก (฿)',   data:dRevRoom, backgroundColor:'rgba(201,169,110,.8)',borderRadius:4},
+  {label:'เต็นท์ (฿)',    data:dRevTent, backgroundColor:'rgba(46,125,50,.8)',  borderRadius:4},
+]},options:{...revOpt,plugins:{...revOpt.plugins,legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}}}});
 
 // Pie chart
 new Chart(document.getElementById('chartPie'),{type:'doughnut',data:{

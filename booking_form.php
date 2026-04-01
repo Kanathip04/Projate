@@ -329,7 +329,6 @@ a{text-decoration:none;}
     <!-- ════ RIGHT: Form ════ -->
     <div class="form-panel">
       <form action="save_booking.php" method="POST" id="bookingForm">
-        <div id="unitHiddenContainer"></div>
         <input type="hidden" name="room_id"    value="<?= (int)$room['id'] ?>">
         <input type="hidden" name="room_name"  value="<?= htmlspecialchars($room['room_name']) ?>">
         <input type="hidden" name="room_price" value="<?= htmlspecialchars($room['price']) ?>">
@@ -494,7 +493,6 @@ function selectPay(method) {
 (function(){
   const PRICE = <?= (float)$room['price'] ?>;
   const cards  = document.querySelectorAll('.uc:not(.ut)');
-  const hidden = document.getElementById('unitHiddenContainer');
   const sumEl  = document.getElementById('unitSummary');
   const checkinEl  = document.getElementById('checkinDate');
   const checkoutEl = document.getElementById('checkoutDate');
@@ -534,12 +532,6 @@ function selectPay(method) {
 
   function syncUnits(){
     const selected = [...document.querySelectorAll('.uc input:checked')].map(c=>parseInt(c.value));
-    hidden.innerHTML = '';
-    selected.forEach(n=>{
-      const inp=document.createElement('input');
-      inp.type='hidden'; inp.name='room_units[]'; inp.value=n;
-      hidden.appendChild(inp);
-    });
     if(selected.length>0){
       sumEl.textContent='✓ เลือกแล้ว: '+selected.map(n=>'ห้อง '+n).join(', ')+' ('+selected.length+' ห้อง)';
       sumEl.classList.add('show');

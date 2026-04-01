@@ -411,11 +411,11 @@ foreach ($_sectionMap as $_sec => $_items) {
     <a href="admin_tent_approved.php" class="menu-item <?= $activeMenu==='tent_approved'?'active':'' ?>">
       <span class="icon">✅</span><span class="text">อนุมัติแล้ว</span>
     </a>
-    <a href="manage_tents.php" class="menu-item <?= $activeMenu==='tent_manage'?'active':'' ?>">
-      <span class="icon">🏕️</span><span class="text">จัดการเต็นท์</span>
-    </a>
     <a href="manage_tent_stock.php" class="menu-item <?= $activeMenu==='tent_stock'?'active':'' ?>">
       <span class="icon">📦</span><span class="text">จัดเก็บเต็นท์</span>
+    </a>
+    <a href="manage_tents.php" class="menu-item <?= $activeMenu==='tent_manage'?'active':'' ?>">
+      <span class="icon">🏕️</span><span class="text">จัดการเต็นท์</span>
     </a>
     <span class="menu-sub-label">🚣 พายเรือ</span>
     <a href="admin_boat_bookings.php" class="menu-item <?= $activeMenu==='boat_booking'?'active':'' ?>">

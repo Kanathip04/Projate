@@ -228,7 +228,7 @@ include 'admin_layout_top.php';
       </div>
       <input type="date" name="filter_date" class="arc-date-input"
              value="<?= h($filterDate) ?>" title="กรองตามวันที่อนุมัติ">
-      <button type="submit" class="arc-btn-date">📋 ดูรายงาน</button>
+      <button type="submit" class="arc-btn-date">ค้นหา</button>
       <?php if ($search || $filterDate): ?>
         <a href="<?= h($currentPage) ?>" class="arc-btn arc-btn-ghost">ล้าง</a>
       <?php endif; ?>

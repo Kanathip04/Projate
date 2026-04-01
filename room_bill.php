@@ -257,7 +257,7 @@ $payStatus = $bk['payment_status'] ?? 'unpaid';
 
 /* Auto redirect สำหรับ cash booking */
 $pmMethod = trim($bk['payment_method'] ?? '');
-$isCashRoom = ($pmMethod === 'เงินสด' || $pmMethod === 'cash');
+$isCashRoom = ($pmMethod === 'เงินสด' || $pmMethod === 'cash' || $pmMethod === 'ชำระเงินสด');
 if ($isCashRoom) {
     header("Location: booking_status.php");
     exit;

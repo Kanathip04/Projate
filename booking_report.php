@@ -252,9 +252,11 @@ if ($serviceType === 'all' || $serviceType === 'boat') {
     while ($r = $rows->fetch_assoc()) $bookingRows[] = $r;
 }
 if ($serviceType === 'all' || $serviceType === 'room') {
-    $rRows = $conn->query("SELECT 'room' svc, CONCAT('RM',id) ref, full_name, room_type subtype, created_at, checkin_date use_date,
-        0 total_amount, booking_status payment_status, booking_status FROM room_bookings
-        WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived=0 AND booking_status NOT IN ('cancelled','rejected') ORDER BY created_at DESC LIMIT 50");
+    $rRows = $conn->query("SELECT 'room' svc, CONCAT('RM',rb.id) ref, rb.full_name, rb.room_type subtype, rb.created_at, rb.checkin_date use_date,
+        COALESCE(r.price * GREATEST(DATEDIFF(rb.checkout_date, rb.checkin_date),1), 0) total_amount,
+        rb.booking_status payment_status, rb.booking_status FROM room_bookings rb
+        LEFT JOIN rooms r ON rb.room_id = r.id
+        WHERE " . dateWhere('rb.created_at', $dateFrom, $dateTo) . " AND rb.archived=0 AND rb.booking_status NOT IN ('cancelled','rejected') ORDER BY rb.created_at DESC LIMIT 50");
     while ($r = $rRows->fetch_assoc()) $bookingRows[] = $r;
 }
 if ($serviceType === 'all' || $serviceType === 'tent') {

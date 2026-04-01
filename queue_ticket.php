@@ -21,7 +21,9 @@ $stmt->close();
 $conn->close();
 
 if (!$booking) { header("Location: booking_boat.php"); exit; }
-if ($booking['payment_status'] !== 'paid') {
+$pm = trim($booking['payment_method'] ?? '');
+$isCashBooking = ($pm === 'เงินสด' || $pm === 'cash' || $pm === 'cash_paid');
+if (!in_array($booking['payment_status'], ['paid','cash_paid']) && !$isCashBooking) {
     header("Location: payment_slip.php?ref=" . urlencode($booking_ref));
     exit;
 }

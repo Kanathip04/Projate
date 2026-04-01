@@ -58,14 +58,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (isset($_GET['msg'])) { $message = $_GET['msg']; $message_type = $_GET['type'] ?? 'success'; }
 $search = trim($_GET['search'] ?? '');
 
-$rs = $conn->query("SELECT COUNT(*) t, SUM(booking_status='pending') p, SUM(booking_status='approved') a, SUM(booking_status='cancelled') c FROM room_bookings WHERE archived=0");
+$rs = $conn->query("SELECT COUNT(*) t, SUM(booking_status='pending') p, SUM(booking_status='approved') a, SUM(booking_status='cancelled') c FROM room_bookings WHERE archived=0 AND payment_method='ชำระเงินสด'");
 $st_row = $rs->fetch_assoc();
 $stat_total     = (int)$st_row['t'];
 $stat_pending   = (int)$st_row['p'];
 $stat_approved  = (int)$st_row['a'];
 $stat_cancelled = (int)$st_row['c'];
 
-$where = "WHERE archived=0 AND booking_status IN ('pending','cancelled')";
+$where = "WHERE archived=0 AND payment_method='ชำระเงินสด' AND booking_status IN ('pending','cancelled')";
 $params = []; $types = "";
 if ($search !== '') {
     $where .= " AND (full_name LIKE ? OR phone LIKE ? OR email LIKE ? OR room_type LIKE ?)";

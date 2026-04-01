@@ -557,9 +557,96 @@ $qnavLinks = [
 .svc-tent{background:rgba(46,125,50,.12);color:#2e7d32;}
 
 @media print{
-  .rpt-toolbar,.rpt-filter,.period-nav,.sidebar,.topbar-actions{display:none!important;}
-  .main{margin-left:0!important;width:100%!important;}
-  .chart-wrap{height:180px;}
+  /* ── ซ่อน UI ที่ไม่ต้องการ ── */
+  .rpt-toolbar,.rpt-filter,.period-nav,.svc-tabs,
+  .sidebar,.topbar-actions,.topbar,.no-print,
+  .pnav-arrow,.pnav-back,
+  button,a.arc-link,a.mn-link{ display:none!important; }
+
+  /* ── Layout ── */
+  *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; box-sizing:border-box; }
+  body{ background:#fff!important; font-family:'Sarabun',sans-serif; font-size:10pt; color:#000; }
+  .main{ margin-left:0!important; width:100%!important; padding:0!important; }
+  .content-wrapper,.page-content{ padding:0!important; margin:0!important; }
+
+  /* ── Print header ── */
+  body::before{
+    content: 'รายงานภาพรวม — WRBRI · <?= $labelRange ?> · พิมพ์วันที่ <?= date('d/m/Y H:i') ?> น.';
+    display:block;
+    font-size:11pt; font-weight:800; color:#1a1a2e;
+    padding:10px 0 8px; margin-bottom:14px;
+    border-bottom:2.5px solid #1a1a2e;
+    letter-spacing:.02em;
+  }
+
+  /* ── Section headings ── */
+  .sec-hd{
+    font-size:9pt!important; font-weight:800!important;
+    color:#333!important; text-transform:uppercase;
+    letter-spacing:.12em; margin:14px 0 7px!important;
+    padding-bottom:4px; border-bottom:1.5px solid #ccc;
+  }
+  .sec-hd::after{ display:none!important; }
+
+  /* ── KPI cards ── */
+  .kpi-grid{ display:grid!important; grid-template-columns:repeat(4,1fr)!important; gap:7px!important; margin-bottom:10px!important; }
+  .kpi-card{
+    border:1px solid #ccc!important; border-radius:6px!important;
+    padding:9px 10px!important; box-shadow:none!important;
+    page-break-inside:avoid; break-inside:avoid;
+  }
+  .kpi-icon{ display:none!important; }
+  .kpi-lbl{ font-size:7pt!important; }
+  .kpi-val{ font-size:16pt!important; }
+  .kpi-sub{ font-size:7pt!important; }
+
+  /* ── Revenue cards ── */
+  .rev-grid{ display:grid!important; grid-template-columns:repeat(3,1fr)!important; gap:7px!important; }
+  .rev-card{ border:1px solid #ccc!important; border-radius:6px!important; box-shadow:none!important; padding:10px!important; page-break-inside:avoid; break-inside:avoid; }
+  .rev-amt{ font-size:14pt!important; }
+
+  /* ── Service breakdown ── */
+  .svc-grid{ display:grid!important; grid-template-columns:repeat(3,1fr)!important; gap:7px!important; }
+  .svc-card{ border:1px solid #ccc!important; border-radius:6px!important; box-shadow:none!important; padding:10px!important; page-break-inside:avoid; break-inside:avoid; }
+
+  /* ── Stat cards / tables ── */
+  .stat-card{ border:1px solid #ccc!important; border-radius:6px!important; box-shadow:none!important; margin-bottom:10px!important; page-break-inside:avoid; break-inside:avoid; }
+  .stat-card-hd{ padding:7px 12px!important; background:#f5f5f5!important; }
+  .stat-table th{ background:#f5f5f5!important; font-size:8pt!important; padding:6px 10px!important; border-bottom:1.5px solid #aaa!important; }
+  .stat-table td{ font-size:9pt!important; padding:5px 10px!important; border-bottom:1px solid #e0e0e0!important; }
+
+  /* ── Finance grid ── */
+  .fin-grid{ display:grid!important; grid-template-columns:repeat(4,1fr)!important; gap:7px!important; }
+  .fin-card{ border:1px solid #ccc!important; border-radius:6px!important; padding:9px!important; background:#fafafa!important; }
+  .fin-val{ font-size:11pt!important; }
+
+  /* ── Comparison grid ── */
+  .cmp-grid{ display:grid!important; grid-template-columns:repeat(3,1fr)!important; gap:7px!important; }
+  .cmp-card{ border:1px solid #ccc!important; border-radius:6px!important; box-shadow:none!important; padding:10px!important; page-break-inside:avoid; break-inside:avoid; }
+  .cmp-cur{ font-size:16pt!important; }
+
+  /* ── Detail table ── */
+  .lm-card{ border:1px solid #ccc!important; border-radius:6px!important; box-shadow:none!important; margin-bottom:10px!important; }
+  .lm-card-header{ background:#f5f5f5!important; padding:7px 12px!important; border-bottom:1.5px solid #aaa!important; }
+  .lm-table{ width:100%!important; border-collapse:collapse!important; font-size:8pt!important; }
+  .lm-table th{ background:#f5f5f5!important; font-size:7.5pt!important; padding:5px 8px!important; border:1px solid #ccc!important; }
+  .lm-table td{ padding:5px 8px!important; border:1px solid #ddd!important; font-size:8pt!important; }
+
+  /* ── Charts ── */
+  .chart-grid{ display:none!important; }
+
+  /* ── Badges ── */
+  .pay-badge,.stat-period-badge,.kpi-card,.pay-pill{
+    border:1px solid #aaa!important;
+    background:#f5f5f5!important; color:#333!important;
+  }
+
+  /* ── Page breaks ── */
+  .sec-hd{ page-break-before:auto; }
+  .kpi-grid,.rev-grid,.svc-grid,.cmp-grid{ page-break-inside:avoid; break-inside:avoid; }
+
+  /* ── Page size ── */
+  @page{ size:A4 landscape; margin:12mm 14mm; }
 }
 @media(max-width:960px){
   .chart-grid{grid-template-columns:1fr;}

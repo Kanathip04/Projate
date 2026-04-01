@@ -156,7 +156,7 @@ include 'admin_layout_top.php';
 .an-drop-sub{font-size:.73rem;color:#94a3b8;margin-top:3px;}
 .an-file-input{
   position:absolute;inset:0;width:100%;height:100%;
-  opacity:0;cursor:pointer;
+  opacity:0;cursor:pointer;z-index:2;
 }
 
 /* ── PREVIEW ── */

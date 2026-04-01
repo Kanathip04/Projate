@@ -45,32 +45,29 @@ function addFilters(string $base, string $bkStatus, string $payStatus, bool $has
 }
 
 // ── Boat bookings ──
-$boatWhere = "WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived = 0";
+$boatWhere = "WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived = 0 AND booking_status NOT IN ('cancelled','rejected')";
 $boatWhere = addFilters($boatWhere, $bkStatus, $payStatus);
 $boatData  = $conn->query("SELECT COUNT(*) total,
     SUM(payment_status='paid') paid,
     SUM(payment_status IN('unpaid','pending','waiting_verify')) waiting,
-    SUM(booking_status='cancelled') cancelled,
     COALESCE(SUM(CASE WHEN payment_status='paid' THEN total_amount END),0) revenue
     FROM boat_bookings $boatWhere")->fetch_assoc();
 
 // ── Room bookings ──
-$roomWhere = "WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived = 0";
+$roomWhere = "WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived = 0 AND booking_status NOT IN ('cancelled','rejected')";
 if ($bkStatus) $roomWhere .= " AND booking_status = '$bkStatus'";
 $roomData  = $conn->query("SELECT COUNT(*) total,
     SUM(booking_status='approved') paid,
     SUM(booking_status='pending') waiting,
-    SUM(booking_status='cancelled') cancelled,
     0 revenue
     FROM room_bookings $roomWhere")->fetch_assoc();
 
 // ── Tent bookings ──
-$tentWhere = "WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived = 0";
+$tentWhere = "WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived = 0 AND booking_status NOT IN ('cancelled','rejected')";
 if ($bkStatus) $tentWhere .= " AND booking_status = '$bkStatus'";
 $tentData  = $conn->query("SELECT COUNT(*) total,
     SUM(booking_status='approved') paid,
     SUM(booking_status='pending') waiting,
-    SUM(booking_status='cancelled') cancelled,
     0 revenue
     FROM tent_bookings $tentWhere")->fetch_assoc();
 
@@ -112,7 +109,6 @@ $finData = $conn->query("SELECT
 $totalAll     = ($boatData['total'] ?? 0) + ($roomData['total'] ?? 0) + ($tentData['total'] ?? 0);
 $totalPaid    = ($boatData['paid'] ?? 0) + ($roomData['paid'] ?? 0) + ($tentData['paid'] ?? 0);
 $totalWaiting = ($boatData['waiting'] ?? 0) + ($roomData['waiting'] ?? 0) + ($tentData['waiting'] ?? 0);
-$totalCancel  = ($boatData['cancelled'] ?? 0) + ($roomData['cancelled'] ?? 0) + ($tentData['cancelled'] ?? 0);
 $totalRevenue = (float)($boatData['revenue'] ?? 0);
 
 // ── Guest counts for current period ──
@@ -251,20 +247,20 @@ $bookingRows = [];
 if ($serviceType === 'all' || $serviceType === 'boat') {
     $listSQL = "SELECT 'boat' svc, booking_ref ref, full_name, boat_type subtype, created_at, boat_date use_date,
         total_amount, payment_status, booking_status FROM boat_bookings
-        WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived=0 ORDER BY created_at DESC LIMIT 50";
+        WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived=0 AND booking_status NOT IN ('cancelled','rejected') ORDER BY created_at DESC LIMIT 50";
     $rows = $conn->query($listSQL);
     while ($r = $rows->fetch_assoc()) $bookingRows[] = $r;
 }
 if ($serviceType === 'all' || $serviceType === 'room') {
     $rRows = $conn->query("SELECT 'room' svc, CONCAT('RM',id) ref, full_name, room_type subtype, created_at, checkin_date use_date,
         0 total_amount, booking_status payment_status, booking_status FROM room_bookings
-        WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived=0 ORDER BY created_at DESC LIMIT 50");
+        WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived=0 AND booking_status NOT IN ('cancelled','rejected') ORDER BY created_at DESC LIMIT 50");
     while ($r = $rRows->fetch_assoc()) $bookingRows[] = $r;
 }
 if ($serviceType === 'all' || $serviceType === 'tent') {
     $tRows = $conn->query("SELECT 'tent' svc, CONCAT('TN',id) ref, full_name, tent_type subtype, created_at, checkin_date use_date,
         0 total_amount, booking_status payment_status, booking_status FROM tent_bookings
-        WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived=0 ORDER BY created_at DESC LIMIT 50");
+        WHERE " . dateWhere('created_at', $dateFrom, $dateTo) . " AND archived=0 AND booking_status NOT IN ('cancelled','rejected') ORDER BY created_at DESC LIMIT 50");
     while ($r = $tRows->fetch_assoc()) $bookingRows[] = $r;
 }
 if (!empty($bookingRows)) {
@@ -341,7 +337,6 @@ if ($serviceType === 'boat') {
     $ctxTotal   = (int)$boatData['total'];
     $ctxPaid    = (int)$boatData['paid'];
     $ctxWaiting = (int)$boatData['waiting'];
-    $ctxCancel  = (int)$boatData['cancelled'];
     $ctxRevenue = (float)$boatData['revenue'];
     $ctxGuests  = $boatGuests;
     $ctxLabel   = 'เรือพาย';
@@ -349,7 +344,6 @@ if ($serviceType === 'boat') {
     $ctxTotal   = (int)$roomData['total'];
     $ctxPaid    = (int)$roomData['paid'];
     $ctxWaiting = (int)$roomData['waiting'];
-    $ctxCancel  = (int)$roomData['cancelled'];
     $ctxRevenue = 0;
     $ctxGuests  = $roomGuests;
     $ctxLabel   = 'ห้องพัก';
@@ -357,7 +351,6 @@ if ($serviceType === 'boat') {
     $ctxTotal   = (int)$tentData['total'];
     $ctxPaid    = (int)$tentData['paid'];
     $ctxWaiting = (int)$tentData['waiting'];
-    $ctxCancel  = (int)$tentData['cancelled'];
     $ctxRevenue = 0;
     $ctxGuests  = $tentGuests;
     $ctxLabel   = 'เต็นท์';
@@ -365,7 +358,6 @@ if ($serviceType === 'boat') {
     $ctxTotal   = $totalCheckinPeriod;
     $ctxPaid    = $boatCheckinPeriod;
     $ctxWaiting = $roomCheckinPeriod;
-    $ctxCancel  = $tentCheckinPeriod;
     $ctxRevenue = 0;
     $ctxGuests  = $totalCheckinPeriod;
     $ctxLabel   = 'ข้อมูลเช็คอิน';
@@ -373,7 +365,6 @@ if ($serviceType === 'boat') {
     $ctxTotal   = $totalAll;
     $ctxPaid    = $totalPaid;
     $ctxWaiting = $totalWaiting;
-    $ctxCancel  = $totalCancel;
     $ctxRevenue = $totalRevenue;
     $ctxGuests  = $boatGuests + $roomGuests + $tentGuests;
     $ctxLabel   = 'ทุกบริการ';
@@ -673,7 +664,6 @@ $qnavLinks = [
       <option value="">ทั้งหมด</option>
       <option value="pending"   <?= $bkStatus==='pending'  ?'selected':'' ?>>รอดำเนินการ</option>
       <option value="approved"  <?= $bkStatus==='approved' ?'selected':'' ?>>อนุมัติแล้ว</option>
-      <option value="cancelled" <?= $bkStatus==='cancelled'?'selected':'' ?>>ยกเลิก</option>
     </select>
   </div>
   <div>
@@ -1196,7 +1186,6 @@ $qnavLinks = [
     <div class="svc-row"><span class="lbl">การจองทั้งหมด</span><span class="val"><?= $boatData['total'] ?></span></div>
     <div class="svc-row"><span class="lbl">ชำระแล้ว</span><span class="val" style="color:#2e7d32;"><?= $boatData['paid'] ?></span></div>
     <div class="svc-row"><span class="lbl">รอชำระ</span><span class="val" style="color:#e65100;"><?= $boatData['waiting'] ?></span></div>
-    <div class="svc-row"><span class="lbl">ยกเลิก</span><span class="val" style="color:#dc2626;"><?= $boatData['cancelled'] ?></span></div>
     <div class="svc-row"><span class="lbl">รายได้</span><span class="val">฿<?= number_format((float)$boatData['revenue'], 0) ?></span></div>
   </div>
   <div class="svc-card">
@@ -1204,7 +1193,6 @@ $qnavLinks = [
     <div class="svc-row"><span class="lbl">การจองทั้งหมด</span><span class="val"><?= $roomData['total'] ?></span></div>
     <div class="svc-row"><span class="lbl">อนุมัติแล้ว</span><span class="val" style="color:#2e7d32;"><?= $roomData['paid'] ?></span></div>
     <div class="svc-row"><span class="lbl">รอดำเนินการ</span><span class="val" style="color:#e65100;"><?= $roomData['waiting'] ?></span></div>
-    <div class="svc-row"><span class="lbl">ยกเลิก</span><span class="val" style="color:#dc2626;"><?= $roomData['cancelled'] ?></span></div>
     <div class="svc-row"><span class="lbl">รายได้</span><span class="val">—</span></div>
   </div>
   <div class="svc-card">
@@ -1212,7 +1200,6 @@ $qnavLinks = [
     <div class="svc-row"><span class="lbl">การจองทั้งหมด</span><span class="val"><?= $tentData['total'] ?></span></div>
     <div class="svc-row"><span class="lbl">อนุมัติแล้ว</span><span class="val" style="color:#2e7d32;"><?= $tentData['paid'] ?></span></div>
     <div class="svc-row"><span class="lbl">รอดำเนินการ</span><span class="val" style="color:#e65100;"><?= $tentData['waiting'] ?></span></div>
-    <div class="svc-row"><span class="lbl">ยกเลิก</span><span class="val" style="color:#dc2626;"><?= $tentData['cancelled'] ?></span></div>
     <div class="svc-row"><span class="lbl">รายได้</span><span class="val">—</span></div>
   </div>
 </div>

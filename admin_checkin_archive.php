@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_all'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_id'])) {
     $rid = (int)$_POST['restore_id'];
     $conn->query("UPDATE tourists SET archived=0 WHERE id=$rid");
-    header("Location: admin_walkin_archive.php" . (http_build_query(array_filter(['date'=>$filterDate,'search'=>$search])) ? '?'.http_build_query(array_filter(['date'=>$filterDate,'search'=>$search])) : ''));
+    header("Location: admin_checkin_archive.php" . (http_build_query(array_filter(['date'=>$filterDate,'search'=>$search])) ? '?'.http_build_query(array_filter(['date'=>$filterDate,'search'=>$search])) : ''));
     exit;
 }
 
@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_id'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
     $did = (int)$_POST['delete_id'];
     $conn->query("DELETE FROM tourists WHERE id=$did AND archived=1");
-    header("Location: admin_walkin_archive.php" . (http_build_query(array_filter(['date'=>$filterDate,'search'=>$search])) ? '?'.http_build_query(array_filter(['date'=>$filterDate,'search'=>$search])) : ''));
+    header("Location: admin_checkin_archive.php" . (http_build_query(array_filter(['date'=>$filterDate,'search'=>$search])) ? '?'.http_build_query(array_filter(['date'=>$filterDate,'search'=>$search])) : ''));
     exit;
 }
 
@@ -189,7 +189,7 @@ include "admin_layout_top.php";
       </div>
       <button type="submit" class="btn btn-primary btn-sm" style="height:40px;">ค้นหา</button>
       <?php if ($filterDate || $search): ?>
-        <a href="admin_walkin_archive.php" class="btn btn-ghost btn-sm" style="height:40px;">ล้าง</a>
+        <a href="admin_checkin_archive.php" class="btn btn-ghost btn-sm" style="height:40px;">ล้าง</a>
       <?php endif; ?>
     </form>
   </div>

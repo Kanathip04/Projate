@@ -25,8 +25,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     if ($title !== "" && $content !== "" && $messageType !== "error") {
-        $stmt = $conn->prepare("INSERT INTO news (title, content, image, created_at) VALUES (?, ?, ?, NOW())");
-        $stmt->bind_param("sss", $title, $content, $imageName);
+        $shortDesc = mb_substr(strip_tags($content), 0, 200, 'UTF-8');
+        $stmt = $conn->prepare("INSERT INTO news (title, short_desc, content, image, created_at) VALUES (?, ?, ?, ?, NOW())");
+        $stmt->bind_param("ssss", $title, $shortDesc, $content, $imageName);
 
         if ($stmt->execute()) {
             $message = "โพสต์ข่าวสำเร็จ";

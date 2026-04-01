@@ -60,13 +60,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if (isset($_GET['msg'])) { $message = $_GET['msg']; $message_type = $_GET['type'] ?? 'success'; }
-$search = trim($_GET['search'] ?? '');
+$search    = trim($_GET['search'] ?? '');
+$dateFrom  = trim($_GET['date_from'] ?? '');
+$dateTo    = trim($_GET['date_to']   ?? '');
+$dateQuick = trim($_GET['dq'] ?? '');
+
+$today     = date('Y-m-d');
+$todayTh   = date('d/m/Y');
+if ($dateQuick === 'today')  { $dateFrom = $dateTo = $today; }
+elseif ($dateQuick === 'week')  { $dateFrom = date('Y-m-d', strtotime('monday this week')); $dateTo = $today; }
+elseif ($dateQuick === 'month') { $dateFrom = date('Y-m-01'); $dateTo = date('Y-m-t'); }
+elseif ($dateQuick === 'year')  { $dateFrom = date('Y-01-01'); $dateTo = date('Y-12-31'); }
 
 $rs = $conn->query("SELECT COUNT(*) t FROM room_bookings WHERE archived=0 AND booking_status='approved'");
 $stat_approved = (int)$rs->fetch_assoc()['t'];
 
 $where = "WHERE archived=0 AND booking_status='approved'";
 $params = []; $types = "";
+if ($dateFrom !== '') { $where .= " AND DATE(created_at) >= '$dateFrom'"; }
+if ($dateTo   !== '') { $where .= " AND DATE(created_at) <= '$dateTo'"; }
 if ($search !== '') {
     $where .= " AND (full_name LIKE ? OR phone LIKE ? OR email LIKE ? OR room_type LIKE ?)";
     $like = "%{$search}%"; $params = [$like,$like,$like,$like]; $types = "ssss";
@@ -146,6 +158,12 @@ include 'admin_layout_top.php';
 .slip-lb.open{display:flex;}
 .slip-lb img{max-width:90vw;max-height:88vh;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.5);}
 .slip-lb-close{position:fixed;top:18px;right:22px;font-size:2rem;color:#fff;cursor:pointer;background:none;border:none;line-height:1;}
+.dq-btn{padding:6px 13px;border-radius:20px;border:1.5px solid var(--border);background:#fafaf8;color:var(--muted);font-family:'Sarabun',sans-serif;font-size:.76rem;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;transition:.15s;}
+.dq-btn:hover{border-color:var(--gold);color:#a07c3a;background:#fffbf5;}
+.dq-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+.date-range-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.date-range-row input[type=date]{padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.82rem;color:var(--ink);background:#fff;outline:none;transition:.2s;}
+.date-range-row input[type=date]:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,169,110,.12);}
 </style>
 
 <!-- Slip Lightbox -->
@@ -195,16 +213,34 @@ include 'admin_layout_top.php';
     </div>
 
     <form method="GET">
-      <div class="bk-search">
-        <div class="bk-search-wrap">
-          <input type="text" name="search" class="bk-search-input"
-                 placeholder="ค้นหาชื่อ, เบอร์โทร, อีเมล, ห้องพัก..."
-                 value="<?= h($search) ?>">
+      <div class="bk-search" style="flex-direction:column;align-items:flex-start;gap:10px;">
+        <!-- Quick date buttons -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:.72rem;color:var(--muted);font-weight:700;margin-right:2px;">ช่วงเวลา:</span>
+          <a href="?dq=today<?= $search?'&search='.urlencode($search):'' ?>" class="dq-btn <?= $dateQuick==='today'?'active':'' ?>">วันนี้</a>
+          <a href="?dq=week<?= $search?'&search='.urlencode($search):'' ?>"  class="dq-btn <?= $dateQuick==='week' ?'active':'' ?>">สัปดาห์นี้</a>
+          <a href="?dq=month<?= $search?'&search='.urlencode($search):'' ?>" class="dq-btn <?= $dateQuick==='month'?'active':'' ?>">เดือนนี้</a>
+          <a href="?dq=year<?= $search?'&search='.urlencode($search):'' ?>"  class="dq-btn <?= $dateQuick==='year' ?'active':'' ?>">ปีนี้</a>
+          <?php if ($dateQuick||$dateFrom||$dateTo): ?>
+            <a href="?<?= $search?'search='.urlencode($search):'' ?>" class="dq-btn" style="color:#dc2626;border-color:#fca5a5;">✕ ล้างวันที่</a>
+          <?php endif; ?>
         </div>
-        <button type="submit" class="bk-btn bk-btn-primary">ค้นหา</button>
-        <?php if ($search): ?>
-          <a href="<?= h($currentPage) ?>" class="bk-btn bk-btn-ghost">ล้าง</a>
-        <?php endif; ?>
+        <!-- Custom date range + search -->
+        <div class="date-range-row" style="width:100%;">
+          <div class="bk-search-wrap" style="flex:2;min-width:180px;">
+            <input type="text" name="search" class="bk-search-input"
+                   placeholder="ค้นหาชื่อ, เบอร์โทร, อีเมล, ห้องพัก..."
+                   value="<?= h($search) ?>">
+          </div>
+          <span style="font-size:.78rem;color:var(--muted);white-space:nowrap;">ตั้งแต่</span>
+          <input type="date" name="date_from" value="<?= h($dateFrom) ?>">
+          <span style="font-size:.78rem;color:var(--muted);">ถึง</span>
+          <input type="date" name="date_to"   value="<?= h($dateTo) ?>">
+          <button type="submit" class="bk-btn bk-btn-primary">ค้นหา</button>
+          <?php if ($search||$dateFrom||$dateTo): ?>
+            <a href="<?= h($currentPage) ?>" class="bk-btn bk-btn-ghost">ล้างทั้งหมด</a>
+          <?php endif; ?>
+        </div>
       </div>
     </form>
 

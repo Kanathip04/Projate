@@ -7,7 +7,7 @@ $conn->set_charset("utf8mb4");
 require_once 'admin_layout_top.php';
 
 // ── Parameters ──
-$reportType  = $_GET['type']    ?? 'daily';
+$reportType  = $_GET['type']    ?? 'monthly';
 $serviceType = $_GET['service'] ?? 'all';
 $bkStatus    = $_GET['bk_status'] ?? '';
 $payStatus   = $_GET['pay_status'] ?? '';

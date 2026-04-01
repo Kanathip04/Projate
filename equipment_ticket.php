@@ -225,9 +225,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh;
 
     <!-- ปุ่ม -->
     <div class="btns no-print">
-      <button onclick="window.print()" class="btn btn-print">🖨 พิมพ์สลิป</button>
-      <a href="booking_tent.php" class="btn btn-again">⛺ จองใหม่</a>
-      <a href="index.php" class="btn btn-home">🏠 หน้าหลัก</a>
+      <a href="booking_status.php" class="btn btn-home">← ย้อนกลับสถานะการจอง</a>
     </div>
     <div class="foot no-print"><?= $bookingRef ?> &nbsp;·&nbsp; ยืนยัน <?= $approvedAt ?> น.</div>
 

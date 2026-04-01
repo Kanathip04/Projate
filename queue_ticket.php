@@ -168,9 +168,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);min-height:100vh;
     </div>
 
     <div class="btns no-print">
-      <button onclick="window.print()" class="btn btn-print">🖨 พิมพ์บัตรคิว</button>
-      <a href="booking_boat.php" class="btn btn-again">🚣 จองอีกครั้ง</a>
-      <a href="index.php" class="btn btn-home">🏠 หน้าหลัก</a>
+      <a href="booking_status.php" class="btn btn-home">← ย้อนกลับสถานะการจอง</a>
     </div>
     <div class="ref no-print"><?= htmlspecialchars($bookingRef) ?> &nbsp;·&nbsp; ยืนยัน <?= $approvedAt ?> น.</div>
   </div>

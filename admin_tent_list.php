@@ -57,7 +57,7 @@ $rs = $conn->query("
         SUM(payment_status = 'paid') AS a,
         SUM(payment_status = 'failed') AS r
     FROM equipment_bookings
-    WHERE payment_method = 'เงินสด' AND (archived IS NULL OR archived = 0)
+    WHERE (archived IS NULL OR archived = 0)
 ");
 $st_row = $rs->fetch_assoc();
 $stat_total    = (int)$st_row['t'];
@@ -68,7 +68,7 @@ $stat_rejected = (int)$st_row['r'];
 // ---------------------------------------------------------------------------
 // List — เฉพาะเงินสด รอการอนุมัติ
 // ---------------------------------------------------------------------------
-$where = "WHERE payment_method = 'เงินสด' AND payment_status IN ('unpaid','waiting_verify','manual_review','failed') AND (archived IS NULL OR archived = 0)";
+$where = "WHERE payment_status IN ('unpaid','waiting_verify','manual_review','failed') AND (archived IS NULL OR archived = 0)";
 $params = []; $types = "";
 if ($search !== '') {
     $where .= " AND (full_name LIKE ? OR phone LIKE ? OR email LIKE ?)";

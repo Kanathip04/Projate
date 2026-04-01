@@ -1101,8 +1101,8 @@ img{display:block;}
     <div class="bk-status-bar">
       <span>📋 มีการจองอยู่แล้ว?</span>
       <a href="booking_status.php">ติดตามสถานะห้องพัก →</a>
-      <a href="booking_tent_status.php">ติดตามสถานะเต็นท์ →</a>
-      <a href="booking_boat_status.php">ติดตามสถานะเรือ →</a>
+      <a href="booking_status.php">ติดตามสถานะเต็นท์ →</a>
+      <a href="booking_status.php">ติดตามสถานะเรือ →</a>
     </div>
   </div>
 </section>

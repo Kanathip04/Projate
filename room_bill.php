@@ -75,6 +75,16 @@ $bk = $st->get_result()->fetch_assoc();
 $st->close();
 if (!$bk) { header("Location: booking_room.php"); exit; }
 
+/* คำนวณเลขใบเสร็จ รูปแบบ DDMMYYYYTHAI + NNN */
+$_rbTs  = strtotime($bk['created_at']);
+$_rbDay = date('d', $_rbTs);
+$_rbMon = date('m', $_rbTs);
+$_rbYth = (int)date('Y', $_rbTs) + 543;
+$_rbDateStr = date('Y-m-d', $_rbTs);
+$_rbSeqRes  = $conn->query("SELECT COUNT(*) AS seq FROM room_bookings WHERE DATE(created_at) = '$_rbDateStr' AND id <= $id");
+$_rbSeq     = (int)($_rbSeqRes ? $_rbSeqRes->fetch_assoc()['seq'] : 1);
+$_roomBookingRef = $_rbDay . $_rbMon . $_rbYth . str_pad($_rbSeq, 3, '0', STR_PAD_LEFT);
+
 define('PROMPTPAY_ID', '0611360322');
 
 /* === อัปโหลดสลิป === */
@@ -106,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['slip'])) {
                 $uploadError = 'สลิปนี้เคยถูกใช้แล้ว กรุณาใช้สลิปใหม่';
             } else {
                 /* คำนวณราคาและคืน */
-                $bookingRef = 'ROOM-' . str_pad($id, 5, '0', STR_PAD_LEFT);
+                $bookingRef = $_roomBookingRef;
 
                 $nights = 1;
                 if (!empty($bk['checkin_date']) && !empty($bk['checkout_date'])) {
@@ -446,7 +456,7 @@ a{text-decoration:none;}
   <!-- BILL CARD -->
   <div class="card">
     <div class="bill-head">
-      <div class="bill-ref">หมายเลขการจอง ROOM-<?= str_pad($id, 5, '0', STR_PAD_LEFT) ?></div>
+      <div class="bill-ref">หมายเลขการจอง <?= htmlspecialchars($_roomBookingRef) ?></div>
       <div class="bill-name"><?= htmlspecialchars($bk['full_name']) ?></div>
       <div class="bill-dates">
         📅 <?= date('d/m/Y', strtotime($bk['checkin_date'])) ?> → <?= date('d/m/Y', strtotime($bk['checkout_date'])) ?>

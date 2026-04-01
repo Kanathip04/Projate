@@ -180,30 +180,26 @@ a{text-decoration:none;}
 .leg-dot{width:11px;height:11px;border-radius:3px;border:1.5px solid;}
 .leg-dot.a{background:#f8fafc;border-color:var(--border);}
 .leg-dot.s{background:var(--navy);border-color:var(--navy);}
-.leg-dot.p{background:#fffbeb;border-color:#fde68a;}
 .leg-dot.b{background:#f1f5f9;border-color:#cbd5e1;}
 
-.unit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-bottom:12px;}
+.unit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-bottom:12px;}
 .uc{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
-  padding:20px 10px;min-height:100px;border:2.5px solid var(--border);border-radius:16px;
-  cursor:pointer;transition:all .18s;background:#f8fafc;user-select:none;position:relative;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:14px 8px;border:2px solid var(--border);border-radius:14px;
+  cursor:pointer;transition:all .2s;background:#f8fafc;user-select:none;position:relative;
   -webkit-tap-highlight-color:transparent;
 }
 .uc input{display:none;}
-.uc:not(.ut):active{transform:scale(.96);}
-.uc:not(.ut):hover{border-color:var(--gold);background:var(--gold-dim);box-shadow:0 4px 14px rgba(201,169,110,.22);}
-.uc.us{border-color:var(--navy);background:var(--navy);box-shadow:0 6px 18px rgba(13,27,42,.28);}
-.uc.us .un{color:#fff;font-size:1rem;}
-.uc.us .ust{color:rgba(255,255,255,.7);}
-.uc.us::after{content:'✓';position:absolute;top:8px;right:10px;color:var(--gold);font-size:.9rem;font-weight:900;}
-.uc.ut{background:#f1f5f9;border-color:#e2e8f0;cursor:not-allowed;opacity:.5;}
-.uc.upv{background:#fffbeb;border-color:#fde68a;}
-.uc.upv:hover{border-color:#f59e0b;background:#fef3c7;}
-.uc.upv .ust{color:#92400e;}
-.ui{font-size:2rem;line-height:1;}
-.un{font-size:.95rem;font-weight:800;color:var(--ink);text-align:center;}
-.ust{font-size:.72rem;color:var(--muted);text-align:center;font-weight:600;}
+.uc:not(.ut):active{transform:scale(.95);}
+.uc:not(.ut):hover{border-color:var(--gold);background:var(--gold-dim);transform:translateY(-2px);box-shadow:0 4px 12px rgba(201,169,110,.18);}
+.uc.us{border-color:var(--navy);background:var(--navy);box-shadow:0 4px 14px rgba(13,27,42,.25);}
+.uc.us .un{color:#fff;}
+.uc.us .ust{color:rgba(255,255,255,.6);}
+.uc.us::after{content:'✓';position:absolute;top:5px;right:7px;color:var(--gold);font-size:.78rem;font-weight:900;}
+.uc.ut{background:#f1f5f9;border-color:#e2e8f0;cursor:not-allowed;opacity:.55;}
+.ui{font-size:1.5rem;line-height:1;}
+.un{font-size:.8rem;font-weight:800;color:var(--ink);text-align:center;}
+.ust{font-size:.67rem;color:var(--muted);text-align:center;}
 
 .unit-summary{display:none;padding:10px 14px;border-radius:10px;font-size:.82rem;font-weight:700;background:#f0fdf4;color:var(--success);border:1.5px solid #bbf7d0;margin-top:4px;}
 .unit-summary.show{display:block;}
@@ -271,8 +267,7 @@ a{text-decoration:none;}
   .submit-wrap{padding:16px 18px 24px;}
   .form-grid{grid-template-columns:1fr;}
   .date-row{grid-template-columns:1fr;}.date-sep{display:none;}
-  .unit-grid{grid-template-columns:repeat(3,1fr);gap:10px;}
-  .uc{min-height:90px;padding:16px 8px;}
+  .unit-grid{grid-template-columns:repeat(auto-fill,minmax(80px,1fr));}
 }
 </style>
 </head>
@@ -351,16 +346,15 @@ a{text-decoration:none;}
           <div class="unit-legend">
             <div class="leg"><div class="leg-dot a"></div>ว่าง</div>
             <div class="leg"><div class="leg-dot s"></div>เลือกแล้ว</div>
-            <div class="leg"><div class="leg-dot p"></div>รออนุมัติ</div>
             <div class="leg"><div class="leg-dot b"></div>จองแล้ว</div>
           </div>
           <div class="unit-grid">
             <?php for ($u = 1; $u <= $total_rooms; $u++):
-              $uSt   = $takenUnits[$u] ?? 'available';
-              $isAv  = ($uSt !== 'approved');
-              $cls   = 'uc' . ($uSt === 'approved' ? ' ut' : ($uSt === 'pending' ? ' upv' : ''));
-              $icon  = $uSt === 'approved' ? '🔒' : ($uSt === 'pending' ? '⏳' : '🏠');
-              $label = $uSt === 'approved' ? 'จองแล้ว' : ($uSt === 'pending' ? 'รออนุมัติ' : 'ว่าง');
+              $uSt  = $takenUnits[$u] ?? 'available';
+              $isAv = ($uSt !== 'approved');
+              $cls  = 'uc' . ($uSt === 'approved' ? ' ut' : '');
+              $icon = $uSt === 'approved' ? '🔒' : '🏠';
+              $label = $uSt === 'approved' ? 'จองแล้ว' : 'ว่าง';
             ?>
             <label class="<?= $cls ?>" id="ul<?= $u ?>">
               <input type="checkbox" name="room_units[]" value="<?= $u ?>" <?= $isAv?'':'disabled' ?>>

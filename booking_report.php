@@ -257,9 +257,9 @@ if ($reportType === 'monthly') {
         $chartRevenueTent[] = (float)$conn->query("SELECT COALESCE(SUM(total_price),0) s FROM equipment_bookings tb WHERE DATE(tb.created_at) BETWEEN '$mStart' AND '$mEnd' AND tb.booking_status='approved' AND (tb.archived IS NULL OR tb.archived=0)")->fetch_assoc()['s'];
     }
 } else {
-    $chartRevenue[]     = $totalRevenue;
-    $chartRevenueRoom[] = (float)$conn->query("SELECT COALESCE(SUM(r.price*GREATEST(DATEDIFF(rb.checkout_date,rb.checkin_date),1)),0) s FROM room_bookings rb LEFT JOIN rooms r ON rb.room_id=r.id WHERE " . dateWhere('rb.created_at',$dateFrom,$dateTo) . " AND rb.booking_status='approved' AND rb.archived=0")->fetch_assoc()['s'];
-    $chartRevenueTent[] = (float)$conn->query("SELECT COALESCE(SUM(total_price),0) s FROM equipment_bookings tb WHERE " . dateWhere('tb.created_at',$dateFrom,$dateTo) . " AND tb.booking_status='approved' AND (tb.archived IS NULL OR tb.archived=0)")->fetch_assoc()['s'];
+    $chartRevenue[]     = (float)$boatData['revenue'];
+    $chartRevenueRoom[] = (float)$roomData['revenue'];
+    $chartRevenueTent[] = (float)$tentData['revenue'];
 }
 
 // ── Booking list ──
@@ -1206,8 +1206,6 @@ $qnavLinks = [
 </div>
 <?php endif; ?>
 
-<?php endif; // end serviceType !== 'checkin' for charts + svc sections ?>
-
 <div class="sec-hd">รายละเอียดการจอง</div>
 <!-- Booking table -->
 <div class="lm-card" style="margin-bottom:20px;">
@@ -1321,22 +1319,24 @@ const opt = {responsive:true,maintainAspectRatio:false,plugins:{legend:{position
 
 const revOpt = {...opt,scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10},callback:v=>'฿'+v.toLocaleString()},beginAtZero:true}}};
 
+function mkChart(id,cfg){const el=document.getElementById(id);if(el)new Chart(el,cfg);}
+
 // Combined revenue chart — ทุกบริการ
-new Chart(document.getElementById('chartRevenueAll'),{type:'bar',data:{labels,datasets:[
+mkChart('chartRevenueAll',{type:'bar',data:{labels,datasets:[
   {label:'เรือพาย (฿)',   data:dRev,     backgroundColor:'rgba(29,111,173,.8)', borderRadius:4},
   {label:'ห้องพัก (฿)',   data:dRevRoom, backgroundColor:'rgba(201,169,110,.8)',borderRadius:4},
   {label:'เต็นท์ (฿)',    data:dRevTent, backgroundColor:'rgba(46,125,50,.8)',  borderRadius:4},
-]},options:{...revOpt,plugins:{...revOpt.plugins,legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}}}});
+]},options:{...revOpt}});
 
 // Pie chart
-new Chart(document.getElementById('chartPie'),{type:'doughnut',data:{
+mkChart('chartPie',{type:'doughnut',data:{
   labels:['เรือพาย','ห้องพัก','เต็นท์'],
   datasets:[{data:[<?= (int)$boatData['total'] ?>,<?= (int)$roomData['total'] ?>,<?= (int)$tentData['total'] ?>],
     backgroundColor:['rgba(29,111,173,.8)','rgba(201,169,110,.8)','rgba(46,125,50,.8)'],borderWidth:2}]
 },options:{...opt}});
 
 // Visitor chart
-new Chart(document.getElementById('chartVisitor'),{type:'bar',data:{labels,datasets:[
+mkChart('chartVisitor',{type:'bar',data:{labels,datasets:[
   {label:'ผู้เข้าใช้งาน',data:dVisit,backgroundColor:'rgba(8,145,178,.6)',borderRadius:4}
 ]},options:{...opt,scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}},beginAtZero:true}}}});
 

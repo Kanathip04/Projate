@@ -17,15 +17,19 @@ use PHPMailer\PHPMailer\Exception;
 
 $email = $_SESSION['otp_email'];
 
-// ดึงชื่อ user
-$stmt = $conn->prepare("SELECT fullname FROM users WHERE email = ? LIMIT 1");
-$stmt->bind_param("s", $email);
-$stmt->execute();
-$user = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-
-if (!$user) {
-    header('Location: register.php'); exit;
+// ดึงชื่อ user จาก session (ยังไม่ได้บันทึก DB)
+if (!empty($_SESSION['pending_register']['fullname'])) {
+    $user = ['fullname' => $_SESSION['pending_register']['fullname']];
+} else {
+    // กรณี OTP login ปกติ (ไม่ใช่สมัครใหม่)
+    $stmt = $conn->prepare("SELECT fullname FROM users WHERE email = ? LIMIT 1");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $user = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$user) {
+        header('Location: register.php'); exit;
+    }
 }
 
 // สร้าง OTP table ถ้ายังไม่มี

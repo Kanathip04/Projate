@@ -25,8 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($password !== $confirm) {
         $error_message = 'รหัสผ่านไม่ตรงกัน';
     } else {
-        // เช็คอีเมลซ้ำ
-        $stmt = $conn->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
+        // เช็คอีเมลซ้ำ (เฉพาะที่ยืนยันแล้วเท่านั้น)
+        $stmt = $conn->prepare("SELECT id FROM users WHERE email = ? AND is_verified = 1 LIMIT 1");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $stmt->store_result();
@@ -36,22 +36,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($exists) {
             $error_message = 'อีเมลนี้ถูกใช้งานแล้ว';
         } else {
-            // บันทึก user (is_verified = 0 รอยืนยัน)
+            // เก็บข้อมูลใน session ก่อน ยังไม่บันทึก DB จนกว่าจะยืนยัน OTP ผ่าน
             $hashed = password_hash($password, PASSWORD_DEFAULT);
-            $stmt   = $conn->prepare("INSERT INTO users (fullname, email, phone, password, is_verified, role, created_at) VALUES (?, ?, ?, ?, 0, 'user', NOW())");
-            $stmt->bind_param("ssss", $fullname, $email, $phone, $hashed);
-
-            if ($stmt->execute()) {
-                $stmt->close();
-                // เก็บ session สำหรับส่ง OTP
-                $_SESSION['otp_email']       = $email;
-                $_SESSION['otp_register']    = true; // บอกว่าเป็น OTP จากการสมัคร
-                header("Location: send_otp_register.php");
-                exit;
-            } else {
-                $error_message = 'เกิดข้อผิดพลาด: ' . $conn->error;
-                $stmt->close();
-            }
+            $_SESSION['pending_register'] = [
+                'fullname' => $fullname,
+                'email'    => $email,
+                'phone'    => $phone,
+                'password' => $hashed,
+            ];
+            $_SESSION['otp_email']    = $email;
+            $_SESSION['otp_register'] = true;
+            header("Location: send_otp_register.php");
+            exit;
         }
     }
 }

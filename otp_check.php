@@ -32,9 +32,18 @@ if (!$otpRow) {
 $stmt = $conn->prepare("UPDATE email_otps SET is_used = 1 WHERE id = ?");
 $stmt->bind_param("i", $otpRow['id']); $stmt->execute(); $stmt->close();
 
-// ยืนยันอีเมล
-$stmt = $conn->prepare("UPDATE users SET is_verified = 1 WHERE email = ?");
-$stmt->bind_param("s", $email); $stmt->execute(); $stmt->close();
+// ถ้าเป็นการสมัครใหม่ → INSERT user ตอนนี้
+if (!empty($_SESSION['otp_register']) && !empty($_SESSION['pending_register'])) {
+    $reg = $_SESSION['pending_register'];
+    $stmt = $conn->prepare("INSERT INTO users (fullname, email, phone, password, is_verified, role, created_at) VALUES (?, ?, ?, ?, 1, 'user', NOW())");
+    $stmt->bind_param("ssss", $reg['fullname'], $reg['email'], $reg['phone'], $reg['password']);
+    $stmt->execute(); $stmt->close();
+    unset($_SESSION['pending_register']);
+} else {
+    // กรณี OTP login ปกติ → update is_verified
+    $stmt = $conn->prepare("UPDATE users SET is_verified = 1 WHERE email = ?");
+    $stmt->bind_param("s", $email); $stmt->execute(); $stmt->close();
+}
 
 // ล้าง session OTP
 unset($_SESSION['otp_email'], $_SESSION['otp_register'], $_SESSION['otp_error']);

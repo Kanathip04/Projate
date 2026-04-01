@@ -596,7 +596,7 @@ $qnavLinks = [
     <a href="?type=monthly" class="qbtn<?= $reportType==='monthly'?' active':'' ?>">รายเดือน</a>
     <a href="?type=yearly"  class="qbtn<?= $reportType==='yearly' ?' active':'' ?>">รายปี</a>
   </div>
-  <span class="rpt-ts">รายงาน<?= $labelRange ?> · <?= date('d/m/Y H:i') ?> น.</span>
+  <span class="rpt-ts">รายงาน<?= $labelRange ?> · <?= date('H:i') ?> น.</span>
 </div>
 
 <!-- Period navigator -->

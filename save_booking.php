@@ -216,8 +216,12 @@ if ($stmt->execute()) {
 
     $stmt->close();
     $conn->close();
-    header("Location: room_bill.php?id=$booking_id");
-    exit;
+    if ($payment_method === 'ชำระเงินสด') {
+        /* cash — แสดงหน้ายืนยัน ไม่ต้องชำระออนไลน์ */
+    } else {
+        header("Location: room_bill.php?id=$booking_id");
+        exit;
+    }
 
     // ── รหัสล่างนี้ไม่ถูก execute แล้ว (เก็บไว้เพื่อ reference) ──
     ?>

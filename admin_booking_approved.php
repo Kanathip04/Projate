@@ -221,24 +221,20 @@ include 'admin_layout_top.php';
           <a href="?dq=week<?= $search?'&search='.urlencode($search):'' ?>"  class="dq-btn <?= $dateQuick==='week' ?'active':'' ?>">สัปดาห์นี้</a>
           <a href="?dq=month<?= $search?'&search='.urlencode($search):'' ?>" class="dq-btn <?= $dateQuick==='month'?'active':'' ?>">เดือนนี้</a>
           <a href="?dq=year<?= $search?'&search='.urlencode($search):'' ?>"  class="dq-btn <?= $dateQuick==='year' ?'active':'' ?>">ปีนี้</a>
-          <?php if ($dateQuick||$dateFrom||$dateTo): ?>
-            <a href="?<?= $search?'search='.urlencode($search):'' ?>" class="dq-btn" style="color:#dc2626;border-color:#fca5a5;">✕ ล้างวันที่</a>
+          <?php if ($dateQuick): ?>
+            <a href="?<?= $search?'search='.urlencode($search):'' ?>" class="dq-btn" style="color:#dc2626;border-color:#fca5a5;">✕ ล้าง</a>
           <?php endif; ?>
         </div>
-        <!-- Custom date range + search -->
-        <div class="date-range-row" style="width:100%;">
-          <div class="bk-search-wrap" style="flex:2;min-width:180px;">
+        <!-- Search row -->
+        <div style="display:flex;gap:8px;width:100%;flex-wrap:wrap;">
+          <div class="bk-search-wrap" style="flex:1;min-width:180px;">
             <input type="text" name="search" class="bk-search-input"
                    placeholder="ค้นหาชื่อ, เบอร์โทร, อีเมล, ห้องพัก..."
                    value="<?= h($search) ?>">
           </div>
-          <span style="font-size:.78rem;color:var(--muted);white-space:nowrap;">ตั้งแต่</span>
-          <input type="date" name="date_from" value="<?= h($dateFrom) ?>">
-          <span style="font-size:.78rem;color:var(--muted);">ถึง</span>
-          <input type="date" name="date_to"   value="<?= h($dateTo) ?>">
           <button type="submit" class="bk-btn bk-btn-primary">ค้นหา</button>
-          <?php if ($search||$dateFrom||$dateTo): ?>
-            <a href="<?= h($currentPage) ?>" class="bk-btn bk-btn-ghost">ล้างทั้งหมด</a>
+          <?php if ($search): ?>
+            <a href="<?= h($currentPage) ?><?= $dateQuick?'?dq='.h($dateQuick):'' ?>" class="bk-btn bk-btn-ghost">ล้าง</a>
           <?php endif; ?>
         </div>
       </div>

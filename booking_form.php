@@ -92,7 +92,7 @@ if ($checkout === '' || $checkout <= $checkin) {
     $checkout = date('Y-m-d', strtotime($checkin . ' +1 day'));
 }
 
-$approvedCount = count(array_filter($takenUnits, fn($s) => $s === 'approved'));
+$approvedCount = count(array_filter($takenUnits, fn($s) => in_array($s, ['approved','pending'])));
 $availCount = $total_rooms - $approvedCount;
 
 $roomImg = '';
@@ -348,14 +348,16 @@ a{text-decoration:none;}
             <div class="leg"><div class="leg-dot a"></div>ว่าง</div>
             <div class="leg"><div class="leg-dot s"></div>เลือกแล้ว</div>
             <div class="leg"><div class="leg-dot b"></div>จองแล้ว</div>
+            <div class="leg"><div class="leg-dot" style="background:#f59e0b;"></div>ติดการจอง</div>
           </div>
           <div class="unit-grid">
             <?php for ($u = 1; $u <= $total_rooms; $u++):
               $uSt  = $takenUnits[$u] ?? 'available';
-              $isAv = ($uSt !== 'approved');
-              $cls  = 'uc' . ($uSt === 'approved' ? ' ut' : '');
-              $icon = $uSt === 'approved' ? '🔒' : '🏠';
-              $label = $uSt === 'approved' ? 'จองแล้ว' : 'ว่าง';
+              $isTaken = in_array($uSt, ['approved','pending']);
+              $isAv = !$isTaken;
+              $cls  = 'uc' . ($isTaken ? ' ut' : '');
+              $icon = $uSt === 'approved' ? '🔒' : ($uSt === 'pending' ? '⏳' : '🏠');
+              $label = $uSt === 'approved' ? 'จองแล้ว' : ($uSt === 'pending' ? 'ติดการจอง' : 'ว่าง');
             ?>
             <label class="<?= $cls ?>" id="ul<?= $u ?>">
               <input type="checkbox" name="room_units[]" value="<?= $u ?>" <?= $isAv?'':'disabled' ?>>

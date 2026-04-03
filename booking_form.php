@@ -26,7 +26,8 @@ if ($room_id <= 0) {
 
 /* === ดึงข้อมูลห้องพัก === */
 $stmt = $conn->prepare("
-    SELECT id, room_name, room_type, price, room_size, bed_type, capacity, image, description, total_rooms
+    SELECT id, room_name, room_type, price, room_size, bed_type, capacity, image, description, total_rooms,
+           checkin_time, checkout_time
     FROM rooms
     WHERE id = ? AND status = 'show'
     LIMIT 1
@@ -376,7 +377,7 @@ a{text-decoration:none;}
           <div class="sec-num">2</div>
           <div>
             <div class="sec-title">กำหนดวันเข้าพัก</div>
-            <div class="sec-sub">เช็คอิน 14:00 น. · เช็คเอาท์ 12:00 น.</div>
+            <div class="sec-sub">เช็คอิน <?= htmlspecialchars($room['checkin_time'] ?? '14:00') ?> น. · เช็คเอาท์ <?= htmlspecialchars($room['checkout_time'] ?? '12:00') ?> น.</div>
           </div>
         </div>
         <div class="sec-body">

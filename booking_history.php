@@ -103,6 +103,15 @@ function genBillRef($type,$created_at,$id,$conn){
 
 $counts=['room'=>0,'tent'=>0,'boat'=>0];
 foreach($allBookings as $b) $counts[$b['type']]++;
+
+/* ── สร้าง map วันที่ → ประเภทบริการ สำหรับปฏิทิน ── */
+$calMap = []; // ['2026-04-01' => ['boat','room'], ...]
+foreach($allBookings as $b){
+    $d = date('Y-m-d', strtotime($b['created_at']));
+    if(!isset($calMap[$d])) $calMap[$d] = [];
+    if(!in_array($b['type'], $calMap[$d])) $calMap[$d][] = $b['type'];
+}
+$calMapJson = json_encode($calMap);
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -239,10 +248,39 @@ a{text-decoration:none;}
 .empty-icon{font-size:3.5rem;margin-bottom:16px;opacity:.35;}
 .empty h3{font-size:1.2rem;font-weight:800;margin-bottom:8px;}
 .empty p{color:var(--muted);font-size:.88rem;line-height:1.7;}
+/* ─── CALENDAR ─── */
+.cal-wrap{width:min(1000px,94%);margin:0 auto 24px;}
+.cal-box{background:var(--card);border-radius:20px;box-shadow:0 2px 12px rgba(13,27,42,.07);border:1px solid var(--border);overflow:hidden;}
+.cal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);background:#fafbfc;}
+.cal-title{font-family:'Kanit',sans-serif;font-size:1rem;font-weight:800;color:var(--ink);}
+.cal-nav{display:flex;gap:6px;}
+.cal-nav button{width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--ink);cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;transition:.15s;}
+.cal-nav button:hover{border-color:var(--gold);color:var(--gold);}
+.cal-grid{padding:14px 16px 16px;}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:6px;}
+.cal-dow span{text-align:center;font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;padding:4px 0;}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.cal-day{
+  aspect-ratio:1;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:.82rem;font-weight:600;color:var(--muted);cursor:default;position:relative;transition:.15s;
+}
+.cal-day.has-booking{cursor:pointer;font-weight:800;color:var(--ink);background:#fffbf5;border:1.5px solid rgba(201,169,110,.3);}
+.cal-day.has-booking:hover{background:#fef3c7;border-color:var(--gold);transform:scale(1.07);}
+.cal-day.active-day{background:var(--navy)!important;color:#fff!important;border-color:var(--navy)!important;}
+.cal-day.today-mark{border:2px solid var(--gold);}
+.cal-dots{display:flex;gap:2px;margin-top:2px;}
+.cal-dot{width:5px;height:5px;border-radius:50%;}
+.cal-legend{display:flex;gap:12px;padding:10px 20px;border-top:1px solid var(--border);background:#fafbfc;flex-wrap:wrap;}
+.cal-leg{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--muted);font-weight:600;}
+.cal-leg-dot{width:8px;height:8px;border-radius:50%;}
+.cal-filter-label{width:min(1000px,94%);margin:0 auto 10px;font-size:.78rem;color:var(--muted);font-weight:600;display:none;}
+.cal-filter-label.visible{display:block;}
+
 @media(max-width:640px){
   .stats-wrap{grid-template-columns:repeat(2,1fr);}
   .hero-title h1{font-size:1.9rem;}
   .d-grid{grid-template-columns:repeat(2,1fr);}
+  .cal-day{font-size:.72rem;}
 }
 </style>
 </head>
@@ -303,6 +341,32 @@ a{text-decoration:none;}
   <button class="f-chip" data-f="tent">⛺ เต็นท์ <span>(<?= $counts['tent'] ?>)</span></button>
   <button class="f-chip" data-f="boat">🚣 พายเรือ <span>(<?= $counts['boat'] ?>)</span></button>
 </div>
+
+<!-- CALENDAR -->
+<div class="cal-wrap">
+  <div class="cal-box">
+    <div class="cal-header">
+      <span class="cal-title" id="calTitle"></span>
+      <div class="cal-nav">
+        <button onclick="moveCal(-1)" title="เดือนก่อน">‹</button>
+        <button onclick="moveCal(0)"  title="เดือนนี้" style="font-size:.68rem;width:auto;padding:0 8px;">วันนี้</button>
+        <button onclick="moveCal(1)"  title="เดือนถัดไป">›</button>
+      </div>
+    </div>
+    <div class="cal-grid">
+      <div class="cal-dow">
+        <span>อา</span><span>จ</span><span>อ</span><span>พ</span><span>พฤ</span><span>ศ</span><span>ส</span>
+      </div>
+      <div class="cal-days" id="calDays"></div>
+    </div>
+    <div class="cal-legend">
+      <span class="cal-leg"><span class="cal-leg-dot" style="background:#0369a1;"></span>พายเรือ</span>
+      <span class="cal-leg"><span class="cal-leg-dot" style="background:#7c3aed;"></span>ห้องพัก</span>
+      <span class="cal-leg"><span class="cal-leg-dot" style="background:#d97706;"></span>เต็นท์</span>
+    </div>
+  </div>
+</div>
+<div class="cal-filter-label" id="calFilterLabel"></div>
 
 <!-- LIST -->
 <div class="list-wrap">
@@ -537,8 +601,126 @@ document.querySelectorAll('.f-chip').forEach(c=>{
     document.querySelectorAll('.bk').forEach(b=>{
       b.style.display=(f==='all'||b.dataset.t===f)?'':'none';
     });
+    // ล้าง calendar filter เมื่อกด filter chip
+    clearCalFilter();
   });
 });
+
+/* ══ CALENDAR ══ */
+const calMap = <?= $calMapJson ?>;
+const dotColors = {boat:'#0369a1', room:'#7c3aed', tent:'#d97706'};
+const thMonths = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+let curYear, curMonth, activeDate = null;
+
+function initCal(){
+  const now = new Date();
+  // เริ่มที่เดือนล่าสุดที่มีข้อมูล หรือเดือนก่อนหน้า
+  const dates = Object.keys(calMap).sort();
+  if(dates.length > 0){
+    const last = new Date(dates[dates.length-1]);
+    curYear = last.getFullYear();
+    curMonth = last.getMonth()+1;
+  } else {
+    curYear = now.getFullYear();
+    curMonth = now.getMonth()+1;
+  }
+  renderCal();
+}
+
+function moveCal(dir){
+  if(dir===0){ initCal(); return; }
+  curMonth += dir;
+  if(curMonth>12){curMonth=1;curYear++;}
+  if(curMonth<1){curMonth=12;curYear--;}
+  renderCal();
+}
+
+function renderCal(){
+  const title = document.getElementById('calTitle');
+  title.textContent = thMonths[curMonth] + ' ' + (curYear+543);
+
+  const firstDay = new Date(curYear, curMonth-1, 1).getDay(); // 0=อา
+  const daysInMonth = new Date(curYear, curMonth, 0).getDate();
+  const todayStr = new Date().toISOString().slice(0,10);
+
+  let html = '';
+  // empty cells before first day
+  for(let i=0;i<firstDay;i++) html += '<div class="cal-day"></div>';
+
+  for(let d=1;d<=daysInMonth;d++){
+    const mm = String(curMonth).padStart(2,'0');
+    const dd = String(d).padStart(2,'0');
+    const dateStr = `${curYear}-${mm}-${dd}`;
+    const types = calMap[dateStr] || [];
+    const hasBk = types.length > 0;
+    const isToday = (dateStr === todayStr);
+    const isActive = (dateStr === activeDate);
+
+    let cls = 'cal-day';
+    if(hasBk) cls += ' has-booking';
+    if(isToday) cls += ' today-mark';
+    if(isActive) cls += ' active-day';
+
+    let dots = '';
+    if(hasBk){
+      dots = '<div class="cal-dots">';
+      types.forEach(t=> dots += `<span class="cal-dot" style="background:${dotColors[t]};"></span>`);
+      dots += '</div>';
+    }
+
+    const onclick = hasBk ? `onclick="filterByDate('${dateStr}')"` : '';
+    html += `<div class="${cls}" data-date="${dateStr}" ${onclick} title="${hasBk?dateStr+' ('+types.length+' บริการ)':''}">
+      ${d}${dots}
+    </div>`;
+  }
+
+  document.getElementById('calDays').innerHTML = html;
+}
+
+function filterByDate(dateStr){
+  if(activeDate === dateStr){
+    // กด 2 ครั้ง = ยกเลิก filter
+    clearCalFilter();
+    return;
+  }
+  activeDate = dateStr;
+  renderCal();
+
+  // แปลงวันที่เป็น Thai
+  const dt = new Date(dateStr);
+  const mm = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const label = `${dt.getDate()} ${mm[dt.getMonth()+1]} ${dt.getFullYear()+543}`;
+
+  // ซ่อน/แสดง booking cards
+  document.querySelectorAll('.bk').forEach(b=>{
+    const bDate = b.dataset.date;
+    b.style.display = (bDate === dateStr) ? '' : 'none';
+  });
+
+  // ซ่อน date-group headers ที่ไม่ match
+  document.querySelectorAll('.date-group').forEach(dg=>{
+    dg.style.display = (dg.dataset.date === dateStr) ? '' : 'none';
+  });
+
+  // แสดง label
+  const lbl = document.getElementById('calFilterLabel');
+  lbl.textContent = `📅 กรองรายการวันที่ ${label} — กดวันเดิมอีกครั้งเพื่อดูทั้งหมด`;
+  lbl.classList.add('visible');
+
+  // scroll ไปที่ list
+  document.querySelector('.list-wrap') && document.querySelector('.list-wrap').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function clearCalFilter(){
+  activeDate = null;
+  renderCal();
+  document.querySelectorAll('.bk').forEach(b=> b.style.display='');
+  document.querySelectorAll('.date-group').forEach(dg=> dg.style.display='');
+  document.getElementById('calFilterLabel').classList.remove('visible');
+}
+
+initCal();
 </script>
 </body>
 </html>

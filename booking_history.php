@@ -8,24 +8,22 @@ $user_email = $_SESSION['email'] ?? $_SESSION['user_email'] ?? '';
 if ($user_email === '') die('ไม่พบ session email');
 
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
-
-/* ══ ดึงข้อมูลทั้ง 3 ตาราง ══ */
-$allBookings = [];
-
-/* helper: ดึง columns ที่มีจริงในตาราง */
 function safeGet($row,$key,$default=null){ return array_key_exists($key,$row)?$row[$key]:$default; }
 
+/* ══ ดึงข้อมูลย้อนหลัง (ก่อนวันนี้) ทั้ง 3 ตาราง ══ */
+$allBookings = [];
+
 /* ── ห้องพัก ── */
-$st = $conn->prepare("SELECT * FROM room_bookings WHERE email=? AND (archived IS NULL OR archived=0) AND booking_status NOT IN ('cancelled','rejected') AND DATE(created_at)=CURDATE() ORDER BY id DESC");
+$st = $conn->prepare("SELECT * FROM room_bookings WHERE email=? AND (archived IS NULL OR archived=0) AND booking_status NOT IN ('cancelled','rejected') AND DATE(created_at)<CURDATE() ORDER BY id DESC");
 if($st){
     $st->bind_param("s",$user_email); $st->execute(); $res=$st->get_result();
     while($r=$res->fetch_assoc()){
-        $r['type']      = 'room';
-        $r['title']     = $r['room_type'] ?? 'ห้องพัก';
-        $r['date_from'] = $r['checkin_date']  ?? null;
-        $r['date_to']   = $r['checkout_date'] ?? null;
-        $r['rooms_json']= $r['rooms'] ?? null;
-        $r['items_json']= null;
+        $r['type']       = 'room';
+        $r['title']      = $r['room_type'] ?? 'ห้องพัก';
+        $r['date_from']  = $r['checkin_date']  ?? null;
+        $r['date_to']    = $r['checkout_date'] ?? null;
+        $r['rooms_json'] = $r['rooms'] ?? null;
+        $r['items_json'] = null;
         $r['daily_queue_no'] = null;
         $r['boat_count']     = null;
         $allBookings[] = $r;
@@ -34,15 +32,15 @@ if($st){
 }
 
 /* ── เต็นท์ ── */
-$st2 = $conn->prepare("SELECT * FROM equipment_bookings WHERE email=? AND (archived IS NULL OR archived=0) AND booking_status NOT IN ('cancelled','rejected') AND DATE(created_at)=CURDATE() ORDER BY id DESC");
+$st2 = $conn->prepare("SELECT * FROM equipment_bookings WHERE email=? AND (archived IS NULL OR archived=0) AND booking_status NOT IN ('cancelled','rejected') AND DATE(created_at)<CURDATE() ORDER BY id DESC");
 if($st2){
     $st2->bind_param("s",$user_email); $st2->execute(); $res2=$st2->get_result();
     while($r=$res2->fetch_assoc()){
-        $r['type']      = 'tent';
-        $r['title']     = 'เช่าอุปกรณ์แคมป์ปิ้ง';
-        $r['date_from'] = $r['checkin_date']  ?? null;
-        $r['date_to']   = $r['checkout_date'] ?? null;
-        $r['rooms_json']= null;
+        $r['type']       = 'tent';
+        $r['title']      = 'เช่าอุปกรณ์แคมป์ปิ้ง';
+        $r['date_from']  = $r['checkin_date']  ?? null;
+        $r['date_to']    = $r['checkout_date'] ?? null;
+        $r['rooms_json'] = null;
         $r['total_price']= $r['total_price'] ?? null;
         $r['daily_queue_no'] = null;
         $r['boat_count']     = null;
@@ -52,7 +50,7 @@ if($st2){
 }
 
 /* ── เรือ ── */
-$st3 = $conn->prepare("SELECT * FROM boat_bookings WHERE email=? AND (archived IS NULL OR archived=0) AND booking_status NOT IN ('cancelled','rejected') AND DATE(created_at)=CURDATE() ORDER BY id DESC");
+$st3 = $conn->prepare("SELECT * FROM boat_bookings WHERE email=? AND (archived IS NULL OR archived=0) AND booking_status NOT IN ('cancelled','rejected') AND DATE(created_at)<CURDATE() ORDER BY id DESC");
 if($st3){
     $st3->bind_param("s",$user_email); $st3->execute(); $res3=$st3->get_result();
     while($r=$res3->fetch_assoc()){
@@ -111,7 +109,7 @@ foreach($allBookings as $b) $counts[$b['type']]++;
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>สถานะการจองทั้งหมด</title>
+<title>ประวัติการจอง</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&family=Kanit:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -126,14 +124,14 @@ a{text-decoration:none;}
 
 /* ─── HERO ─── */
 .hero{
-  background:linear-gradient(135deg,#0d1b2a 0%,#162032 40%,#1a2e4a 100%);
+  background:linear-gradient(135deg,#1a0a2e 0%,#2a1a4a 40%,#1a2a3a 100%);
   padding:28px 20px 80px;position:relative;overflow:hidden;
 }
 .hero::before{content:'';position:absolute;width:500px;height:500px;border-radius:50%;
   background:radial-gradient(circle,rgba(201,169,110,.12) 0%,transparent 70%);
   top:-150px;right:-100px;pointer-events:none;}
 .hero::after{content:'';position:absolute;width:300px;height:300px;border-radius:50%;
-  background:rgba(14,165,233,.06);bottom:-100px;left:-50px;pointer-events:none;}
+  background:rgba(201,169,110,.06);bottom:-100px;left:-50px;pointer-events:none;}
 .wrap{width:min(1000px,94%);margin:0 auto;}
 .hero-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;position:relative;z-index:1;}
 .hero-nav a{
@@ -147,6 +145,15 @@ a{text-decoration:none;}
 .hero-title h1{font-family:'Kanit',sans-serif;font-size:2.6rem;font-weight:900;color:#fff;line-height:1.15;margin-bottom:6px;}
 .hero-title h1 em{font-style:normal;color:var(--gold);}
 .hero-sub{font-size:.88rem;color:rgba(255,255,255,.65);font-weight:500;}
+
+/* ─── DATE GROUP ─── */
+.date-group{width:min(1000px,94%);margin:0 auto 10px;}
+.date-label{
+  display:flex;align-items:center;gap:8px;
+  font-size:.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;
+  margin:18px 0 10px;
+}
+.date-label::after{content:'';flex:1;height:1px;background:var(--border);}
 
 /* ─── STATS ─── */
 .stats-wrap{
@@ -162,11 +169,7 @@ a{text-decoration:none;}
   transition:transform .2s;
 }
 .stat-card:hover{transform:translateY(-2px);}
-.stat-ico{
-  width:44px;height:44px;border-radius:12px;
-  display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;
-}
-.stat-body{}
+.stat-ico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;}
 .stat-num{font-family:'Kanit',sans-serif;font-size:1.7rem;font-weight:900;line-height:1;}
 .stat-lbl{font-size:.72rem;color:var(--muted);font-weight:600;margin-top:2px;}
 
@@ -183,81 +186,40 @@ a{text-decoration:none;}
 
 /* ─── CARDS ─── */
 .list-wrap{width:min(1000px,94%);margin:0 auto;padding-bottom:60px;display:grid;gap:14px;}
-
-.bk{
-  background:var(--card);border-radius:20px;overflow:hidden;
+.bk{background:var(--card);border-radius:20px;overflow:hidden;
   box-shadow:0 2px 12px rgba(13,27,42,.07);border:1px solid var(--border);
-  transition:box-shadow .2s,transform .2s;
-}
+  transition:box-shadow .2s,transform .2s;}
 .bk:hover{box-shadow:0 6px 24px rgba(13,27,42,.11);transform:translateY(-1px);}
-
-/* stripe on left */
 .bk-inner{display:flex;}
 .bk-stripe{width:6px;flex-shrink:0;border-radius:0;}
-
 .bk-body{flex:1;padding:18px 20px 14px;min-width:0;}
 .bk-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
-
-.type-pill{
-  display:inline-flex;align-items:center;gap:5px;
-  padding:3px 10px;border-radius:99px;font-size:.7rem;font-weight:800;flex-shrink:0;
-}
+.type-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-size:.7rem;font-weight:800;flex-shrink:0;}
 .bk-bill{font-family:'Kanit',sans-serif;font-size:.72rem;letter-spacing:.05em;color:var(--muted);margin-top:2px;}
-
 .bk-name{font-weight:800;font-size:1rem;color:var(--ink);margin-bottom:6px;}
-
-/* info row */
 .bk-info{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:.82rem;color:var(--muted);}
 .bi{display:inline-flex;align-items:center;gap:4px;font-size:.8rem;}
 .bi b{color:var(--ink);font-weight:700;}
-
-/* price badge */
-.price-tag{
-  font-family:'Kanit',sans-serif;font-size:1.1rem;font-weight:800;
-  color:var(--gold);white-space:nowrap;
-}
-
-/* status */
-.st-pill{
-  display:inline-flex;align-items:center;gap:5px;
-  padding:5px 12px;border-radius:99px;font-size:.72rem;font-weight:700;white-space:nowrap;
-}
+.price-tag{font-family:'Kanit',sans-serif;font-size:1.1rem;font-weight:800;color:var(--gold);white-space:nowrap;}
+.st-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:99px;font-size:.72rem;font-weight:700;white-space:nowrap;}
 .st-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
-
-/* payment method */
 .pm-cash{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:.7rem;font-weight:700;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;}
 .pm-tf{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:.7rem;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;}
-
-/* action btns */
 .bk-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);}
 .btn{display:inline-flex;align-items:center;gap:5px;padding:7px 16px;border-radius:10px;
   font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;
   border:none;transition:all .2s;white-space:nowrap;text-decoration:none;}
 .btn:hover{transform:translateY(-1px);}
-.btn-dark{background:var(--navy);color:#fff;}
-.btn-dark:hover{background:var(--navy2);}
-.btn-green{background:#059669;color:#fff;}
-.btn-green:hover{background:#047857;}
-.btn-amber{background:#d97706;color:#fff;}
-.btn-amber:hover{background:#b45309;}
-.btn-red{background:#dc2626;color:#fff;}
-.btn-red:hover{background:#b91c1c;}
-.btn-blue{background:#0369a1;color:#fff;}
-.btn-blue:hover{background:#075985;}
-.btn-ghost{background:#f8fafc;color:var(--muted);border:1.5px solid var(--border);}
-.btn-ghost:hover{border-color:var(--navy);color:var(--navy);}
-
-/* expand toggle */
-.expand-row{
-  display:flex;align-items:center;gap:6px;cursor:pointer;
-  padding:10px 20px;border-top:1px solid var(--border);
-  background:#fafbfc;font-size:.78rem;font-weight:700;color:var(--muted);
-  transition:background .15s;user-select:none;
-}
+.btn-green{background:#059669;color:#fff;}.btn-green:hover{background:#047857;}
+.btn-amber{background:#d97706;color:#fff;}.btn-amber:hover{background:#b45309;}
+.btn-red{background:#dc2626;color:#fff;}.btn-red:hover{background:#b91c1c;}
+.btn-blue{background:#0369a1;color:#fff;}.btn-blue:hover{background:#075985;}
+.btn-ghost{background:#f8fafc;color:var(--muted);border:1.5px solid var(--border);}.btn-ghost:hover{border-color:var(--navy);color:var(--navy);}
+.expand-row{display:flex;align-items:center;gap:6px;cursor:pointer;padding:10px 20px;
+  border-top:1px solid var(--border);background:#fafbfc;font-size:.78rem;font-weight:700;
+  color:var(--muted);transition:background .15s;user-select:none;}
 .expand-row:hover{background:#f1f5f9;color:var(--ink);}
 .expand-arrow{transition:transform .25s;font-size:.7rem;}
-
-/* detail panel */
 .bk-detail{display:none;padding:18px 20px 20px;background:#f8fafc;border-top:1px dashed var(--border);}
 .bk-detail.open{display:block;}
 .detail-section{margin-bottom:14px;}
@@ -268,25 +230,15 @@ a{text-decoration:none;}
 .d-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
 .d-lbl{font-size:.66rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
 .d-val{font-size:.85rem;font-weight:700;color:var(--ink);}
-.d-val.green{color:#059669;}
-.d-val.amber{color:#d97706;}
-.d-val.red{color:#dc2626;}
-
-/* items list */
+.d-val.green{color:#059669;}.d-val.amber{color:#d97706;}.d-val.red{color:#dc2626;}
 .item-row{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;
-  border-radius:8px;background:var(--card);border:1px solid var(--border);
-  font-size:.8rem;margin-bottom:5px;}
-.item-row:last-child{margin-bottom:0;}
-.item-name{font-weight:700;color:var(--ink);}
-.item-qty{color:var(--muted);}
-
-/* empty */
+  border-radius:8px;background:var(--card);border:1px solid var(--border);font-size:.8rem;margin-bottom:5px;}
+.item-name{font-weight:700;color:var(--ink);}.item-qty{color:var(--muted);}
 .empty{background:var(--card);border-radius:20px;padding:70px 24px;text-align:center;
   box-shadow:0 2px 12px rgba(13,27,42,.07);border:1px solid var(--border);}
 .empty-icon{font-size:3.5rem;margin-bottom:16px;opacity:.35;}
 .empty h3{font-size:1.2rem;font-weight:800;margin-bottom:8px;}
 .empty p{color:var(--muted);font-size:.88rem;line-height:1.7;}
-
 @media(max-width:640px){
   .stats-wrap{grid-template-columns:repeat(2,1fr);}
   .hero-title h1{font-size:1.9rem;}
@@ -300,14 +252,14 @@ a{text-decoration:none;}
   <div class="wrap">
     <nav class="hero-nav">
       <a href="index.php">← หน้าหลัก</a>
+      <a href="booking_status.php" style="border-color:rgba(201,169,110,.5);color:var(--gold);">📋 การจองวันนี้</a>
       <a href="booking_boat.php">🚣 จองพายเรือ</a>
       <a href="booking_room.php">🏨 จองห้องพัก</a>
       <a href="booking_tent.php">⛺ จองเต็นท์</a>
-      <a href="booking_history.php" style="border-color:rgba(201,169,110,.5);color:var(--gold);">🕐 ประวัติการจอง</a>
     </nav>
     <div class="hero-title">
-      <h1>สถานะ<em>การจอง</em></h1>
-      <p class="hero-sub">รายการจองวันนี้ของคุณ · ห้องพัก · เต็นท์ · พายเรือ</p>
+      <h1>ประวัติ<em>การจอง</em></h1>
+      <p class="hero-sub">รายการจองทั้งหมดก่อนวันนี้ · ห้องพัก · เต็นท์ · พายเรือ</p>
     </div>
   </div>
 </section>
@@ -315,7 +267,7 @@ a{text-decoration:none;}
 <!-- STATS -->
 <div class="stats-wrap">
   <div class="stat-card">
-    <div class="stat-ico" style="background:#f0f9ff;color:#0369a1;">📋</div>
+    <div class="stat-ico" style="background:#f5f3ff;color:#7c3aed;">🕐</div>
     <div class="stat-body">
       <div class="stat-num" style="color:var(--ink);"><?= count($allBookings) ?></div>
       <div class="stat-lbl">รายการทั้งหมด</div>
@@ -356,61 +308,69 @@ a{text-decoration:none;}
 <div class="list-wrap">
 <?php if(empty($allBookings)): ?>
   <div class="empty">
-    <div class="empty-icon">📭</div>
-    <h3>ไม่มีรายการจองวันนี้</h3>
-    <p>รายการจองของวันนี้จะแสดงที่นี่<br>หากต้องการดูประวัติการจองวันก่อนหน้า <a href="booking_history.php" style="color:var(--gold);font-weight:700;">คลิกที่นี่</a></p>
+    <div class="empty-icon">🕐</div>
+    <h3>ยังไม่มีประวัติการจอง</h3>
+    <p>รายการจองจากวันก่อนหน้าจะแสดงที่นี่</p>
   </div>
-<?php else: foreach($allBookings as $i=>$b):
-  $ti    = typeInfo($b['type']);
-  $bkSt  = $b['booking_status'] ?? 'pending';
-  $payS  = $b['payment_status'] ?? null;
-  $pm    = trim($b['payment_method'] ?? '');
-  $isCash= ($pm === 'เงินสด' || $pm === 'cash');
-  $price = (float)($b['total_price'] ?? 0);
-  $billRef = $b['booking_ref'] ?? genBillRef($b['type'], $b['created_at'], $b['id'], $conn);
+<?php else:
+  $prevDate = null;
+  foreach($allBookings as $i=>$b):
+    $ti    = typeInfo($b['type']);
+    $bkSt  = $b['booking_status'] ?? 'pending';
+    $payS  = $b['payment_status'] ?? null;
+    $pm    = trim($b['payment_method'] ?? '');
+    $isCash= ($pm === 'เงินสด' || $pm === 'cash');
+    $price = (float)($b['total_price'] ?? 0);
+    $billRef = $b['booking_ref'] ?? genBillRef($b['type'], $b['created_at'], $b['id'], $conn);
 
-  /* ── decode extra info ── */
-  $roomsArr = $b['rooms_json'] ? json_decode($b['rooms_json'],true) : [];
-  $itemsArr = [];
-  if(!empty($b['items_json'])){
-    $dec=json_decode($b['items_json'],true);
-    if(is_array($dec)) foreach($dec as $it){
-      $n=$it['name']??($it['tent_name']??'');
-      $q=(int)($it['qty']??($it['quantity']??1));
-      $u=$it['unit']??'ชิ้น';
-      $p=(float)($it['price_per_night']??($it['price']??0));
-      if($n) $itemsArr[]=['name'=>$n,'qty'=>$q,'unit'=>$u,'price'=>$p];
+    $roomsArr = $b['rooms_json'] ? json_decode($b['rooms_json'],true) : [];
+    $itemsArr = [];
+    if(!empty($b['items_json'])){
+      $dec=json_decode($b['items_json'],true);
+      if(is_array($dec)) foreach($dec as $it){
+        $n=$it['name']??($it['tent_name']??'');
+        $q=(int)($it['qty']??($it['quantity']??1));
+        $u=$it['unit']??'ชิ้น';
+        $p=(float)($it['price_per_night']??($it['price']??0));
+        if($n) $itemsArr[]=['name'=>$n,'qty'=>$q,'unit'=>$u,'price'=>$p];
+      }
     }
-  }
 
-  /* nights */
-  $nights=1;
-  if(!empty($b['date_from'])&&!empty($b['date_to'])&&$b['date_from']!==$b['date_to']){
-    $nights=max(1,(int)(new DateTime($b['date_from']))->diff(new DateTime($b['date_to']))->days);
-  }
+    $nights=1;
+    if(!empty($b['date_from'])&&!empty($b['date_to'])&&$b['date_from']!==$b['date_to'])
+      $nights=max(1,(int)(new DateTime($b['date_from']))->diff(new DateTime($b['date_to']))->days);
 
-  /* needPay — cash bookings pay at counter, no online payment needed */
-  $needPay=(in_array($b['type'],['boat','tent'])&&in_array($payS,['unpaid','failed',null,''])&&!$isCash);
-  $isWaiting=($payS==='waiting_verify'||$payS==='manual_review');
-  $isPaid=($payS==='paid'||$bkSt==='approved');
+    $needPay=(in_array($b['type'],['boat','tent'])&&in_array($payS,['unpaid','failed',null,''])&&!$isCash);
+    $isWaiting=($payS==='waiting_verify'||$payS==='manual_review');
 
-  /* status color */
-  $dotColor=bsDot($bkSt);
-  $stBg=['pending'=>'#fef9c3','approved'=>'#d1fae5','rejected'=>'#fee2e2',
-         'cancelled'=>'#f3f4f6','completed'=>'#dbeafe','paid'=>'#d1fae5',
-         'waiting_verify'=>'#fef3c7','failed'=>'#fee2e2','manual_review'=>'#fef3c7',
-         'unpaid'=>'#f3f4f6'][$bkSt]??'#f3f4f6';
-  $stTx=['pending'=>'#92400e','approved'=>'#065f46','rejected'=>'#991b1b',
-         'cancelled'=>'#374151','completed'=>'#1d4ed8','paid'=>'#065f46',
-         'waiting_verify'=>'#92400e','failed'=>'#991b1b','manual_review'=>'#92400e',
-         'unpaid'=>'#6b7280'][$bkSt]??'#6b7280';
+    $dotColor=bsDot($bkSt);
+    $stBg=['pending'=>'#fef9c3','approved'=>'#d1fae5','rejected'=>'#fee2e2',
+           'cancelled'=>'#f3f4f6','completed'=>'#dbeafe','paid'=>'#d1fae5',
+           'waiting_verify'=>'#fef3c7','failed'=>'#fee2e2','manual_review'=>'#fef3c7',
+           'unpaid'=>'#f3f4f6'][$bkSt]??'#f3f4f6';
+    $stTx=['pending'=>'#92400e','approved'=>'#065f46','rejected'=>'#991b1b',
+           'cancelled'=>'#374151','completed'=>'#1d4ed8','paid'=>'#065f46',
+           'waiting_verify'=>'#92400e','failed'=>'#991b1b','manual_review'=>'#92400e',
+           'unpaid'=>'#6b7280'][$bkSt]??'#6b7280';
+
+    /* แสดง date separator */
+    $bookDate = date('Y-m-d', strtotime($b['created_at']));
+    if($bookDate !== $prevDate):
+      $prevDate = $bookDate;
+      $thM=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      $ts=strtotime($bookDate);
+      $dLabel=date('j',$ts).' '.$thM[(int)date('m',$ts)].' '.(date('Y',$ts)+543);
 ?>
+</div>
+<div class="date-group"><div class="date-label">📅 <?= $dLabel ?></div></div>
+<div class="list-wrap" style="margin-top:0;">
+<?php endif; ?>
+
 <div class="bk" data-t="<?= $b['type'] ?>">
   <div class="bk-inner">
     <div class="bk-stripe" style="background:linear-gradient(<?= $ti['grad'] ?>);"></div>
     <div class="bk-body">
 
-      <!-- HEAD ROW -->
       <div class="bk-head">
         <div>
           <span class="type-pill" style="background:<?= $ti['bg'] ?>;color:<?= $ti['color'] ?>;">
@@ -424,7 +384,6 @@ a{text-decoration:none;}
         </span>
       </div>
 
-      <!-- TITLE -->
       <div class="bk-name"><?= h($b['title']??'-') ?>
         <?php if($b['type']==='boat'&&!empty($b['daily_queue_no'])): ?>
           <span style="font-family:'Kanit',sans-serif;font-size:.75rem;padding:2px 8px;background:#f0fdf4;color:#15803d;border-radius:6px;margin-left:6px;font-weight:800;">
@@ -433,7 +392,6 @@ a{text-decoration:none;}
         <?php endif; ?>
       </div>
 
-      <!-- INFO ROW -->
       <div class="bk-info">
         <?php if($b['date_from']): ?>
         <span class="bi">📅 <b><?= thDate($b['date_from']) ?><?= ($b['date_to']&&$b['date_to']!==$b['date_from']) ? ' → '.thDate($b['date_to']) : '' ?></b></span>
@@ -463,7 +421,6 @@ a{text-decoration:none;}
         <span class="bi" style="margin-left:auto;">🕐 <?= date('d/m/Y H:i',strtotime($b['created_at'])) ?></span>
       </div>
 
-      <!-- ACTION BUTTONS -->
       <div class="bk-actions">
         <?php if($b['type']==='boat'&&$needPay&&!empty($b['booking_ref'])): ?>
           <a href="payment_slip.php?ref=<?= urlencode($b['booking_ref']) ?>" class="btn btn-blue">💳 ชำระเงิน</a>
@@ -472,13 +429,11 @@ a{text-decoration:none;}
         <?php elseif($b['type']==='room'&&in_array($payS,['unpaid',null,''])&&$bkSt==='approved'): ?>
           <a href="room_bill.php?id=<?= (int)$b['id'] ?>" class="btn btn-blue">💳 ชำระเงิน</a>
         <?php endif; ?>
-
         <?php if($isWaiting&&$b['type']==='tent'): ?>
           <a href="equipment_bill.php?id=<?= (int)$b['id'] ?>" class="btn btn-amber">⏳ ติดตามสถานะ</a>
         <?php elseif($isWaiting&&$b['type']==='room'): ?>
           <a href="room_bill.php?id=<?= (int)$b['id'] ?>" class="btn btn-amber">⏳ ติดตามสถานะ</a>
         <?php endif; ?>
-
         <?php if($b['type']==='tent'&&$payS==='paid'): ?>
           <a href="equipment_ticket.php?id=<?= (int)$b['id'] ?>" class="btn btn-green">🎫 ดูใบรับเงิน</a>
         <?php endif; ?>
@@ -496,14 +451,11 @@ a{text-decoration:none;}
     </div>
   </div>
 
-  <!-- EXPAND TOGGLE -->
   <div class="expand-row" onclick="toggle(<?= $i ?>)">
     <span class="expand-arrow" id="arr-<?= $i ?>">▶</span> รายละเอียดทั้งหมด
   </div>
 
-  <!-- DETAIL PANEL -->
   <div class="bk-detail" id="det-<?= $i ?>">
-
     <div class="detail-section">
       <div class="detail-title">ข้อมูลผู้จอง</div>
       <div class="d-grid">
@@ -517,7 +469,6 @@ a{text-decoration:none;}
         <?php endif; ?>
       </div>
     </div>
-
     <div class="detail-section">
       <div class="detail-title">รายละเอียดการจอง</div>
       <div class="d-grid">
@@ -529,68 +480,43 @@ a{text-decoration:none;}
         </div>
         <?php endif; ?>
         <?php if($b['date_to']&&$b['date_to']!==$b['date_from']): ?>
-        <div class="d-card">
-          <div class="d-lbl">เช็คเอาท์</div>
-          <div class="d-val"><?= thDate($b['date_to']) ?></div>
-        </div>
-        <div class="d-card">
-          <div class="d-lbl">จำนวนคืน</div>
-          <div class="d-val"><?= $nights ?> คืน</div>
-        </div>
+        <div class="d-card"><div class="d-lbl">เช็คเอาท์</div><div class="d-val"><?= thDate($b['date_to']) ?></div></div>
+        <div class="d-card"><div class="d-lbl">จำนวนคืน</div><div class="d-val"><?= $nights ?> คืน</div></div>
         <?php endif; ?>
         <?php if($b['guests']): ?>
         <div class="d-card"><div class="d-lbl">จำนวนคน</div><div class="d-val"><?= (int)$b['guests'] ?> คน</div></div>
-        <?php endif; ?>
-        <?php if($b['type']==='boat'&&!empty($b['boat_count'])): ?>
-        <div class="d-card"><div class="d-lbl">จำนวนเรือ</div><div class="d-val"><?= (int)$b['boat_count'] ?> ลำ</div></div>
         <?php endif; ?>
         <?php if($price>0): ?>
         <div class="d-card"><div class="d-lbl">ยอดรวม</div><div class="d-val green">฿<?= number_format($price,2) ?></div></div>
         <?php endif; ?>
         <?php if($pm): ?>
-        <div class="d-card">
-          <div class="d-lbl">วิธีชำระ</div>
-          <div class="d-val"><?= $isCash ? '💵 เงินสด' : '🏦 '.h($pm) ?></div>
-        </div>
+        <div class="d-card"><div class="d-lbl">วิธีชำระ</div><div class="d-val"><?= $isCash ? '💵 เงินสด' : '🏦 '.h($pm) ?></div></div>
         <?php endif; ?>
-        <div class="d-card">
-          <div class="d-lbl">สถานะการจอง</div>
-          <div class="d-val" style="color:<?= $stTx ?>"><?= bsText($bkSt) ?></div>
-        </div>
+        <div class="d-card"><div class="d-lbl">สถานะการจอง</div><div class="d-val" style="color:<?= $stTx ?>"><?= bsText($bkSt) ?></div></div>
         <?php if($payS): ?>
-        <div class="d-card">
-          <div class="d-lbl">สถานะชำระเงิน</div>
-          <div class="d-val" style="color:<?= bsDot($payS) ?>"><?= bsText($payS) ?></div>
-        </div>
+        <div class="d-card"><div class="d-lbl">สถานะชำระเงิน</div><div class="d-val" style="color:<?= bsDot($payS) ?>"><?= bsText($payS) ?></div></div>
         <?php endif; ?>
       </div>
     </div>
-
     <?php if($b['type']==='room'&&!empty($roomsArr)): ?>
     <div class="detail-section">
       <div class="detail-title">ห้องพักที่จอง</div>
       <?php foreach($roomsArr as $rm): ?>
-      <div class="item-row">
-        <span class="item-name">🔑 ห้อง <?= h($rm) ?></span>
-      </div>
+      <div class="item-row"><span class="item-name">🔑 ห้อง <?= h($rm) ?></span></div>
       <?php endforeach; ?>
     </div>
     <?php endif; ?>
-
     <?php if($b['type']==='tent'&&!empty($itemsArr)): ?>
     <div class="detail-section">
       <div class="detail-title">อุปกรณ์ที่เช่า</div>
       <?php foreach($itemsArr as $it): ?>
       <div class="item-row">
         <span class="item-name">🎒 <?= h($it['name']) ?></span>
-        <span class="item-qty"><?= $it['qty'] ?> <?= h($it['unit']) ?>
-          <?= $it['price']>0 ? ' · ฿'.number_format($it['price'],0).'/คืน' : '' ?>
-        </span>
+        <span class="item-qty"><?= $it['qty'] ?> <?= h($it['unit']) ?><?= $it['price']>0?' · ฿'.number_format($it['price'],0).'/คืน':'' ?></span>
       </div>
       <?php endforeach; ?>
     </div>
     <?php endif; ?>
-
   </div>
 </div>
 <?php endforeach; endif; ?>

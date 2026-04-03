@@ -19,7 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'update_profile') {
         $fullname   = trim($_POST['fullname']   ?? '');
-        $phone      = trim($_POST['phone']      ?? '');
+        $phone      = preg_replace('/[^0-9]/', '', trim($_POST['phone'] ?? ''));
+        if (strlen($phone) > 10) $phone = substr($phone, 0, 10);
         $gender     = trim($_POST['gender']     ?? ''); $gender = $gender === '' ? null : $gender;
         $birth_date = trim($_POST['birth_date'] ?? ''); $birth_date = $birth_date === '' ? null : $birth_date;
         $address    = trim($_POST['address']    ?? '');
@@ -431,8 +432,10 @@ if ($isAdmin) {
               <label>เบอร์โทรศัพท์</label>
               <div class="pf-input-wrap">
                 <span class="pf-input-icon">📱</span>
-                <input class="pf-input" type="text" name="phone"
-                       value="<?= h($user['phone'] ?? '') ?>" placeholder="08x-xxx-xxxx">
+                <input class="pf-input" type="tel" name="phone"
+                       value="<?= h($user['phone'] ?? '') ?>" placeholder="08x-xxx-xxxx"
+                       maxlength="10" pattern="[0-9]{9,10}"
+                       oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)">
               </div>
             </div>
 

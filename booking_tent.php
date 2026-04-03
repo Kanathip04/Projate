@@ -89,9 +89,33 @@ if (!empty($_SESSION['user_id'])) {
 }
 
 /* === ดึงอุปกรณ์ === */
+// เพิ่ม stock_limit ถ้ายังไม่มี
+$chkLim = $conn->query("SHOW COLUMNS FROM tent_equipment LIKE 'stock_limit'");
+if ($chkLim && $chkLim->num_rows === 0) {
+    $conn->query("ALTER TABLE tent_equipment ADD COLUMN `stock_limit` INT DEFAULT NULL AFTER `note`");
+}
 $equipResult = $conn->query("SELECT * FROM tent_equipment WHERE is_available=1 ORDER BY sort_order, id");
 $equipList = [];
 while ($eq = $equipResult->fetch_assoc()) $equipList[] = $eq;
+
+/* === คำนวณจำนวนที่ถูกจองไปแล้ว (pending/approved, checkout >= today) === */
+$bookedQty = []; // [item_id => qty]
+$activeBookings = $conn->query(
+    "SELECT items_json FROM equipment_bookings
+     WHERE booking_status IN ('pending','approved')
+     AND (archived IS NULL OR archived=0)
+     AND checkout_date >= CURDATE()"
+);
+if ($activeBookings) {
+    while ($bk = $activeBookings->fetch_assoc()) {
+        $items = json_decode($bk['items_json'] ?? '[]', true);
+        if (!is_array($items)) continue;
+        foreach ($items as $it) {
+            $iid = (int)($it['id'] ?? 0);
+            if ($iid > 0) $bookedQty[$iid] = ($bookedQty[$iid] ?? 0) + (int)($it['qty'] ?? 1);
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -144,9 +168,14 @@ a{text-decoration:none;}
   padding:16px 18px;display:flex;align-items:center;gap:14px;
   box-shadow:0 2px 10px rgba(26,26,46,.05);transition:.2s;}
 .equip-item.in-cart{border-color:var(--gold);background:#fffdf7;}
+.equip-item.out-of-stock{opacity:.55;pointer-events:none;}
 .equip-info{flex:1;}
 .equip-name{font-size:16px;font-weight:700;color:var(--ink);}
 .equip-note-txt{font-size:12px;color:var(--muted);margin-top:2px;}
+.stock-badge{display:inline-block;margin-top:5px;font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;}
+.stock-ok{background:#f0fdf4;color:#16a34a;}
+.stock-low{background:#fff7ed;color:#d97706;}
+.stock-out{background:#fef2f2;color:#dc2626;}
 .equip-price-badge{font-size:17px;font-weight:800;color:var(--gold-dark);white-space:nowrap;}
 .equip-unit-txt{font-size:12px;color:var(--muted);font-weight:500;}
 
@@ -268,12 +297,28 @@ a{text-decoration:none;}
         <div style="font-size:14px;color:var(--muted);">เลือกจำนวนและกด "เพิ่มตะกร้า" ได้เลย</div>
       </div>
       <div class="equip-card-grid" id="equipGrid">
-        <?php foreach ($equipList as $eq): ?>
-        <div class="equip-item" id="item-<?= $eq['id'] ?>" data-id="<?= $eq['id'] ?>" data-name="<?= htmlspecialchars($eq['name'],ENT_QUOTES) ?>" data-price="<?= (float)$eq['price'] ?>" data-unit="<?= htmlspecialchars($eq['unit'],ENT_QUOTES) ?>">
+        <?php foreach ($equipList as $eq):
+          $eid      = (int)$eq['id'];
+          $hasLimit = ($eq['stock_limit'] !== null && $eq['stock_limit'] !== '');
+          $booked   = $bookedQty[$eid] ?? 0;
+          $remaining = $hasLimit ? max(0, (int)$eq['stock_limit'] - $booked) : null;
+          $isOut    = $hasLimit && $remaining <= 0;
+        ?>
+        <div class="equip-item<?= $isOut ? ' out-of-stock' : '' ?>" id="item-<?= $eid ?>"
+             data-id="<?= $eid ?>"
+             data-name="<?= htmlspecialchars($eq['name'],ENT_QUOTES) ?>"
+             data-price="<?= (float)$eq['price'] ?>"
+             data-unit="<?= htmlspecialchars($eq['unit'],ENT_QUOTES) ?>"
+             data-max="<?= $remaining !== null ? $remaining : 999 ?>">
           <div class="equip-info">
             <div class="equip-name"><?= htmlspecialchars($eq['name']) ?></div>
             <?php if (!empty($eq['note'])): ?>
             <div class="equip-note-txt"><?= htmlspecialchars($eq['note']) ?></div>
+            <?php endif; ?>
+            <?php if ($hasLimit): ?>
+            <div class="stock-badge <?= $isOut ? 'stock-out' : ($remaining <= 3 ? 'stock-low' : 'stock-ok') ?>">
+              <?= $isOut ? '❌ หมดแล้ว' : "✅ คงเหลือ {$remaining} {$eq['unit']}" ?>
+            </div>
             <?php endif; ?>
           </div>
           <div style="text-align:right;min-width:72px;">
@@ -281,11 +326,15 @@ a{text-decoration:none;}
             <div class="equip-unit-txt">/ <?= htmlspecialchars($eq['unit']) ?></div>
           </div>
           <div class="qty-wrap">
-            <button class="qty-btn" onclick="changeQty(<?= $eq['id'] ?>,-1)">−</button>
-            <input type="text" class="qty-num" id="qty-<?= $eq['id'] ?>" value="1" readonly>
-            <button class="qty-btn" onclick="changeQty(<?= $eq['id'] ?>,1)">+</button>
+            <button class="qty-btn" onclick="changeQty(<?= $eid ?>,-1)" <?= $isOut ? 'disabled' : '' ?>>−</button>
+            <input type="text" class="qty-num" id="qty-<?= $eid ?>" value="1" readonly>
+            <button class="qty-btn" onclick="changeQty(<?= $eid ?>,1)" <?= $isOut ? 'disabled' : '' ?>>+</button>
           </div>
-          <button class="add-cart-btn idle" id="btn-<?= $eq['id'] ?>" onclick="addToCart(<?= $eq['id'] ?>)">+ ตะกร้า</button>
+          <button class="add-cart-btn idle" id="btn-<?= $eid ?>"
+                  onclick="addToCart(<?= $eid ?>)"
+                  <?= $isOut ? 'disabled' : '' ?>>
+            <?= $isOut ? 'หมด' : '+ ตะกร้า' ?>
+          </button>
         </div>
         <?php endforeach; ?>
         <?php if (empty($equipList)): ?>

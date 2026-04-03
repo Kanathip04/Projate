@@ -426,11 +426,11 @@ a{text-decoration:none;}
       $dLabel=date('j',$ts).' '.$thM[(int)date('m',$ts)].' '.(date('Y',$ts)+543);
 ?>
 </div>
-<div class="date-group"><div class="date-label">📅 <?= $dLabel ?></div></div>
+<div class="date-group" data-date="<?= h($bookDate) ?>"><div class="date-label">📅 <?= $dLabel ?></div></div>
 <div class="list-wrap" style="margin-top:0;">
 <?php endif; ?>
 
-<div class="bk" data-t="<?= $b['type'] ?>">
+<div class="bk" data-t="<?= $b['type'] ?>" data-date="<?= h($bookDate) ?>">
   <div class="bk-inner">
     <div class="bk-stripe" style="background:linear-gradient(<?= $ti['grad'] ?>);"></div>
     <div class="bk-body">

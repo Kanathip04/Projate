@@ -437,11 +437,12 @@ const cart = {}; // id -> {name, price, unit, qty}
 
 function changeQty(id, delta) {
   const input = document.getElementById('qty-' + id);
+  const el = document.getElementById('item-' + id);
+  const maxStock = parseInt(el.dataset.max) || 999;
   let v = parseInt(input.value) + delta;
   if (v < 1) v = 1;
-  if (v > 99) v = 99;
+  if (v > maxStock) { v = maxStock; alert('ไม่สามารถเลือกได้มากกว่าจำนวนคงเหลือ (' + maxStock + ')'); }
   input.value = v;
-  // if already in cart, update live
   if (cart[id]) { cart[id].qty = v; renderCart(); }
 }
 

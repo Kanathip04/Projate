@@ -33,9 +33,15 @@ $conn->query("CREATE TABLE IF NOT EXISTS `tent_equipment` (
     `price` DECIMAL(10,2) DEFAULT 0,
     `unit` VARCHAR(50) DEFAULT '',
     `note` VARCHAR(500) DEFAULT '',
+    `stock_limit` INT DEFAULT NULL,
     `sort_order` INT DEFAULT 0,
     `is_available` TINYINT(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+// เพิ่ม column stock_limit ถ้ายังไม่มี (live server)
+$chk = $conn->query("SHOW COLUMNS FROM tent_equipment LIKE 'stock_limit'");
+if ($chk && $chk->num_rows === 0) {
+    $conn->query("ALTER TABLE tent_equipment ADD COLUMN `stock_limit` INT DEFAULT NULL AFTER `note`");
+}
 
 /* === seed ข้อมูลเริ่มต้นอุปกรณ์ === */
 $eqCount = (int)$conn->query("SELECT COUNT(*) c FROM tent_equipment")->fetch_assoc()['c'];
@@ -128,13 +134,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $eq_price = max(0, (float)($_POST['eq_price'] ?? 0));
         $eq_unit  = trim($_POST['eq_unit'] ?? '');
         $eq_note  = trim($_POST['eq_note'] ?? '');
+        $eq_limit = trim($_POST['eq_limit'] ?? '') !== '' ? max(1, (int)$_POST['eq_limit']) : null;
         if ($eq_name !== '') {
             if ($eq_id > 0) {
-                $st = $conn->prepare("UPDATE tent_equipment SET name=?,price=?,unit=?,note=? WHERE id=?");
-                $st->bind_param("sdssi", $eq_name,$eq_price,$eq_unit,$eq_note,$eq_id);
+                $st = $conn->prepare("UPDATE tent_equipment SET name=?,price=?,unit=?,note=?,stock_limit=? WHERE id=?");
+                $st->bind_param("sdssii", $eq_name,$eq_price,$eq_unit,$eq_note,$eq_limit,$eq_id);
             } else {
-                $st = $conn->prepare("INSERT INTO tent_equipment (name,price,unit,note) VALUES (?,?,?,?)");
-                $st->bind_param("sdss", $eq_name,$eq_price,$eq_unit,$eq_note);
+                $st = $conn->prepare("INSERT INTO tent_equipment (name,price,unit,note,stock_limit) VALUES (?,?,?,?,?)");
+                $st->bind_param("sdssi", $eq_name,$eq_price,$eq_unit,$eq_note,$eq_limit);
             }
             $st->execute(); $st->close();
             $message = "บันทึกรายการอุปกรณ์เรียบร้อยแล้ว";
@@ -349,6 +356,11 @@ include 'admin_layout_top.php';
                value="<?= h($editEq['note'] ?? '') ?>">
       </div>
       <div class="f-grp">
+        <label>จำนวนจำกัด</label>
+        <input type="number" name="eq_limit" min="1" placeholder="ไม่จำกัด"
+               value="<?= ($editEq && $editEq['stock_limit'] !== null) ? (int)$editEq['stock_limit'] : '' ?>">
+      </div>
+      <div class="f-grp">
         <label>&nbsp;</label>
         <button type="submit" class="eq-add-btn <?= $editEq ? 'btn-edit' : 'btn-add' ?>">
           <?= $editEq ? '💾 บันทึก' : '➕ เพิ่ม' ?>
@@ -369,6 +381,7 @@ include 'admin_layout_top.php';
           <th>รายการ</th>
           <th>ราคา</th>
           <th>หน่วย</th>
+          <th>จำนวนจำกัด</th>
           <th>หมายเหตุ</th>
           <th style="width:120px;">จัดการ</th>
         </tr>

@@ -66,6 +66,7 @@ if ($colRow && (int)$colRow['cnt'] > 0) {
     $takenStmt = $conn->prepare(
         "SELECT room_units, booking_status FROM room_bookings
          WHERE room_id = ? AND booking_status IN ('pending','approved')
+         AND (archived IS NULL OR archived=0)
          AND room_units IS NOT NULL AND room_units != ''"
     );
     $takenStmt->bind_param("i", $room_id);

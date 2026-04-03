@@ -309,7 +309,7 @@ include 'admin_layout_top.php';
   </div>
   <form method="POST" style="display:flex;align-items:center;gap:8px;">
     <input type="hidden" name="save_restore_time" value="1">
-    <input type="time" name="restore_time" value="<?= h($restoreTime) ?>"
+    <input type="time" name="restore_time" value="<?= htmlspecialchars($restoreTime, ENT_QUOTES) ?>"
            style="padding:8px 12px;border:1.5px solid #e8e4de;border-radius:8px;
                   font-family:'Sarabun',sans-serif;font-size:.88rem;color:var(--ink);">
     <button type="submit"

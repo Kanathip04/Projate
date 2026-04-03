@@ -1331,7 +1331,7 @@ mkChart('chartRevenueAll',{type:'bar',data:{labels,datasets:[
 // Pie chart
 mkChart('chartPie',{type:'doughnut',data:{
   labels:['เรือพาย','ห้องพัก','เต็นท์'],
-  datasets:[{data:[<?= (int)$boatData['total'] ?>,<?= (int)$roomData['total'] ?>,<?= (int)$tentData['total'] ?>],
+  datasets:[{data:[<?= (int)$widgetBoat ?>,<?= (int)$widgetRoom ?>,<?= (int)$widgetTent ?>],
     backgroundColor:['rgba(29,111,173,.8)','rgba(201,169,110,.8)','rgba(46,125,50,.8)'],borderWidth:2}]
 },options:{...opt}});
 

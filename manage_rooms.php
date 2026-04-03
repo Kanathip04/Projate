@@ -15,6 +15,23 @@ if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
 $pageTitle  = "จัดการห้องพัก";
 $activeMenu = "rooms";
 
+// ── Auto-restore: archive booking ที่ checkout_date ผ่านไปแล้ว ──
+$autoRestored = (int)$conn->query(
+    "SELECT COUNT(*) c FROM room_bookings
+     WHERE checkout_date < CURDATE()
+     AND booking_status IN ('approved','pending')
+     AND (archived IS NULL OR archived=0)"
+)->fetch_assoc()['c'];
+if ($autoRestored > 0) {
+    $conn->query(
+        "UPDATE room_bookings
+         SET archived=1
+         WHERE checkout_date < CURDATE()
+         AND booking_status IN ('approved','pending')
+         AND (archived IS NULL OR archived=0)"
+    );
+}
+
 $editData = null;
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     $editId   = (int)$_GET['edit'];
@@ -222,6 +239,12 @@ include 'admin_layout_top.php';
   <?= htmlspecialchars($_SESSION['room_msg']) ?>
 </div>
 <?php unset($_SESSION['room_msg'],$_SESSION['room_msg_type']); ?>
+<?php endif; ?>
+
+<?php if ($autoRestored > 0): ?>
+<div class="rm-alert rm-alert-ok" style="margin-bottom:16px;">
+  ♻️ คืนสถานะอัตโนมัติ: ห้องพักจาก <strong><?= $autoRestored ?> การจอง</strong> ที่ checkout ผ่านไปแล้ว ถูกคืนเป็น "ว่าง" แล้ว
+</div>
 <?php endif; ?>
 
 <!-- Stats -->

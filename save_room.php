@@ -25,10 +25,21 @@ function redirect_back($message, $editId = 0, $type = 'error') {
 $checkTable = $conn->query("SHOW TABLES LIKE 'rooms'");
 if (!$checkTable || $checkTable->num_rows === 0) die("ไม่พบตาราง rooms");
 
-// เพิ่มคอลัมน์ amenities ถ้ายังไม่มี
-$colCheck = $conn->query("SHOW COLUMNS FROM rooms LIKE 'amenities'");
-if ($colCheck && $colCheck->num_rows === 0) {
-    $conn->query("ALTER TABLE rooms ADD COLUMN amenities TEXT DEFAULT NULL");
+// เพิ่มคอลัมน์ที่อาจขาดบน live server
+$addCols = [
+    "amenities"   => "TEXT DEFAULT NULL",
+    "room_size"   => "VARCHAR(50) DEFAULT NULL",
+    "capacity"    => "INT DEFAULT 2",
+    "bed_type"    => "VARCHAR(100) DEFAULT NULL",
+    "total_rooms" => "INT DEFAULT 1",
+    "max_guests"  => "INT DEFAULT 2",
+    "image_path"  => "VARCHAR(255) DEFAULT NULL",
+];
+foreach ($addCols as $col => $def) {
+    $chk = $conn->query("SHOW COLUMNS FROM rooms LIKE '$col'");
+    if ($chk && $chk->num_rows === 0) {
+        $conn->query("ALTER TABLE rooms ADD COLUMN `$col` $def");
+    }
 }
 
 $id          = isset($_POST['id'])          ? (int)$_POST['id']          : 0;

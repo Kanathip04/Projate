@@ -335,7 +335,7 @@ include 'admin_layout_top.php';
       <div class="rm-form-head-sub"><?= $editData ? 'กำลังแก้ไข ID #'.$editData['id'] : 'กรอกข้อมูลห้องพักที่ต้องการเพิ่ม' ?></div>
     </div>
     <div class="rm-form-body">
-      <form action="save_room.php" method="POST" enctype="multipart/form-data">
+      <form id="roomForm" action="save_room.php" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="id" value="<?= htmlspecialchars($editData['id'] ?? '') ?>">
 
         <div class="rm-section-label">ข้อมูลพื้นฐาน</div>
@@ -547,7 +547,7 @@ function previewImg(input) {
   }
 }
 
-document.querySelector('form').addEventListener('submit', () => {
+document.getElementById('roomForm').addEventListener('submit', () => {
   // รวม bed type จาก checkbox
   const beds = [...document.querySelectorAll('.am-chip input[data-bed]:checked')].map(cb => cb.dataset.bed);
   document.getElementById('bed_type_hidden').value = beds.join('|');

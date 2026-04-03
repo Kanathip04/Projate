@@ -69,6 +69,12 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     }
 }
 
+// เพิ่ม column checkin_time / checkout_time ถ้ายังไม่มี
+foreach (['checkin_time VARCHAR(10) DEFAULT "14:00"', 'checkout_time VARCHAR(10) DEFAULT "12:00"'] as $colDef) {
+    $colName = explode(' ', $colDef)[0];
+    $chk = $conn->query("SHOW COLUMNS FROM rooms LIKE '$colName'");
+    if ($chk && $chk->num_rows === 0) $conn->query("ALTER TABLE rooms ADD COLUMN `$colName` $colDef");
+}
 $rooms = $conn->query("SELECT * FROM rooms ORDER BY id DESC");
 $totalRooms = $rooms ? $rooms->num_rows : 0;
 $showCount  = $rooms ? (int)$conn->query("SELECT COUNT(*) c FROM rooms WHERE status='show'")->fetch_assoc()['c'] : 0;
@@ -356,6 +362,20 @@ include 'admin_layout_top.php';
         <div class="rm-fg">
           <label>รายละเอียด</label>
           <textarea name="description" placeholder="สิ่งอำนวยความสะดวก, วิว, บริการ..."><?= htmlspecialchars($editData['description'] ?? '') ?></textarea>
+        </div>
+
+        <div class="rm-section-label">เวลาเช็คอิน / เช็คเอาท์</div>
+        <div class="rm-row2">
+          <div class="rm-fg">
+            <label>เวลาเช็คอิน</label>
+            <input type="time" name="checkin_time"
+                   value="<?= htmlspecialchars($editData['checkin_time'] ?? '14:00') ?>">
+          </div>
+          <div class="rm-fg">
+            <label>เวลาเช็คเอาท์</label>
+            <input type="time" name="checkout_time"
+                   value="<?= htmlspecialchars($editData['checkout_time'] ?? '12:00') ?>">
+          </div>
         </div>
 
         <div class="rm-section-label">ความจุ</div>

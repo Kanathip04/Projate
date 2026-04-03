@@ -31,9 +31,11 @@ $addCols = [
     "room_size"   => "VARCHAR(50) DEFAULT NULL",
     "capacity"    => "INT DEFAULT 2",
     "bed_type"    => "VARCHAR(100) DEFAULT NULL",
-    "total_rooms" => "INT DEFAULT 1",
-    "max_guests"  => "INT DEFAULT 2",
-    "image_path"  => "VARCHAR(255) DEFAULT NULL",
+    "total_rooms"   => "INT DEFAULT 1",
+    "max_guests"    => "INT DEFAULT 2",
+    "image_path"    => "VARCHAR(255) DEFAULT NULL",
+    "checkin_time"  => "VARCHAR(10) DEFAULT '14:00'",
+    "checkout_time" => "VARCHAR(10) DEFAULT '12:00'",
 ];
 foreach ($addCols as $col => $def) {
     $chk = $conn->query("SHOW COLUMNS FROM rooms LIKE '$col'");
@@ -49,8 +51,10 @@ $description = trim($_POST['description']   ?? '');
 $price       = isset($_POST['price'])       ? (float)$_POST['price']     : 0;
 $total_rooms = isset($_POST['total_rooms']) ? (int)$_POST['total_rooms'] : 5;
 $max_guests  = isset($_POST['max_guests'])  ? (int)$_POST['max_guests']  : 2;
-$room_size   = trim($_POST['room_size']     ?? '');
-$bed_type    = trim($_POST['bed_type']      ?? '');
+$room_size     = trim($_POST['room_size']      ?? '');
+$bed_type      = trim($_POST['bed_type']      ?? '');
+$checkin_time  = trim($_POST['checkin_time']  ?? '14:00');
+$checkout_time = trim($_POST['checkout_time'] ?? '12:00');
 $amenities   = trim($_POST['amenities']    ?? '');
 $capacity    = $max_guests;
 
@@ -114,28 +118,30 @@ if ($id > 0) {
     }
 
     $sql = "UPDATE rooms SET
-                room_name   = ?,
-                room_type   = ?,
-                price       = ?,
-                description = ?,
-                status      = ?,
-                room_size   = ?,
-                bed_type    = ?,
-                amenities   = ?,
-                capacity    = ?,
-                total_rooms = ?,
-                max_guests  = ?,
-                image_path  = ?
+                room_name     = ?,
+                room_type     = ?,
+                price         = ?,
+                description   = ?,
+                status        = ?,
+                room_size     = ?,
+                bed_type      = ?,
+                amenities     = ?,
+                capacity      = ?,
+                total_rooms   = ?,
+                max_guests    = ?,
+                image_path    = ?,
+                checkin_time  = ?,
+                checkout_time = ?
             WHERE id = ?";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) redirect_back("Prepare UPDATE failed: " . $conn->error, $id);
 
-    // s s d s s s s s i i i s i
-    $stmt->bind_param("ssdsssssiissi",
+    // s s d s s s s s i i i s s s i
+    $stmt->bind_param("ssdsssssiissssi",
         $room_name, $room_type, $price, $description, $status,
         $room_size, $bed_type, $amenities, $capacity, $total_rooms, $max_guests,
-        $dbUploadPath, $id
+        $dbUploadPath, $checkin_time, $checkout_time, $id
     );
 
     if (!$stmt->execute()) {
@@ -150,17 +156,18 @@ if ($id > 0) {
 
     $sql = "INSERT INTO rooms
                 (room_name, room_type, price, description, status,
-                 room_size, bed_type, amenities, capacity, total_rooms, max_guests, image_path)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                 room_size, bed_type, amenities, capacity, total_rooms, max_guests, image_path,
+                 checkin_time, checkout_time)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) redirect_back("Prepare INSERT failed: " . $conn->error);
 
-    // s s d s s s s s i i i s
-    $stmt->bind_param("ssdsssssiiis",
+    // s s d s s s s s i i i s s s
+    $stmt->bind_param("ssdsssssiiiiss",
         $room_name, $room_type, $price, $description, $status,
         $room_size, $bed_type, $amenities, $capacity, $total_rooms, $max_guests,
-        $dbUploadPath
+        $dbUploadPath, $checkin_time, $checkout_time
     );
 
     if (!$stmt->execute()) {

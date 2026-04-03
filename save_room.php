@@ -56,11 +56,11 @@ $uploadRoot   = __DIR__ . '/uploads';
 $uploadDir    = __DIR__ . '/uploads/rooms/';
 $dbUploadPath = '';
 
-if (!is_dir($uploadRoot)) mkdir($uploadRoot, 0777, true);
-if (!is_dir($uploadDir))  mkdir($uploadDir,  0777, true);
-if (!is_writable($uploadDir)) redirect_back("โฟลเดอร์ uploads/rooms เขียนไฟล์ไม่ได้");
-
 if (isset($_FILES['room_image']) && $_FILES['room_image']['error'] !== UPLOAD_ERR_NO_FILE) {
+    if (!is_dir($uploadRoot)) @mkdir($uploadRoot, 0777, true);
+    if (!is_dir($uploadDir))  @mkdir($uploadDir,  0777, true);
+    if (!is_writable($uploadDir)) redirect_back("โฟลเดอร์ uploads/rooms เขียนไฟล์ไม่ได้ กรุณาติดต่อผู้ดูแลระบบ", $id);
+
     if ($_FILES['room_image']['error'] !== UPLOAD_ERR_OK) redirect_back("อัปโหลดรูปไม่สำเร็จ", $id);
 
     $tmpName      = $_FILES['room_image']['tmp_name'];

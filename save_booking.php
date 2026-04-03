@@ -115,6 +115,9 @@ if ($checkin_date !== '' && $checkout_date !== '') {
     if (strtotime($checkout_date) <= strtotime($checkin_date)) {
         $errors[] = "วันเช็คเอาท์ต้องมากกว่าวันเช็คอิน";
     }
+    if (strtotime($checkin_date) < strtotime(date('Y-m-d'))) {
+        $errors[] = "ไม่สามารถจองย้อนหลังได้ กรุณาเลือกวันตั้งแต่วันนี้เป็นต้นไป";
+    }
 }
 
 if (!empty($errors)) {

@@ -84,8 +84,9 @@ if ($colRow && (int)$colRow['cnt'] > 0) {
 if ($guests === '' || !is_numeric($guests) || (int)$guests < 1) {
     $guests = 1;
 }
-if ($checkin === '') {
-    $checkin = date('Y-m-d');
+$today = date('Y-m-d');
+if ($checkin === '' || $checkin < $today) {
+    $checkin = $today;
 }
 if ($checkout === '' || $checkout <= $checkin) {
     $checkout = date('Y-m-d', strtotime($checkin . ' +1 day'));
@@ -380,14 +381,14 @@ a{text-decoration:none;}
             <div class="fg">
               <label>เช็คอิน <span class="req">*</span></label>
               <div class="fi"><span class="fi-icon">📅</span>
-                <input type="date" name="checkin_date" id="checkinDate" value="<?= htmlspecialchars($checkin) ?>" required>
+                <input type="date" name="checkin_date" id="checkinDate" value="<?= htmlspecialchars($checkin) ?>" min="<?= date('Y-m-d') ?>" required>
               </div>
             </div>
             <div class="date-sep">→</div>
             <div class="fg">
               <label>เช็คเอาท์ <span class="req">*</span></label>
               <div class="fi"><span class="fi-icon">📅</span>
-                <input type="date" name="checkout_date" id="checkoutDate" value="<?= htmlspecialchars($checkout) ?>" required>
+                <input type="date" name="checkout_date" id="checkoutDate" value="<?= htmlspecialchars($checkout) ?>" min="<?= date('Y-m-d', strtotime('+1 day')) ?>" required>
               </div>
             </div>
             <div class="nights-badge" id="nightsBadge">— คืน</div>

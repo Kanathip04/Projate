@@ -720,7 +720,7 @@ input.prefilled {
       <form action="save_tourist.php" method="POST">
         <div class="form-grid">
 
-          <?php elseif (!$isLoggedIn): ?>
+          <?php if (!$isLoggedIn): ?>
           <div class="profile-banner not-logged-in">
             <span class="pb-icon">💡</span>
             <div>

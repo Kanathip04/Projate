@@ -40,14 +40,29 @@ $hasStatus      = in_array('status',      $rc, true);
 $hasTotalRooms  = in_array('total_rooms', $rc, true);
 $hasAmenities   = in_array('amenities',   $rc, true);
 
+$checkin_q  = trim($_GET['checkin']  ?? '');
+$checkout_q = trim($_GET['checkout'] ?? '');
+$guests_q   = max(1, (int)($_GET['guests'] ?? 1));
+if (!$checkin_q)  $checkin_q  = date('Y-m-d');
+if (!$checkout_q || $checkout_q <= $checkin_q)
+    $checkout_q = date('Y-m-d', strtotime($checkin_q . ' +1 day'));
+$nights_q = max(1, (int)((strtotime($checkout_q) - strtotime($checkin_q)) / 86400));
+
 $approvedMap = [];
 if (tableExists($conn, 'room_bookings')) {
     $bc = getColumns($conn, 'room_bookings');
     if (in_array('room_id', $bc, true) && in_array('booking_status', $bc, true)) {
-        $hasUnits = in_array('room_units', $bc, true);
+        $hasUnits  = in_array('room_units',    $bc, true);
+        $hasCiCol  = in_array('checkin_date',  $bc, true);
+        $hasCoCol  = in_array('checkout_date', $bc, true);
+        $safeCI = $conn->real_escape_string($checkin_q);
+        $safeCO = $conn->real_escape_string($checkout_q);
+        $dateFilter = ($hasCiCol && $hasCoCol)
+            ? " AND checkin_date < '$safeCO' AND checkout_date > '$safeCI'"
+            : "";
         $sql = $hasUnits
-            ? "SELECT room_id, SUM(CASE WHEN room_units IS NOT NULL AND room_units!='' THEN JSON_LENGTH(room_units) ELSE 1 END) AS n FROM room_bookings WHERE booking_status='approved' GROUP BY room_id"
-            : "SELECT room_id, COUNT(*) AS n FROM room_bookings WHERE booking_status='approved' GROUP BY room_id";
+            ? "SELECT room_id, SUM(CASE WHEN room_units IS NOT NULL AND room_units!='' THEN JSON_LENGTH(room_units) ELSE 1 END) AS n FROM room_bookings WHERE booking_status IN ('pending','approved') AND (archived IS NULL OR archived=0)$dateFilter GROUP BY room_id"
+            : "SELECT room_id, COUNT(*) AS n FROM room_bookings WHERE booking_status IN ('pending','approved') AND (archived IS NULL OR archived=0)$dateFilter GROUP BY room_id";
         $res = $conn->query($sql);
         if ($res) while ($row = $res->fetch_assoc()) $approvedMap[(int)$row['room_id']] = (int)$row['n'];
     }
@@ -71,14 +86,6 @@ $stmt = $conn->prepare($sql);
 if (!$stmt) die("Prepare failed: " . $conn->error);
 $stmt->execute();
 $result = $stmt->get_result();
-
-$checkin_q  = trim($_GET['checkin']  ?? '');
-$checkout_q = trim($_GET['checkout'] ?? '');
-$guests_q   = max(1, (int)($_GET['guests'] ?? 1));
-if (!$checkin_q)  $checkin_q  = date('Y-m-d');
-if (!$checkout_q || $checkout_q <= $checkin_q)
-    $checkout_q = date('Y-m-d', strtotime($checkin_q . ' +1 day'));
-$nights_q = max(1, (int)((strtotime($checkout_q) - strtotime($checkin_q)) / 86400));
 
 $rooms = [];
 if ($result) while ($r = $result->fetch_assoc()) $rooms[] = $r;

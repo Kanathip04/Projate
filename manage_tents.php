@@ -399,6 +399,9 @@ include 'admin_layout_top.php';
           </td>
           <td class="eq-price-cell">฿<?= number_format((float)$eq['price'], 0) ?>.-</td>
           <td class="eq-unit-cell">/ <?= h($eq['unit']) ?></td>
+          <td style="text-align:center;font-weight:700;color:var(--ink);">
+            <?= ($eq['stock_limit'] !== null) ? (int)$eq['stock_limit'] : '<span style="color:var(--muted);font-weight:400;">—</span>' ?>
+          </td>
           <td style="color:var(--muted);font-size:.8rem;"><?= h($eq['note'] ?: '—') ?></td>
           <td>
             <div class="eq-actions">

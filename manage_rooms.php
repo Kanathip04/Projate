@@ -15,18 +15,42 @@ if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
 $pageTitle  = "จัดการห้องพัก";
 $activeMenu = "rooms";
 
-// ── Auto-restore: archive booking ที่ checkout_date ผ่านไปแล้ว ──
+// ── Settings table ──
+$conn->query("CREATE TABLE IF NOT EXISTS `room_settings` (
+    `key` VARCHAR(100) PRIMARY KEY,
+    `value` VARCHAR(200) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$conn->query("INSERT IGNORE INTO room_settings (`key`,`value`) VALUES ('checkout_restore_time','12:00')");
+
+// ── บันทึกเวลาคืนสถานะ ──
+if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_restore_time'])) {
+    $rt = trim($_POST['restore_time'] ?? '12:00');
+    if (preg_match('/^\d{2}:\d{2}$/', $rt)) {
+        $conn->query("UPDATE room_settings SET `value`='$rt' WHERE `key`='checkout_restore_time'");
+    }
+    header("Location: manage_rooms.php"); exit;
+}
+
+// ── ดึงเวลาคืนสถานะ ──
+$restoreTime = $conn->query("SELECT `value` FROM room_settings WHERE `key`='checkout_restore_time'")->fetch_assoc()['value'] ?? '12:00';
+$nowTime = date('H:i');
+$today   = date('Y-m-d');
+
+// ── Auto-restore: archive booking ที่ checkout_date ผ่านไปแล้ว หรือ วันนี้และถึงเวลาแล้ว ──
+$restoreCondition = "
+    (checkout_date < '$today')
+    OR (checkout_date = '$today' AND '$nowTime' >= '$restoreTime')
+";
 $autoRestored = (int)$conn->query(
     "SELECT COUNT(*) c FROM room_bookings
-     WHERE checkout_date < CURDATE()
+     WHERE ($restoreCondition)
      AND booking_status IN ('approved','pending')
      AND (archived IS NULL OR archived=0)"
 )->fetch_assoc()['c'];
 if ($autoRestored > 0) {
     $conn->query(
-        "UPDATE room_bookings
-         SET archived=1
-         WHERE checkout_date < CURDATE()
+        "UPDATE room_bookings SET archived=1
+         WHERE ($restoreCondition)
          AND booking_status IN ('approved','pending')
          AND (archived IS NULL OR archived=0)"
     );
@@ -270,6 +294,30 @@ include 'admin_layout_top.php';
       <div class="rm-stat-lbl">ซ่อนอยู่</div>
     </div>
   </div>
+</div>
+
+<!-- ── Restore Time Setting ── -->
+<div style="background:#fff;border-radius:14px;padding:16px 22px;margin-bottom:20px;
+     box-shadow:0 2px 12px rgba(26,26,46,.06);border-left:4px solid #f59e0b;
+     display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+  <div style="font-size:1.4rem;">⏰</div>
+  <div style="flex:1;">
+    <div style="font-weight:800;color:var(--ink);font-size:.92rem;">เวลาคืนสถานะห้องพักอัตโนมัติ</div>
+    <div style="font-size:.76rem;color:var(--muted);margin-top:2px;">
+      ห้องที่ checkout วันนี้จะถูกคืนสถานะเป็น "ว่าง" เมื่อถึงเวลาที่กำหนด · ปัจจุบัน: <strong><?= $restoreTime ?> น.</strong> · เวลาเซิร์ฟเวอร์: <?= $nowTime ?> น.
+    </div>
+  </div>
+  <form method="POST" style="display:flex;align-items:center;gap:8px;">
+    <input type="hidden" name="save_restore_time" value="1">
+    <input type="time" name="restore_time" value="<?= h($restoreTime) ?>"
+           style="padding:8px 12px;border:1.5px solid #e8e4de;border-radius:8px;
+                  font-family:'Sarabun',sans-serif;font-size:.88rem;color:var(--ink);">
+    <button type="submit"
+            style="padding:8px 16px;background:var(--ink);color:#fff;border:none;border-radius:8px;
+                   font-family:'Sarabun',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer;">
+      💾 บันทึก
+    </button>
+  </form>
 </div>
 
 <div class="rm-layout">
